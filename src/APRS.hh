@@ -19,7 +19,7 @@ public:
     char callSign[8];
     HardwareSerial *serial;
     bool nada = true;
-    APRS(uint8_t powerLevelPin, uint8_t SquelchPin, uint8_t pttPin, const char callSign[8]);
+    APRS(const char callSign[8]);
     void sendPacket(char type);
     static bool configDra818v(HardwareSerial &hardSerial, float txFrequency, float rxFrequency, bool emphasis, bool hpf, bool lpf);
 #ifdef APRS_SoftwareSerial_enabled

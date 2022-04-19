@@ -2,10 +2,10 @@
 // Created by Louis Adamian on 3/23/22.
 //
 #include "APRS.hh"
-#include "conifig.hh"
+#include "conifig.h"
 // configures the DRA818V VHF module over UART returns true if config us successful and false if unsuccessful.
 //
-APRS::APRS(uint8_t powerLevelPin, uint8_t SquelchPin, uint8_t pttPin, const char callSign[8]) {
+APRS::APRS(const char callSign[8]) {
         this->powerLevelPin = powerLevelPin;
         this->SquelchPin = SquelchPin;
         this->pttPin = pttPin;
