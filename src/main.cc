@@ -1,7 +1,7 @@
 #if (ARDUINO >= 100)
 #include "Arduino.h"
 #else
-#include "WProgram.h"å
+#include "WProgram.h"
 #endif
 #include <SparkFun_Swarm_Satellite_Arduino_Library.h>
 #include "APRS.hh"
@@ -56,35 +56,34 @@ void txAprs(){
 }
 
 uint8_t initTag(){
-
-    return 0
+    return 0;
 }
 
 uint8_t dive(){
     /*
-     * Does nothing until interrupted at surface
+     * sleep and do nothing until interrupted at surface
      *
      */
+    return 0;
 }
 
 uint8_t breachTransmit(){
     /*
      *
      */
+    return 0;
 }
 
 uint8_t breachLoop(){
-
-
+    return 0;
 }
 
 uint8_t recoveryLoop(){
-
-
+    return 0;
 }
 
 uint8_t txSwarm(){
-
+    return 0;
 }
 
 

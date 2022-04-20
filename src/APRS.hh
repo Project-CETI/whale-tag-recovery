@@ -8,7 +8,9 @@
 #else
 #include "WProgram.h"
 #endif
-#include "config.hh"
+#include "config.h"
+#include "SparkFun_Swarm_Satellite_Arduino_Library.h"
+#define numSinValues 32
 #define _FLAG 0x7e
 //sleep power level, squelch, ptt
 
@@ -18,24 +20,39 @@ public:
     uint8_t powerLevelPin, SquelchPin, pttPin;
     char callSign[8];
     HardwareSerial *serial;
+    char bitStuff = 0;
+    uint8_t currOutput = 0;
     bool nada = true;
     APRS(const char callSign[8]);
-    void sendPacket(char type);
-    static bool configDra818v(HardwareSerial &hardSerial, float txFrequency, float rxFrequency, bool emphasis, bool hpf, bool lpf);
+    void sendPacket(Swarm_M138_GeospatialData_t *locationInfo);
+    void sendPayload(Swarm_M138_GeospatialData_t *locationInfo, char* status);
 #ifdef APRS_SoftwareSerial_enabled
-    bool configDra818v(SoftwareSerial serial, float txFrequency, float rxFrequency, bool emphasis, bool hpf, bool lpf)
+    static bool configDra818v(SoftwareSerial serial, float txFrequency, float rxFrequency, bool emphasis, bool hpf, bool lpf)
+#else
+    static bool configDra818v(HardwareSerial &hardSerial, float txFrequency, float rxFrequency, bool emphasis, bool hpf, bool lpf);
 #endif
 private:
+#ifdef r2rDac5
+    static constexpr uint8_t sinValues[numSinValues] = {
+        19, 22, 24, 27, 29, 30, 31, 31, 31, 30, 29, 27, 24, 22, 19, 16, 12,
+        9,  7,  4,  2,  1,  0,  0,  0,  1,  2,  4,  7,  9, 12, 15
+};
+#else
+    static constexpr uint8_t sinValues[numSinValues] = {
+            152,176,198,217,233,245,252,255,252,245,233,217,198,176,152,127,103,79,57,38,22,10,3,1,3,10,22,38,57,79,103,128
+    };
+#endif
     char bit_stuff = 0;
-    void sendPayload(char type);
-    void sendCharNrzi(char in_byte, bool enBitStuff, char bit_stuff);
-    static inline void setNada2400();
-    static inline void setNada1200();
-    static inline void setNada(bool nada);
+    void sendCharNrzi(char in_byte, bool enBitStuff);
+    inline void setNada2400();
+    inline void setNada1200();
+    inline void setNada(bool nada);
     void sendFlag(unsigned char flagLen);
     void sendCrc();
     void calcCrc(bool in_bit);
     static void writeDac(uint8_t);
     void sendStringLen(const char *inString, int len);
+    void setNextSin();
+    static void setOutput(uint8_t state);
 };
 #endif //CETI_TAG_TRACKING_APRS_H

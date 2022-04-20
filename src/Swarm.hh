@@ -4,13 +4,10 @@
 
 #ifndef CETI_TAG_TRACKING_SWARM_H
 #define CETI_TAG_TRACKING_SWARM_H
-
+#include "SparkFun_Swarm_Satellite_Arduino_Library.h"
 
 class Swarm {
-public:
-    Swarm(Serial serial){
 
-    }
 
 };
 

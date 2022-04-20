@@ -2,7 +2,16 @@
 // Created by Louis Adamian on 3/23/22.
 //
 #include "APRS.hh"
-#include "conifig.h"
+#include "config.h"
+#include "SparkFun_Swarm_Satellite_Arduino_Library.h"
+#include "math.h"
+#define _DT_POS '!'
+#define sym_ovl  'T'
+#define sym_tab 'a'
+#define delay2400 9
+#define numSinValues 32
+#define delay1200 19
+#define bitPeriod 832
 // configures the DRA818V VHF module over UART returns true if config us successful and false if unsuccessful.
 //
 APRS::APRS(const char callSign[8]) {
@@ -43,105 +52,87 @@ bool APRS::configDra818v(HardwareSerial &hardSerial, float txFrequency, float rx
     serial->end();
     return true;
 }
-
-#ifdef r2rDac5
-const uint16_t sin1200Values[32] = {
-        19, 22, 24, 27, 29, 30, 31, 31, 31, 30, 29, 27, 24, 22, 19, 16, 12,
-        9,  7,  4,  2,  1,  0,  0,  0,  1,  2,  4,  7,  9, 12, 15
-};
-const uint8_t sin2400Values[16] = {22, 27, 30, 31, 30, 27, 22, 16,  9,  4,  1,  0,  1,  4,  9, 15};
-#endif
+void setOutput(uint8_t state) {
+    digitalWrite(dacPin0, state & 0b00000001);
+    digitalWrite(dacPin1, state & 0b00000010);
+    digitalWrite(dacPin2, state & 0b00000100);
+    digitalWrite(dacPin3, state & 0b00001000);
+    digitalWrite(dacPin4, state & 0b00010000);
+    digitalWrite(dacPin5, state & 0b00100000);
+    digitalWrite(dacPin6, state & 0b01000000);
+    digitalWrite(dacPin7, state & 0b10000000);
+}
+void APRS::setNextSin() {
+    APRS::currOutput++;
+    if (currOutput == numSinValues)
+        currOutput = 0;
+    setOutput(APRS::sinValues[currOutput]);
+}
 
 void APRS::setNada1200() {
-    for(uint8_t sinNum = 0; sinNum < 2; sinNum++){
-        for(uint8_t currSinVal = 0; currSinVal < sizeof(sin2400Values)/2; currSinVal++){
-            setVoltageFast(sin2400Values[currSinVal]);
-        }
+    uint32_t endTime = micros() + bitPeriod;
+    while (micros() < endTime) {
+        APRS::setNextSin();
+        delayMicroseconds(delay2400);
     }
 }
 
 void APRS::setNada2400() {
-    for(uint8_t currSinVal = 0; currSinVal < sizeof(sin1200Values)/2; currSinVal++){
-        setVoltageFast(sin1200Values[currSinVal]);
+    uint32_t endTime = micros() + bitPeriod;
+    while (micros() < endTime) {
+        APRS::setNextSin();
+        delayMicroseconds(delay2400);
     }
 }
 
-void APRS::sendPayload(char type) {
-    /*
-       APRS AX.25 Payloads
 
-       TYPE : POSITION
-       ........................................................
-       |DATA TYPE |    LAT   |SYMB. OVL.|    LON   |SYMB. TBL.|
-       --------------------------------------------------------
-       |  1 byte  |  8 bytes |  1 byte  |  9 bytes |  1 byte  |
-       --------------------------------------------------------
-
-       DATA TYPE  : !
-       LAT        : ddmm.ssN or ddmm.ssS
-       LON        : dddmm.ssE or dddmm.ssW
-
-
-       TYPE : STATUS
-       ..................................
-       |DATA TYPE |    STATUS TEXT      |
-       ----------------------------------
-       |  1 byte  |       N bytes       |
-       ----------------------------------
-
-       DATA TYPE  : >
-       STATUS TEXT: Free form text
-
-
-       TYPE : POSITION & STATUS
-       ..............................................................................
-       |DATA TYPE |    LAT   |SYMB. OVL.|    LON   |SYMB. TBL.|    STATUS TEXT      |
-       ------------------------------------------------------------------------------
-       |  1 byte  |  8 bytes |  1 byte  |  9 bytes |  1 byte  |       N bytes       |
-       ------------------------------------------------------------------------------
-
-       DATA TYPE  : !
-       LAT        : ddmm.ssN or ddmm.ssS
-       LON        : dddmm.ssE or dddmm.ssW
-       STATUS TEXT: Free form text
-
-
-       All of the data are sent in the form of ASCII Text, not shifted.
-
-    */
-//    if (type == _GPRMC)
-//    {
-//        sendCharNrzi('$', true);
-//        send_string_len(rmc, strlen(rmc) - 1);
-//    }
-//    else if (type == _FIXPOS)
-//    {
-//        sendCharNrzi(_DT_POS, true);
-//        send_string_len(lati, strlen(lati));
-//        sendCharNrzi(sym_ovl, true);
-//        send_string_len(lon, strlen(lon));
-//        sendCharNrzi(sym_tab, true);
-//    }
-//    else if (type == _STATUS)
-//    {
-//        sendCharNrzi(_DT_STATUS, true);
-//        send_string_len(mystatus, strlen(mystatus));
-//    }
-//    else if (type == _FIXPOS_STATUS)
-//    {
-//        sendCharNrzi(_DT_POS, true);
-//        send_string_len(lati, strlen(lati));
-//        sendCharNrzi(sym_ovl, true);
-//        send_string_len(lon, strlen(lon));
-//        sendCharNrzi(sym_tab, true);
-//
-//        send_string_len(comment, strlen(comment));
-//    }
-//    else
-//    {
-//        send_string_len(mystatus, strlen(mystatus));
-//    }
+void APRS::sendPayload(Swarm_M138_GeospatialData_t *locationInfo, char* status){
+    float latFloat = locationInfo->lat;
+    bool south = false;
+    if (latFloat <0){
+        south = true;
+        latFloat = fabs(latFloat);
+    }
+    float latInt, latDec;
+    latDec = modf(latFloat, &latInt);// split the integer and decimal component fom the latitude
+    latDec = latDec *60; // convert decimal degrees to minutes
+    char lat[9];
+    if (south){
+        sprintf(lat, "%02d.%06dS", latInt, latDec);
+    } else{
+        sprintf(lat, "%02d.%06dN", latInt, latDec);
+    }
+    float lonFloat = locationInfo->lon;
+    bool west = false;
+    if(lonFloat<0){
+        west = true;
+        lonFloat = fabs(lonFloat);
+    }
+    float lonInt, lonDec;
+    lonDec = modf(lonFloat,&lonDec);
+    lonDec = lonDec*60;
+    char lon[10];
+    if(west){
+        sprintf(lon, "%03d%6dW", lonInt, lonDec);
+    } else{
+        sprintf(lon, "%03d%6dE", lonInt, lonDec);
+    }
+    float speed = locationInfo->speed /1.852; //convert speed from km/h to knots
+    float course = locationInfo->course;
+    if(course ==0){ //APRS wants course in 1-360 and swarm provides it as 0-359
+        course = 360;
+    }
+    char cogSpeed[7];
+    sprintf(cogSpeed, "%03d/%03d", course, speed);
+    APRS::sendCharNrzi(_DT_POS, true);
+    APRS::sendStringLen(lat, strlen(lat));
+    APRS::sendCharNrzi(sym_ovl, true);
+    APRS::sendStringLen(lon, strlen(lon));
+    APRS::sendCharNrzi(sym_tab, true);
+    char comment[] = "https://projectceti.org";
+    APRS::sendStringLen(comment, strlen(comment));
 }
+
 
 void APRS::sendCharNrzi(char in_byte, bool enBitStuff) {
     bool bits;
@@ -149,17 +140,17 @@ void APRS::sendCharNrzi(char in_byte, bool enBitStuff) {
     for (int i = 0; i < 8; i++)
     {
         bits = in_byte & 0x01;
-        calcCrc(bits);
+        APRS::calcCrc(bits);
 
         if (bits)
         {
-            setNada(nada);
+            APRS::setNada(nada);
             bit_stuff++;
 
             if ((enBitStuff) && (bit_stuff == 5))
             {
                 nada ^= 1;
-                setNada(nada);
+                APRS::setNada(nada);
 
                 bit_stuff = 0;
             }
@@ -167,7 +158,7 @@ void APRS::sendCharNrzi(char in_byte, bool enBitStuff) {
         else
         {
             nada ^= 1;
-            setNada(nada);
+            APRS::setNada(nada);
 
             bit_stuff = 0;
         }
@@ -179,12 +170,12 @@ void APRS::sendCharNrzi(char in_byte, bool enBitStuff) {
 void APRS::sendStringLen(const char *inString, int len)
 {
     for (int j = 0; j < len; j++)
-        sendCharNrzi(inString[j], true);
+        APRS::sendCharNrzi(inString[j], true);
 }
 
 void APRS::sendFlag(unsigned char flagLen) {
     for (int j = 0; j < flagLen; j++)
-        sendCharNrzi(_FLAG, false);
+        APRS::sendCharNrzi(_FLAG, false);
 }
 
 void APRS::setNada(bool nada) {
@@ -205,10 +196,6 @@ void APRS::calcCrc(bool in_bit)
         crc ^= 0x8408;
 }
 
-void APRS::sendPacket(char type) {
-
-}
-
 void APRS::writeDac(uint8_t value) {
 #ifdef r2rDac5
     digitalWrite(dacPin0, value & 0b00001);
@@ -222,6 +209,6 @@ void APRS::writeDac(uint8_t value) {
 void APRS::sendCrc() {
     unsigned char crc_lo = crc ^ 0xff;
     unsigned char crc_hi = (crc >> 8) ^ 0xff;
-    sendCharNrzi(crc_lo, true);
-    sendCharNrzi(crc_hi, true);
+    APRS::sendCharNrzi(crc_lo, true);
+    APRS::sendCharNrzi(crc_hi, true);
 }
