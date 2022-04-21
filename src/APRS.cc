@@ -4,7 +4,7 @@
 #include "APRS.hh"
 #include "config.h"
 #include "SparkFun_Swarm_Satellite_Arduino_Library.h"
-#include "math.h"
+#include <cmath>
 #define _DT_POS '!'
 #define sym_ovl  'T'
 #define sym_tab 'a'
@@ -15,10 +15,7 @@
 // configures the DRA818V VHF module over UART returns true if config us successful and false if unsuccessful.
 //
 APRS::APRS(const char callSign[8]) {
-        this->powerLevelPin = powerLevelPin;
-        this->SquelchPin = SquelchPin;
-        this->pttPin = pttPin;
-        for(uint8_t i =0; i< 8;i++){
+        for(uint8_t i =0; i< 8; i++){
             this->callSign[i] = callSign[i];
         }
     }
@@ -52,6 +49,37 @@ bool APRS::configDra818v(HardwareSerial &hardSerial, float txFrequency, float rx
     serial->end();
     return true;
 }
+
+bool APRS::configDra818v(SerialPIO serial, float txFrequency, float rxFrequency, bool emphasis, bool hpf, bool lpf) {
+    // Open serial connection
+    serial.begin(9600);
+    serial->setTimeout(dra818vTimeout);
+    // Handshake
+    serial->println("AT+DMOCONNECT");
+    if(!serial->find("+DMOcvf          ")) return false;
+    delay(dra818vEnableDelay);
+    // Set frequencies and group
+    serial->print("AT+DMOSETGROUP=0,");
+    serial->print(txFrequency, 4);
+    serial->print(',');
+    serial->print(rxFrequency, 4);
+    serial->println(",0000,0,0000");
+    if(!serial->find("+DMOSETGROUP:0")) return false;
+    delay(dra818vEnableDelay);
+    // Set filter settings
+    serial->print("AT+SETFILTER=");
+    serial->print(emphasis);
+    serial->print(',');
+    serial->print(hpf);
+    serial->print(',');
+    serial->println(lpf);
+    if(!serial->find("+DMOSETFILTER:0")) return false;
+    delay(dra818vEnableDelay);
+    serial->end();
+    return true;
+}
+
+
 void setOutput(uint8_t state) {
     digitalWrite(dacPin0, state & 0b00000001);
     digitalWrite(dacPin1, state & 0b00000010);
@@ -73,7 +101,7 @@ void APRS::setNada1200() {
     uint32_t endTime = micros() + bitPeriod;
     while (micros() < endTime) {
         APRS::setNextSin();
-        delayMicroseconds(delay2400);
+        delayMicroseconds(delay1200);
     }
 }
 
@@ -98,9 +126,9 @@ void APRS::sendPayload(Swarm_M138_GeospatialData_t *locationInfo, char* status){
     latDec = latDec *60; // convert decimal degrees to minutes
     char lat[9];
     if (south){
-        sprintf(lat, "%02d.%06dS", latInt, latDec);
+        sprintf(lat, "%02f.%06fS", latInt, latDec);
     } else{
-        sprintf(lat, "%02d.%06dN", latInt, latDec);
+        sprintf(lat, "%02f.%06fN", latInt, latDec);
     }
     float lonFloat = locationInfo->lon;
     bool west = false;
@@ -109,28 +137,27 @@ void APRS::sendPayload(Swarm_M138_GeospatialData_t *locationInfo, char* status){
         lonFloat = fabs(lonFloat);
     }
     float lonInt, lonDec;
-    lonDec = modf(lonFloat,&lonDec);
+    lonDec = modf(lonFloat,&lonInt);
     lonDec = lonDec*60;
     char lon[10];
     if(west){
-        sprintf(lon, "%03d%6dW", lonInt, lonDec);
+        sprintf(lon, "%03f%6fW", lonInt, lonDec);
     } else{
-        sprintf(lon, "%03d%6dE", lonInt, lonDec);
+        sprintf(lon, "%03f%6fE", lonInt, lonDec);
     }
-    float speed = locationInfo->speed /1.852; //convert speed from km/h to knots
+    double speed = locationInfo->speed /1.852; //convert speed from km/h to knots
     float course = locationInfo->course;
     if(course ==0){ //APRS wants course in 1-360 and swarm provides it as 0-359
         course = 360;
     }
     char cogSpeed[7];
-    sprintf(cogSpeed, "%03d/%03d", course, speed);
+    sprintf(cogSpeed, "%03f/%03f", course, speed);
     APRS::sendCharNrzi(_DT_POS, true);
     APRS::sendStringLen(lat, strlen(lat));
     APRS::sendCharNrzi(sym_ovl, true);
     APRS::sendStringLen(lon, strlen(lon));
     APRS::sendCharNrzi(sym_tab, true);
-    char comment[] = "https://projectceti.org";
-    APRS::sendStringLen(comment, strlen(comment));
+    APRS::sendStringLen(status, strlen(status));
 }
 
 
@@ -167,9 +194,9 @@ void APRS::sendCharNrzi(char in_byte, bool enBitStuff) {
     }
 }
 
-void APRS::sendStringLen(const char *inString, int len)
+void APRS::sendStringLen(const char *inString, uint16_t len)
 {
-    for (int j = 0; j < len; j++)
+    for (uint16_t j = 0; j < len; j++)
         APRS::sendCharNrzi(inString[j], true);
 }
 
@@ -178,8 +205,8 @@ void APRS::sendFlag(unsigned char flagLen) {
         APRS::sendCharNrzi(_FLAG, false);
 }
 
-void APRS::setNada(bool nada) {
-    if (nada)
+void APRS::setNada(bool currNada) {
+    if (currNada)
         setNada1200();
     else
         setNada2400();
