@@ -338,21 +338,31 @@ void send_payload(char type)
     }
 }
 
+void floatSplit(float whole, int integer, int decimal){
+  integer = (int)whole;
+  decimal = (int)whole-integer;
+}
+
 void sendPayload(Swarm_M138_GeospatialData_t *locationInfo, char* status_){
+    if(locationInfo-> lat ==0 && locationInfo->lon == 0){
+      return;
+    }
+    
     float latFloat = locationInfo->lat;
     bool south = false;
     if (latFloat <0){
         south = true;
         latFloat = fabs(latFloat);
     }
-    float latInt, latDec;
-    latDec = modf(latFloat, &latInt);// split the integer and decimal component fom the latitude
+    int latInt, latDec;
+    latInt  = (int)latFloat;
+    latDec = (int)(latFloat-latInt);
     latDec = latDec *60; // convert decimal degrees to minutes
-    char lat[9];
+    char lati[9];
     if (south){
-        sprintf(lat, "%02f.%06fS", latInt, latDec);
+        sprintf(lati, "%02d.%06dS", latInt, latDec);
     } else{
-        sprintf(lat, "%02f.%06fN", latInt, latDec);
+        sprintf(lati, "%02d.%06dN", latInt, latDec);
     }
     float lonFloat = locationInfo->lon;
     bool west = false;
@@ -360,28 +370,43 @@ void sendPayload(Swarm_M138_GeospatialData_t *locationInfo, char* status_){
         west = true;
         lonFloat = fabs(lonFloat);
     }
-    float lonInt, lonDec;
-    lonDec = modf(lonFloat,&lonInt);
+    
+    int lonInt, lonDec;
+    lonInt = (int)lonFloat;
+    Serial.print("lonInt ");
+    Serial.println(lonInt);
+
+    lonDec = (int)(lonFloat-lonInt);
+    Serial.print("lonDec ");
+    Serial.println(lonDec);
     lonDec = lonDec*60;
     char lon[10];
     if(west){
-        sprintf(lon, "%03f%6fW", lonInt, lonDec);
+        sprintf(lon, "%03d%6dW", lonInt, lonDec);
     } else{
-        sprintf(lon, "%03f%6fE", lonInt, lonDec);
+        sprintf(lon, "%03d%6dE", lonInt, lonDec);
     }
+    
+
     double speed = locationInfo->speed /1.852; //convert speed from km/h to knots
-    float course = locationInfo->course;
-    if(course ==0){ //APRS wants course in 1-360 and swarm provides it as 0-359
+    int course = (int)locationInfo->course;
+    if(course == 0){ //APRS wants course in 1-360 and swarm provides it as 0-359
         course = 360;
     }
     char cogSpeed[7];
-    sprintf(cogSpeed, "%03f/%03f", course, speed);
+    sprintf(cogSpeed, "%03f/%03d ", course, speed);
+    Serial.print("Lat: ");
+    Serial.print(lati);
+    Serial.print("lon: ");
+    Serial.print(lon);
+    Serial.print("cogspeed: ");
+    Serial.println(cogSpeed);
     send_char_NRZI(_DT_POS, true);
-    send_string_len(lat, strlen(lat));
+    send_string_len(lati, strlen(lati));
     send_char_NRZI(sym_ovl, true);
     send_string_len(lon, strlen(lon));
 //    send_string_len(cogSpeed, strlen(cogSpeed));
-//    send_string_len(cogSpeed, strlen(cogSpeed));
+    send_char_NRZI(sym_tab, true);
     send_string_len(status_, strlen(status_));
 }
 
@@ -702,6 +727,7 @@ void loop()
 {
     Swarm_M138_GeospatialData_t *info = new Swarm_M138_GeospatialData_t; // Allocate memory for the information
     swarm.getGeospatialInfo(info);    
+//    Serial.printf("lat: %f, lon: %f, heading: %d, speed %f \n", info->lat, info->lon, info-> course, info->speed/1.852);/
     uint32_t startPacket = millis();
     send_packet(info);
     //send_packet(_BEACON);
@@ -709,5 +735,4 @@ void loop()
     delete info;
     Serial.println("Packet sent in: " + String(packetDuration) + " ms");
     delay(tx_delay);
-    //randomize(tx_delay, 5000, 9000);
 }
