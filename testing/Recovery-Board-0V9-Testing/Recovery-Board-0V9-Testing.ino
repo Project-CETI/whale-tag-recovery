@@ -1,3 +1,4 @@
+#include <SparkFun_Swarm_Satellite_Arduino_Library.h>
 /*
 
 */
@@ -19,6 +20,7 @@
 #define _FIXPOS_STATUS  3
 #define _STATUS         4
 #define _BEACON         5
+SWARM_M138 swarm;
 
 // LED Pin
 const uint8_t ledPin = 29;
@@ -44,20 +46,18 @@ const uint8_t out5Pin = 23;
 const uint8_t out6Pin = 24;
 const uint8_t out7Pin = 25;
 
+void setLed(bool state){
+    digitalWrite(ledPin, state);
+}
 bool nada = _2400;
-
 char mycall[8] = "KC1QXQ";
-char myssid = 11;
-
+char myssid = 3;
 char dest[8] = "APLIGA";
 char dest_beacon[8] = "BEACON";
-
 char digi[8] = "WIDE2";
 char digissid = 2;
-
 char comment[128] = "v0.9";
 char mystatus[128] = "Status";
-
 char lati[9] = "4221.78N";
 char lon[10] = "07107.52W";
 
@@ -80,6 +80,7 @@ void set_nada(bool nada);
 
 void send_char_NRZI(unsigned char in_byte, bool enBitStuff);
 void send_string_len(const char *in_string, int len);
+void sendPayload(Swarm_M138_GeospatialData_t *locationInfo, char* status);
 
 void calc_crc(bool in_bit);
 void send_crc(void);
@@ -92,8 +93,8 @@ void send_payload(char type);
 void print_debug(char type);
 
 const uint16_t bitPeriod = 832;
-const uint16_t delay1200 = 19;//23
-const uint16_t delay2200 = 9;//11
+#define delay1200 19 //23
+#define delay2200 9 //11
 const uint8_t numSinValues = 32;
 
 const uint8_t sinValues[numSinValues] = {
@@ -313,6 +314,7 @@ void send_payload(char type)
         send_string_len(lati, strlen(lati));
         send_char_NRZI(sym_ovl, true);
         send_string_len(lon, strlen(lon));
+        
         send_char_NRZI(sym_tab, true);
     }
     else if (type == _STATUS)
@@ -334,6 +336,53 @@ void send_payload(char type)
     {
         send_string_len(mystatus, strlen(mystatus));
     }
+}
+
+void sendPayload(Swarm_M138_GeospatialData_t *locationInfo, char* status_){
+    float latFloat = locationInfo->lat;
+    bool south = false;
+    if (latFloat <0){
+        south = true;
+        latFloat = fabs(latFloat);
+    }
+    float latInt, latDec;
+    latDec = modf(latFloat, &latInt);// split the integer and decimal component fom the latitude
+    latDec = latDec *60; // convert decimal degrees to minutes
+    char lat[9];
+    if (south){
+        sprintf(lat, "%02f.%06fS", latInt, latDec);
+    } else{
+        sprintf(lat, "%02f.%06fN", latInt, latDec);
+    }
+    float lonFloat = locationInfo->lon;
+    bool west = false;
+    if(lonFloat<0){
+        west = true;
+        lonFloat = fabs(lonFloat);
+    }
+    float lonInt, lonDec;
+    lonDec = modf(lonFloat,&lonInt);
+    lonDec = lonDec*60;
+    char lon[10];
+    if(west){
+        sprintf(lon, "%03f%6fW", lonInt, lonDec);
+    } else{
+        sprintf(lon, "%03f%6fE", lonInt, lonDec);
+    }
+    double speed = locationInfo->speed /1.852; //convert speed from km/h to knots
+    float course = locationInfo->course;
+    if(course ==0){ //APRS wants course in 1-360 and swarm provides it as 0-359
+        course = 360;
+    }
+    char cogSpeed[7];
+    sprintf(cogSpeed, "%03f/%03f", course, speed);
+    send_char_NRZI(_DT_POS, true);
+    send_string_len(lat, strlen(lat));
+    send_char_NRZI(sym_ovl, true);
+    send_string_len(lon, strlen(lon));
+//    send_string_len(cogSpeed, strlen(cogSpeed));
+//    send_string_len(cogSpeed, strlen(cogSpeed));
+    send_string_len(status_, strlen(status_));
 }
 
 /*
@@ -397,10 +446,7 @@ void send_flag(unsigned char flag_len)
    delimiter. In this example, 100 flags is used the preamble and 3 flags as
    the postamble.
 */
-void send_packet(char packet_type)
-{
-    print_debug(packet_type);
-
+void send_packet(Swarm_M138_GeospatialData_t *locationInfo){
     setLed(true);
     setPttState(true);
 
@@ -429,14 +475,52 @@ void send_packet(char packet_type)
 
     send_flag(150);
     crc = 0xffff;
-    send_header(packet_type);
-    send_payload(packet_type);
+    send_header(_FIXPOS_STATUS);
+    sendPayload(locationInfo, "");
     send_crc();
     send_flag(3);
-
-    setPttState(false);
     setLed(false);
+    setPttState(false);
 }
+//
+//void send_packet(packet_type)
+//{
+//    print_debug(packet_type);
+//
+//    setLed(true);
+////    setPttState(true);
+//
+//    // TODO TEST IF THIS IMPROVES RECEPTION
+//    // Send initialize sequence for receiver
+//    send_char_NRZI(0x99, true);
+//    send_char_NRZI(0x99, true);
+//    send_char_NRZI(0x99, true);
+//
+//    // delay(100);
+//
+//    /*
+//       AX25 FRAME
+//
+//       ........................................................
+//       |  FLAG(s) |  HEADER  | PAYLOAD  | FCS(CRC) |  FLAG(s) |
+//       --------------------------------------------------------
+//       |  N bytes | 22 bytes |  N bytes | 2 bytes  |  N bytes |
+//       --------------------------------------------------------
+//
+//       FLAG(s)  : 0x7e
+//       HEADER   : see header
+//       PAYLOAD  : 1 byte data type + N byte info
+//       FCS      : 2 bytes calculated from HEADER + PAYLOAD
+//    */
+//
+//    send_flag(150);
+//    crc = 0xffff;
+//    send_header(packet_type);
+//    send_payload(packet_type);
+//    send_crc();
+//    send_flag(3);
+//    setLed(false);
+//}
 
 void print_debug(char type)
 {
@@ -535,36 +619,34 @@ void initializeDra818v(bool highPower = true) {
 // Configures DRA818V settings
 bool configureDra818v(float txFrequency = 144.39, float rxFrequency = 144.39, bool emphasis = false, bool hpf = false, bool lpf = false){
     // Open serial connection
-    Serial1.setTX(vhfRxPin);
-    Serial1.setRX(vhfTxPin);
-    Serial1.begin(9600);
-    Serial1.setTimeout(vhfTimeout);
+    SerialPIO serial = SerialPIO(vhfRxPin, vhfTxPin);
+    serial.begin(9600);
+    serial.setTimeout(vhfTimeout);
 
     // Handshake
-    Serial1.println("AT+DMOCONNECT");
-    if(!Serial1.find("+DMOCONNECT:0")) return false;
+    serial.println("AT+DMOCONNECT");
+    if(!serial.find("+DMOCONNECT:0")) return false;
     delay(vhfEnableDelay);
 
     // Set frequencies and group
-    Serial1.print("AT+DMOSETGROUP=0,");
-    Serial1.print(txFrequency, 4);
-    Serial1.print(',');
-    Serial1.print(rxFrequency, 4);
-    Serial1.println(",0000,0,0000");
+    serial.print("AT+DMOSETGROUP=0,");
+    serial.print(txFrequency, 4);
+    serial.print(',');
+    serial.print(rxFrequency, 4);
+    serial.println(",0000,0,0000");
     if(!Serial1.find("+DMOSETGROUP:0")) return false;
-    delay(Serial1);
+    delay(serial);
 
     // Set filter settings
-    Serial1.print("AT+SETFILTER=");
-    Serial1.print(emphasis);
-    Serial1.print(',');
-    Serial1.print(hpf);
-    Serial1.print(',');
-    Serial1.println(lpf);
-    if(!Serial1.find("+DMOSETFILTER:0")) return false;
+    serial.print("AT+SETFILTER=");
+    serial.print(emphasis);
+    serial.print(',');
+    serial.print(hpf);
+    serial.print(',');
+    serial.println(lpf);
+    if(!serial.find("+DMOSETFILTER:0")) return false;
     delay(vhfEnableDelay);
-
-    Serial1.end();
+    serial.end();
     return true;
 }
 
@@ -583,33 +665,34 @@ void initLed(){
     digitalWrite(ledPin, false);
 }
 
-void setLed(bool state){
-    digitalWrite(ledPin, state);
-}
 
 void setup()
 {
     initLed();
     setLed(true);
-
     Serial.begin(115200);
     delay(5000);
-
+    Serial1.setTX(0);
+    Serial1.setRX(1);
+    while (!swarm.begin(Serial1)) // Begin communication with the modem
+    {
+      Serial.println(F("Could not communicate with the modem. Please check the serial connections. Freezing..."));
+      delay(1200);
+    }
     Serial.println("Configuring DRA818V...");
     // Initialize DRA818V
     initializeDra818v();
-    while(!configureDra818v()){
-        Serial.println("Failed to configure, trying again");
-        delay(3000);
-    }
+    configureDra818v();
+//    while(!configureDra818v()){
+//        Serial.println("Failed to configure, trying again");
+//        delay(3000);
+//    }
     setPttState(false);
     setVhfState(true);
     Serial.println("DRA818V configured");
-
     Serial.println("Configuring DAC...");
     initializeOutput();
     Serial.println("DAC configured");
-
     Serial.println("Setup complete");
     setLed(false);
     delay(1000);
@@ -617,10 +700,13 @@ void setup()
 
 void loop()
 {
+    Swarm_M138_GeospatialData_t *info = new Swarm_M138_GeospatialData_t; // Allocate memory for the information
+    swarm.getGeospatialInfo(info);    
     uint32_t startPacket = millis();
-    send_packet(_FIXPOS);
+    send_packet(info);
     //send_packet(_BEACON);
     uint32_t packetDuration = millis() - startPacket;
+    delete info;
     Serial.println("Packet sent in: " + String(packetDuration) + " ms");
     delay(tx_delay);
     //randomize(tx_delay, 5000, 9000);
