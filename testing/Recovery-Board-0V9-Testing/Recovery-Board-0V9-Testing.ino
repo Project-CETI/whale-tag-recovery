@@ -1,9 +1,7 @@
 #include <SparkFun_Swarm_Satellite_Arduino_Library.h>
-/*
-
-*/
 #include <math.h>
 #include <stdio.h>
+#include "pico/stdlib.h"
 
 #define _1200 1
 #define _2400 0
@@ -24,7 +22,6 @@ SWARM_M138 swarm;
 
 // LED Pin
 const uint8_t ledPin = 29;
-
 // VHF control pins
 const uint8_t vhfPowerLevelPin = 15;
 const uint8_t vhfPttPin = 16;
@@ -52,8 +49,8 @@ char mycall[8] = "KC1QXQ";
 char myssid = 3;
 char dest[8] = "APLIGA";
 char dest_beacon[8] = "BEACON";
-char digi[8] = "WIDE2";
-char digissid = 2;
+char digi[8] = "WIDE1";
+char digissid = 1;
 char comment[128] = "v0.9";
 char mystatus[128] = "Status";
 char lati[9] = "4221.78N";
@@ -86,7 +83,6 @@ void send_crc(void);
 void send_packet(char packet_type);
 void send_flag(unsigned char flag_len);
 void send_header(char mssinValuesg_type);
-void send_payload(char type);
 
 void print_debug(char type);
 
@@ -308,47 +304,51 @@ void floatSplit(float whole, int integer, int decimal) {
 }
 
 void sendPayload(Swarm_M138_GeospatialData_t *locationInfo, char *status_) {
-  if (locationInfo->lat == 0 && locationInfo->lon == 0) {
-    return;
-  }
-
   float latFloat = locationInfo->lat;
   bool south = false;
   if (latFloat < 0) {
     south = true;
     latFloat = fabs(latFloat);
   }
-  int latInt, latDec;
-  latInt = (int)latFloat;
-  latDec = (int)(latFloat - latInt);
-  latDec = latDec * 60;  // convert decimal degrees to minutes
+  int latDeg;
+  float latMin;
+  latDeg = 42;
+  latMin = 21.782;
+  uint8_t latMinInt = (int)latMin;
+  uint8_t latMinDec = round((latMin-latMinInt)*100);
+  //  latDeg = (int) latFloat;
+  //  latMin = latFloat - latDeg; // get decimal degress from float
+  //  latMin = latMin * 60; // convert decimal degrees to minutes
   char lati[9];
   if (south) {
-    sprintf(lati, "%02d.%06dS", latInt, latDec);
+      snprintf(lati, 9, "%02d%02d.%02dS", latDeg, latMinInt, latMinDec);
   } else {
-    sprintf(lati, "%02d.%06dN", latInt, latDec);
+      snprintf(lati, 9, "%02d%02d.%02dN", latDeg, latMinInt, latMinDec);
   }
   float lonFloat = locationInfo->lon;
-  bool west = false;
+  bool west = true;
   if (lonFloat < 0) {
     west = true;
     lonFloat = fabs(lonFloat);
   }
-
-  int lonInt, lonDec;
-  lonInt = (int)lonFloat;
-  Serial.print("lonInt ");
-  Serial.println(lonInt);
-
-  lonDec = (int)(lonFloat - lonInt);
-  Serial.print("lonDec ");
-  Serial.println(lonDec);
-  lonDec = lonDec * 60;
+  int lonDeg;
+  lonDeg = 71;
+  float lonMin;
+  lonMin = 07.5244;
+  //  lonDeg = (int) lonDeg;
+  //  lonMin = lonFloat - lonDeg;
+  //  lonMin = lonMin * 60; // convert decimal degrees to minutes
+  //  Serial.println();
+  //  Serial.print(" Lon: ");
+  //  Serial.print(lonDeg);
+  //  Serial.print(lonMin);
+  uint8_t lonMinInt = (int)lonMin;
+  uint8_t lonMinDec = round((lonMin-lonMinInt)*100);
   char lon[10];
   if (west) {
-    sprintf(lon, "%03d%6dW", lonInt, lonDec);
+    snprintf(lon, 10, "%03d%02d.%02dW", lonDeg, lonMinInt, lonMinDec);
   } else {
-    sprintf(lon, "%03d%6dE", lonInt, lonDec);
+    snprintf(lon, 10, "%03d%02d.%02dE", lonDeg, lonMinInt, lonMinDec);
   }
 
   double speed =
@@ -359,13 +359,28 @@ void sendPayload(Swarm_M138_GeospatialData_t *locationInfo, char *status_) {
     course = 360;
   }
   char cogSpeed[7];
-  sprintf(cogSpeed, "%03f/%03d ", course, speed);
-  Serial.print("Lat: ");
-  Serial.print(lati);
-  Serial.print("lon: ");
-  Serial.print(lon);
-  Serial.print("cogspeed: ");
-  Serial.println(cogSpeed);
+    Serial.begin(115200);
+    /****** MYCALL ********/
+    Serial.print(mycall);
+    Serial.print('-');
+    Serial.print(myssid, DEC);
+    Serial.print('>');
+    /******** DEST ********/
+    Serial.print(dest);
+    Serial.print(',');
+    /******** DIGI ********/
+    Serial.print(digi);
+    Serial.print('-');
+    Serial.print(digissid, DEC);
+    Serial.print(':');
+    /******* PAYLOAD ******/
+    Serial.print(_DT_POS);
+    Serial.print(lati);
+    Serial.print(sym_ovl);
+    Serial.print(lon);
+    Serial.print(sym_tab);
+    Serial.println(' ');
+    Serial.flush();
   send_char_NRZI(_DT_POS, true);
   send_string_len(lati, strlen(lati));
   send_char_NRZI(sym_ovl, true);
@@ -669,8 +684,6 @@ void loop() {
   Swarm_M138_GeospatialData_t *info =
       new Swarm_M138_GeospatialData_t;  // Allocate memory for the information
   swarm.getGeospatialInfo(info);
-  //    Serial.printf("lat: %f, lon: %f, heading: %d, speed %f \n", info->lat,
-  //    info->lon, info-> course, info->speed/1.852);/
   uint32_t startPacket = millis();
   send_packet(info);
   // send_packet(_BEACON);
@@ -678,4 +691,5 @@ void loop() {
   delete info;
   Serial.println("Packet sent in: " + String(packetDuration) + " ms");
   delay(tx_delay);
+  Serial.println();
 }
