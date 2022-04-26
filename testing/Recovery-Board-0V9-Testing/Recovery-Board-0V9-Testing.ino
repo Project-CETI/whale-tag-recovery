@@ -5,21 +5,21 @@
 #include <math.h>
 #include <stdio.h>
 
-#define _1200   1
-#define _2400   0
+#define _1200 1
+#define _2400 0
 
-#define _FLAG       0x7e
-#define _CTRL_ID    0x03
-#define _PID        0xf0
-#define _DT_EXP     ','
-#define _DT_STATUS  '>'
-#define _DT_POS     '!'
+#define _FLAG 0x7e
+#define _CTRL_ID 0x03
+#define _PID 0xf0
+#define _DT_EXP ','
+#define _DT_STATUS '>'
+#define _DT_POS '!'
 
-#define _GPRMC          1
-#define _FIXPOS         2
-#define _FIXPOS_STATUS  3
-#define _STATUS         4
-#define _BEACON         5
+#define _GPRMC 1
+#define _FIXPOS 2
+#define _FIXPOS_STATUS 3
+#define _STATUS 4
+#define _BEACON 5
 SWARM_M138 swarm;
 
 // LED Pin
@@ -46,9 +46,7 @@ const uint8_t out5Pin = 23;
 const uint8_t out6Pin = 24;
 const uint8_t out7Pin = 25;
 
-void setLed(bool state){
-    digitalWrite(ledPin, state);
-}
+void setLed(bool state) { digitalWrite(ledPin, state); }
 bool nada = _2400;
 char mycall[8] = "KC1QXQ";
 char myssid = 3;
@@ -80,7 +78,7 @@ void set_nada(bool nada);
 
 void send_char_NRZI(unsigned char in_byte, bool enBitStuff);
 void send_string_len(const char *in_string, int len);
-void sendPayload(Swarm_M138_GeospatialData_t *locationInfo, char* status);
+void sendPayload(Swarm_M138_GeospatialData_t *locationInfo, char *status);
 
 void calc_crc(bool in_bit);
 void send_crc(void);
@@ -93,70 +91,66 @@ void send_payload(char type);
 void print_debug(char type);
 
 const uint16_t bitPeriod = 832;
-#define delay1200 19 //23
-#define delay2200 9 //11
+#define delay1200 19  // 23
+#define delay2200 9   // 11
 const uint8_t numSinValues = 32;
 
 const uint8_t sinValues[numSinValues] = {
-        152,176,198,217,233,245,252,255,252,245,233,217,198,176,152,127,103,79,57,38,22,10,3,1,3,10,22,38,57,79,103,128
-};
+    152, 176, 198, 217, 233, 245, 252, 255, 252, 245, 233,
+    217, 198, 176, 152, 127, 103, 79,  57,  38,  22,  10,
+    3,   1,   3,   10,  22,  38,  57,  79,  103, 128};
 
 uint8_t currOutput = 0;
 
 void initializeOutput() {
-    pinMode(out0Pin, OUTPUT);
-    pinMode(out1Pin, OUTPUT);
-    pinMode(out2Pin, OUTPUT);
-    pinMode(out3Pin, OUTPUT);
-    pinMode(out4Pin, OUTPUT);
-    pinMode(out5Pin, OUTPUT);
-    pinMode(out6Pin, OUTPUT);
-    pinMode(out7Pin, OUTPUT);
-
+  pinMode(out0Pin, OUTPUT);
+  pinMode(out1Pin, OUTPUT);
+  pinMode(out2Pin, OUTPUT);
+  pinMode(out3Pin, OUTPUT);
+  pinMode(out4Pin, OUTPUT);
+  pinMode(out5Pin, OUTPUT);
+  pinMode(out6Pin, OUTPUT);
+  pinMode(out7Pin, OUTPUT);
 }
 
 void setOutput(uint8_t state) {
-    digitalWrite(out0Pin, state & 0b00000001);
-    digitalWrite(out1Pin, state & 0b00000010);
-    digitalWrite(out2Pin, state & 0b00000100);
-    digitalWrite(out3Pin, state & 0b00001000);
-    digitalWrite(out4Pin, state & 0b00010000);
-    digitalWrite(out5Pin, state & 0b00100000);
-    digitalWrite(out6Pin, state & 0b01000000);
-    digitalWrite(out7Pin, state & 0b10000000);
+  digitalWrite(out0Pin, state & 0b00000001);
+  digitalWrite(out1Pin, state & 0b00000010);
+  digitalWrite(out2Pin, state & 0b00000100);
+  digitalWrite(out3Pin, state & 0b00001000);
+  digitalWrite(out4Pin, state & 0b00010000);
+  digitalWrite(out5Pin, state & 0b00100000);
+  digitalWrite(out6Pin, state & 0b01000000);
+  digitalWrite(out7Pin, state & 0b10000000);
 }
 
 void setNextSin() {
-    currOutput++;
-    if (currOutput == numSinValues)
-        currOutput = 0;
-    setOutput(sinValues[currOutput]);
+  currOutput++;
+  if (currOutput == numSinValues) currOutput = 0;
+  setOutput(sinValues[currOutput]);
 }
 
-void set_nada_1200(void)
-{
-    uint32_t endTime = micros() + bitPeriod;
-    while (micros() < endTime) {
-        setNextSin();
-        delayMicroseconds(delay1200);
-    }
+void set_nada_1200(void) {
+  uint32_t endTime = micros() + bitPeriod;
+  while (micros() < endTime) {
+    setNextSin();
+    delayMicroseconds(delay1200);
+  }
 }
 
-void set_nada_2400(void)
-{
-    uint32_t endTime = micros() + bitPeriod;
-    while (micros() < endTime) {
-        setNextSin();
-        delayMicroseconds(delay2200);
-    }
+void set_nada_2400(void) {
+  uint32_t endTime = micros() + bitPeriod;
+  while (micros() < endTime) {
+    setNextSin();
+    delayMicroseconds(delay2200);
+  }
 }
 
-void set_nada(bool nada)
-{
-    if (nada)
-        set_nada_1200();
-    else
-        set_nada_2400();
+void set_nada(bool nada) {
+  if (nada)
+    set_nada_1200();
+  else
+    set_nada_2400();
 }
 
 /*
@@ -166,248 +160,219 @@ void set_nada(bool nada)
    Using 0x1021 as polynomial generator. The CRC registers are initialized with
    0xFFFF
 */
-void calc_crc(bool in_bit)
-{
-    unsigned short xor_in;
+void calc_crc(bool in_bit) {
+  unsigned short xor_in;
 
-    xor_in = crc ^ in_bit;
-    crc >>= 1;
+  xor_in = crc ^ in_bit;
+  crc >>= 1;
 
-    if (xor_in & 0x01)
-        crc ^= 0x8408;
+  if (xor_in & 0x01) crc ^= 0x8408;
 }
 
-void send_crc(void)
-{
-    unsigned char crc_lo = crc ^ 0xff;
-    unsigned char crc_hi = (crc >> 8) ^ 0xff;
+void send_crc(void) {
+  unsigned char crc_lo = crc ^ 0xff;
+  unsigned char crc_hi = (crc >> 8) ^ 0xff;
 
-    send_char_NRZI(crc_lo, true);
-    send_char_NRZI(crc_hi, true);
+  send_char_NRZI(crc_lo, true);
+  send_char_NRZI(crc_hi, true);
 }
 
-void send_header(char msg_type)
-{
-    char temp;
+void send_header(char msg_type) {
+  char temp;
 
-    /*
-       APRS AX.25 Header
-       ........................................................
-       |   DEST   |  SOURCE  |   DIGI   | CTRL FLD |    PID   |
-       --------------------------------------------------------
-       |  7 bytes |  7 bytes |  7 bytes |   0x03   |   0xf0   |
-       --------------------------------------------------------
+  /*
+     APRS AX.25 Header
+     ........................................................
+     |   DEST   |  SOURCE  |   DIGI   | CTRL FLD |    PID   |
+     --------------------------------------------------------
+     |  7 bytes |  7 bytes |  7 bytes |   0x03   |   0xf0   |
+     --------------------------------------------------------
 
-       DEST   : 6 byte "callsign" + 1 byte ssid
-       SOURCE : 6 byte your callsign + 1 byte ssid
-       DIGI   : 6 byte "digi callsign" + 1 byte ssid
+     DEST   : 6 byte "callsign" + 1 byte ssid
+     SOURCE : 6 byte your callsign + 1 byte ssid
+     DIGI   : 6 byte "digi callsign" + 1 byte ssid
 
-       ALL DEST, SOURCE, & DIGI are left shifted 1 bit, ASCII format.
-       DIGI ssid is left shifted 1 bit + 1
+     ALL DEST, SOURCE, & DIGI are left shifted 1 bit, ASCII format.
+     DIGI ssid is left shifted 1 bit + 1
 
-       CTRL FLD is 0x03 and not shifted.
-       PID is 0xf0 and not shifted.
-    */
+     CTRL FLD is 0x03 and not shifted.
+     PID is 0xf0 and not shifted.
+  */
 
-    /********* DEST ***********/
-    if (msg_type == _BEACON)
-    {
-        temp = strlen(dest_beacon);
-        for (int j = 0; j < temp; j++)
-            send_char_NRZI(dest_beacon[j] << 1, true);
-    }
-    else
-    {
-        temp = strlen(dest);
-        for (int j = 0; j < temp; j++)
-            send_char_NRZI(dest[j] << 1, true);
-    }
-    if (temp < 6)
-    {
-        for (int j = 0; j < (6 - temp); j++)
-            send_char_NRZI(' ' << 1, true);
-    }
-    send_char_NRZI('0' << 1, true);
+  /********* DEST ***********/
+  if (msg_type == _BEACON) {
+    temp = strlen(dest_beacon);
+    for (int j = 0; j < temp; j++) send_char_NRZI(dest_beacon[j] << 1, true);
+  } else {
+    temp = strlen(dest);
+    for (int j = 0; j < temp; j++) send_char_NRZI(dest[j] << 1, true);
+  }
+  if (temp < 6) {
+    for (int j = 0; j < (6 - temp); j++) send_char_NRZI(' ' << 1, true);
+  }
+  send_char_NRZI('0' << 1, true);
 
+  /********* SOURCE *********/
+  temp = strlen(mycall);
+  for (int j = 0; j < temp; j++) send_char_NRZI(mycall[j] << 1, true);
+  if (temp < 6) {
+    for (int j = 0; j < (6 - temp); j++) send_char_NRZI(' ' << 1, true);
+  }
+  send_char_NRZI((myssid + '0') << 1, true);
 
+  /********* DIGI ***********/
+  temp = strlen(digi);
+  for (int j = 0; j < temp; j++) send_char_NRZI(digi[j] << 1, true);
+  if (temp < 6) {
+    for (int j = 0; j < (6 - temp); j++) send_char_NRZI(' ' << 1, true);
+  }
+  send_char_NRZI(((digissid + '0') << 1) + 1, true);
 
-    /********* SOURCE *********/
-    temp = strlen(mycall);
-    for (int j = 0; j < temp; j++)
-        send_char_NRZI(mycall[j] << 1, true);
-    if (temp < 6)
-    {
-        for (int j = 0; j < (6 - temp); j++)
-            send_char_NRZI(' ' << 1, true);
-    }
-    send_char_NRZI((myssid + '0') << 1, true);
-
-
-    /********* DIGI ***********/
-    temp = strlen(digi);
-    for (int j = 0; j < temp; j++)
-        send_char_NRZI(digi[j] << 1, true);
-    if (temp < 6)
-    {
-        for (int j = 0; j < (6 - temp); j++)
-            send_char_NRZI(' ' << 1, true);
-    }
-    send_char_NRZI(((digissid + '0') << 1) + 1, true);
-
-    /***** CTRL FLD & PID *****/
-    send_char_NRZI(_CTRL_ID, true);
-    send_char_NRZI(_PID, true);
+  /***** CTRL FLD & PID *****/
+  send_char_NRZI(_CTRL_ID, true);
+  send_char_NRZI(_PID, true);
 }
 
-void send_payload(char type)
-{
-    /*
-       APRS AX.25 Payloads
+void send_payload(char type) {
+  /*
+     APRS AX.25 Payloads
 
-       TYPE : POSITION
-       ........................................................
-       |DATA TYPE |    LAT   |SYMB. OVL.|    LON   |SYMB. TBL.|
-       --------------------------------------------------------
-       |  1 byte  |  8 bytes |  1 byte  |  9 bytes |  1 byte  |
-       --------------------------------------------------------
+     TYPE : POSITION
+     ........................................................
+     |DATA TYPE |    LAT   |SYMB. OVL.|    LON   |SYMB. TBL.|
+     --------------------------------------------------------
+     |  1 byte  |  8 bytes |  1 byte  |  9 bytes |  1 byte  |
+     --------------------------------------------------------
 
-       DATA TYPE  : !
-       LAT        : ddmm.ssN or ddmm.ssS
-       LON        : dddmm.ssE or dddmm.ssW
-
-
-       TYPE : STATUS
-       ..................................
-       |DATA TYPE |    STATUS TEXT      |
-       ----------------------------------
-       |  1 byte  |       N bytes       |
-       ----------------------------------
-
-       DATA TYPE  : >
-       STATUS TEXT: Free form text
+     DATA TYPE  : !
+     LAT        : ddmm.ssN or ddmm.ssS
+     LON        : dddmm.ssE or dddmm.ssW
 
 
-       TYPE : POSITION & STATUS
-       ..............................................................................
-       |DATA TYPE |    LAT   |SYMB. OVL.|    LON   |SYMB. TBL.|    STATUS TEXT      |
-       ------------------------------------------------------------------------------
-       |  1 byte  |  8 bytes |  1 byte  |  9 bytes |  1 byte  |       N bytes       |
-       ------------------------------------------------------------------------------
+     TYPE : STATUS
+     ..................................
+     |DATA TYPE |    STATUS TEXT      |
+     ----------------------------------
+     |  1 byte  |       N bytes       |
+     ----------------------------------
 
-       DATA TYPE  : !
-       LAT        : ddmm.ssN or ddmm.ssS
-       LON        : dddmm.ssE or dddmm.ssW
-       STATUS TEXT: Free form text
+     DATA TYPE  : >
+     STATUS TEXT: Free form text
 
 
-       All of the data are sent in the form of ASCII Text, not shifted.
+     TYPE : POSITION & STATUS
+     ..............................................................................
+     |DATA TYPE |    LAT   |SYMB. OVL.|    LON   |SYMB. TBL.|    STATUS TEXT |
+     ------------------------------------------------------------------------------
+     |  1 byte  |  8 bytes |  1 byte  |  9 bytes |  1 byte  |       N bytes |
+     ------------------------------------------------------------------------------
 
-    */
-    if (type == _GPRMC)
-    {
-        send_char_NRZI('$', true);
-        send_string_len(rmc, strlen(rmc) - 1);
-    }
-    else if (type == _FIXPOS)
-    {
-        send_char_NRZI(_DT_POS, true);
-        send_string_len(lati, strlen(lati));
-        send_char_NRZI(sym_ovl, true);
-        send_string_len(lon, strlen(lon));
-        
-        send_char_NRZI(sym_tab, true);
-    }
-    else if (type == _STATUS)
-    {
-        send_char_NRZI(_DT_STATUS, true);
-        send_string_len(mystatus, strlen(mystatus));
-    }
-    else if (type == _FIXPOS_STATUS)
-    {
-        send_char_NRZI(_DT_POS, true);
-        send_string_len(lati, strlen(lati));
-        send_char_NRZI(sym_ovl, true);
-        send_string_len(lon, strlen(lon));
-        send_char_NRZI(sym_tab, true);
+     DATA TYPE  : !
+     LAT        : ddmm.ssN or ddmm.ssS
+     LON        : dddmm.ssE or dddmm.ssW
+     STATUS TEXT: Free form text
 
-        send_string_len(comment, strlen(comment));
-    }
-    else
-    {
-        send_string_len(mystatus, strlen(mystatus));
-    }
-}
 
-void floatSplit(float whole, int integer, int decimal){
-  integer = (int)whole;
-  decimal = (int)whole-integer;
-}
+     All of the data are sent in the form of ASCII Text, not shifted.
 
-void sendPayload(Swarm_M138_GeospatialData_t *locationInfo, char* status_){
-    if(locationInfo-> lat ==0 && locationInfo->lon == 0){
-      return;
-    }
-    
-    float latFloat = locationInfo->lat;
-    bool south = false;
-    if (latFloat <0){
-        south = true;
-        latFloat = fabs(latFloat);
-    }
-    int latInt, latDec;
-    latInt  = (int)latFloat;
-    latDec = (int)(latFloat-latInt);
-    latDec = latDec *60; // convert decimal degrees to minutes
-    char lati[9];
-    if (south){
-        sprintf(lati, "%02d.%06dS", latInt, latDec);
-    } else{
-        sprintf(lati, "%02d.%06dN", latInt, latDec);
-    }
-    float lonFloat = locationInfo->lon;
-    bool west = false;
-    if(lonFloat<0){
-        west = true;
-        lonFloat = fabs(lonFloat);
-    }
-    
-    int lonInt, lonDec;
-    lonInt = (int)lonFloat;
-    Serial.print("lonInt ");
-    Serial.println(lonInt);
-
-    lonDec = (int)(lonFloat-lonInt);
-    Serial.print("lonDec ");
-    Serial.println(lonDec);
-    lonDec = lonDec*60;
-    char lon[10];
-    if(west){
-        sprintf(lon, "%03d%6dW", lonInt, lonDec);
-    } else{
-        sprintf(lon, "%03d%6dE", lonInt, lonDec);
-    }
-    
-
-    double speed = locationInfo->speed /1.852; //convert speed from km/h to knots
-    int course = (int)locationInfo->course;
-    if(course == 0){ //APRS wants course in 1-360 and swarm provides it as 0-359
-        course = 360;
-    }
-    char cogSpeed[7];
-    sprintf(cogSpeed, "%03f/%03d ", course, speed);
-    Serial.print("Lat: ");
-    Serial.print(lati);
-    Serial.print("lon: ");
-    Serial.print(lon);
-    Serial.print("cogspeed: ");
-    Serial.println(cogSpeed);
+  */
+  if (type == _GPRMC) {
+    send_char_NRZI('$', true);
+    send_string_len(rmc, strlen(rmc) - 1);
+  } else if (type == _FIXPOS) {
     send_char_NRZI(_DT_POS, true);
     send_string_len(lati, strlen(lati));
     send_char_NRZI(sym_ovl, true);
     send_string_len(lon, strlen(lon));
-//    send_string_len(cogSpeed, strlen(cogSpeed));
+
     send_char_NRZI(sym_tab, true);
-    send_string_len(status_, strlen(status_));
+  } else if (type == _STATUS) {
+    send_char_NRZI(_DT_STATUS, true);
+    send_string_len(mystatus, strlen(mystatus));
+  } else if (type == _FIXPOS_STATUS) {
+    send_char_NRZI(_DT_POS, true);
+    send_string_len(lati, strlen(lati));
+    send_char_NRZI(sym_ovl, true);
+    send_string_len(lon, strlen(lon));
+    send_char_NRZI(sym_tab, true);
+
+    send_string_len(comment, strlen(comment));
+  } else {
+    send_string_len(mystatus, strlen(mystatus));
+  }
+}
+
+void floatSplit(float whole, int integer, int decimal) {
+  integer = (int)whole;
+  decimal = (int)whole - integer;
+}
+
+void sendPayload(Swarm_M138_GeospatialData_t *locationInfo, char *status_) {
+  if (locationInfo->lat == 0 && locationInfo->lon == 0) {
+    return;
+  }
+
+  float latFloat = locationInfo->lat;
+  bool south = false;
+  if (latFloat < 0) {
+    south = true;
+    latFloat = fabs(latFloat);
+  }
+  int latInt, latDec;
+  latInt = (int)latFloat;
+  latDec = (int)(latFloat - latInt);
+  latDec = latDec * 60;  // convert decimal degrees to minutes
+  char lati[9];
+  if (south) {
+    sprintf(lati, "%02d.%06dS", latInt, latDec);
+  } else {
+    sprintf(lati, "%02d.%06dN", latInt, latDec);
+  }
+  float lonFloat = locationInfo->lon;
+  bool west = false;
+  if (lonFloat < 0) {
+    west = true;
+    lonFloat = fabs(lonFloat);
+  }
+
+  int lonInt, lonDec;
+  lonInt = (int)lonFloat;
+  Serial.print("lonInt ");
+  Serial.println(lonInt);
+
+  lonDec = (int)(lonFloat - lonInt);
+  Serial.print("lonDec ");
+  Serial.println(lonDec);
+  lonDec = lonDec * 60;
+  char lon[10];
+  if (west) {
+    sprintf(lon, "%03d%6dW", lonInt, lonDec);
+  } else {
+    sprintf(lon, "%03d%6dE", lonInt, lonDec);
+  }
+
+  double speed =
+      locationInfo->speed / 1.852;  // convert speed from km/h to knots
+  int course = (int)locationInfo->course;
+  if (course ==
+      0) {  // APRS wants course in 1-360 and swarm provides it as 0-359
+    course = 360;
+  }
+  char cogSpeed[7];
+  sprintf(cogSpeed, "%03f/%03d ", course, speed);
+  Serial.print("Lat: ");
+  Serial.print(lati);
+  Serial.print("lon: ");
+  Serial.print(lon);
+  Serial.print("cogspeed: ");
+  Serial.println(cogSpeed);
+  send_char_NRZI(_DT_POS, true);
+  send_string_len(lati, strlen(lati));
+  send_char_NRZI(sym_ovl, true);
+  send_string_len(lon, strlen(lon));
+  //    send_string_len(cogSpeed, strlen(cogSpeed));
+  send_char_NRZI(sym_tab, true);
+  send_string_len(status_, strlen(status_));
 }
 
 /*
@@ -418,51 +383,41 @@ void sendPayload(Swarm_M138_GeospatialData_t *locationInfo, char* status_){
    bit 1 : transmitted as no change in tone
    bit 0 : transmitted as change in tone
 */
-void send_char_NRZI(unsigned char in_byte, bool enBitStuff)
-{
-    bool bits;
+void send_char_NRZI(unsigned char in_byte, bool enBitStuff) {
+  bool bits;
 
-    for (int i = 0; i < 8; i++)
-    {
-        bits = in_byte & 0x01;
+  for (int i = 0; i < 8; i++) {
+    bits = in_byte & 0x01;
 
-        calc_crc(bits);
+    calc_crc(bits);
 
-        if (bits)
-        {
-            set_nada(nada);
-            bit_stuff++;
+    if (bits) {
+      set_nada(nada);
+      bit_stuff++;
 
-            if ((enBitStuff) && (bit_stuff == 5))
-            {
-                nada ^= 1;
-                set_nada(nada);
+      if ((enBitStuff) && (bit_stuff == 5)) {
+        nada ^= 1;
+        set_nada(nada);
 
-                bit_stuff = 0;
-            }
-        }
-        else
-        {
-            nada ^= 1;
-            set_nada(nada);
+        bit_stuff = 0;
+      }
+    } else {
+      nada ^= 1;
+      set_nada(nada);
 
-            bit_stuff = 0;
-        }
-
-        in_byte >>= 1;
+      bit_stuff = 0;
     }
+
+    in_byte >>= 1;
+  }
 }
 
-void send_string_len(const char *in_string, int len)
-{
-    for (int j = 0; j < len; j++)
-        send_char_NRZI(in_string[j], true);
+void send_string_len(const char *in_string, int len) {
+  for (int j = 0; j < len; j++) send_char_NRZI(in_string[j], true);
 }
 
-void send_flag(unsigned char flag_len)
-{
-    for (int j = 0; j < flag_len; j++)
-        send_char_NRZI(_FLAG, LOW);
+void send_flag(unsigned char flag_len) {
+  for (int j = 0; j < flag_len; j++) send_char_NRZI(_FLAG, LOW);
 }
 
 /*
@@ -471,44 +426,44 @@ void send_flag(unsigned char flag_len)
    delimiter. In this example, 100 flags is used the preamble and 3 flags as
    the postamble.
 */
-void send_packet(Swarm_M138_GeospatialData_t *locationInfo){
-    setLed(true);
-    setPttState(true);
+void send_packet(Swarm_M138_GeospatialData_t *locationInfo) {
+  setLed(true);
+  setPttState(true);
 
-    // TODO TEST IF THIS IMPROVES RECEPTION
-    // Send initialize sequence for receiver
-    send_char_NRZI(0x99, true);
-    send_char_NRZI(0x99, true);
-    send_char_NRZI(0x99, true);
+  // TODO TEST IF THIS IMPROVES RECEPTION
+  // Send initialize sequence for receiver
+  send_char_NRZI(0x99, true);
+  send_char_NRZI(0x99, true);
+  send_char_NRZI(0x99, true);
 
-    // delay(100);
+  // delay(100);
 
-    /*
-       AX25 FRAME
+  /*
+     AX25 FRAME
 
-       ........................................................
-       |  FLAG(s) |  HEADER  | PAYLOAD  | FCS(CRC) |  FLAG(s) |
-       --------------------------------------------------------
-       |  N bytes | 22 bytes |  N bytes | 2 bytes  |  N bytes |
-       --------------------------------------------------------
+     ........................................................
+     |  FLAG(s) |  HEADER  | PAYLOAD  | FCS(CRC) |  FLAG(s) |
+     --------------------------------------------------------
+     |  N bytes | 22 bytes |  N bytes | 2 bytes  |  N bytes |
+     --------------------------------------------------------
 
-       FLAG(s)  : 0x7e
-       HEADER   : see header
-       PAYLOAD  : 1 byte data type + N byte info
-       FCS      : 2 bytes calculated from HEADER + PAYLOAD
-    */
+     FLAG(s)  : 0x7e
+     HEADER   : see header
+     PAYLOAD  : 1 byte data type + N byte info
+     FCS      : 2 bytes calculated from HEADER + PAYLOAD
+  */
 
-    send_flag(150);
-    crc = 0xffff;
-    send_header(_FIXPOS_STATUS);
-    sendPayload(locationInfo, "");
-    send_crc();
-    send_flag(3);
-    setLed(false);
-    setPttState(false);
+  send_flag(150);
+  crc = 0xffff;
+  send_header(_FIXPOS_STATUS);
+  sendPayload(locationInfo, "");
+  send_crc();
+  send_flag(3);
+  setLed(false);
+  setPttState(false);
 }
 //
-//void send_packet(packet_type)
+// void send_packet(packet_type)
 //{
 //    print_debug(packet_type);
 //
@@ -547,192 +502,180 @@ void send_packet(Swarm_M138_GeospatialData_t *locationInfo){
 //    setLed(false);
 //}
 
-void print_debug(char type)
-{
-    /*
-       PROTOCOL DEBUG.
+void print_debug(char type) {
+  /*
+     PROTOCOL DEBUG.
 
-       Will outputs the transmitted data to the serial monitor
-       in the form of TNC2 string format.
+     Will outputs the transmitted data to the serial monitor
+     in the form of TNC2 string format.
 
-       MYCALL-N>APRS,DIGIn-N:<PAYLOAD STRING> <CR><LF>
-    */
-    Serial.begin(115200);
+     MYCALL-N>APRS,DIGIn-N:<PAYLOAD STRING> <CR><LF>
+  */
+  Serial.begin(115200);
 
-    /****** MYCALL ********/
-    Serial.print(mycall);
-    Serial.print('-');
-    Serial.print(myssid, DEC);
-    Serial.print('>');
+  /****** MYCALL ********/
+  Serial.print(mycall);
+  Serial.print('-');
+  Serial.print(myssid, DEC);
+  Serial.print('>');
 
-    /******** DEST ********/
-    if (type == _BEACON)
-        Serial.print(dest_beacon);
-    else
-        Serial.print(dest);
-    Serial.print(',');
+  /******** DEST ********/
+  if (type == _BEACON)
+    Serial.print(dest_beacon);
+  else
+    Serial.print(dest);
+  Serial.print(',');
 
-    /******** DIGI ********/
-    Serial.print(digi);
-    Serial.print('-');
-    Serial.print(digissid, DEC);
-    Serial.print(':');
+  /******** DIGI ********/
+  Serial.print(digi);
+  Serial.print('-');
+  Serial.print(digissid, DEC);
+  Serial.print(':');
 
-    /******* PAYLOAD ******/
-    if (type == _GPRMC)
-    {
-        Serial.print('$');
-        Serial.print(rmc);
-    }
-    else if (type == _FIXPOS)
-    {
-        Serial.print(_DT_POS);
-        Serial.print(lati);
-        Serial.print(sym_ovl);
-        Serial.print(lon);
-        Serial.print(sym_tab);
-    }
-    else if (type == _STATUS)
-    {
-        Serial.print(_DT_STATUS);
-        Serial.print(mystatus);
-    }
-    else if (type == _FIXPOS_STATUS)
-    {
-        Serial.print(_DT_POS);
-        Serial.print(lati);
-        Serial.print(sym_ovl);
-        Serial.print(lon);
-        Serial.print(sym_tab);
+  /******* PAYLOAD ******/
+  if (type == _GPRMC) {
+    Serial.print('$');
+    Serial.print(rmc);
+  } else if (type == _FIXPOS) {
+    Serial.print(_DT_POS);
+    Serial.print(lati);
+    Serial.print(sym_ovl);
+    Serial.print(lon);
+    Serial.print(sym_tab);
+  } else if (type == _STATUS) {
+    Serial.print(_DT_STATUS);
+    Serial.print(mystatus);
+  } else if (type == _FIXPOS_STATUS) {
+    Serial.print(_DT_POS);
+    Serial.print(lati);
+    Serial.print(sym_ovl);
+    Serial.print(lon);
+    Serial.print(sym_tab);
 
-        Serial.print(comment);
-    }
-    else
-    {
-        Serial.print(mystatus);
-    }
+    Serial.print(comment);
+  } else {
+    Serial.print(mystatus);
+  }
 
-    Serial.println(' ');
+  Serial.println(' ');
 
-    Serial.flush();
-    Serial.end();
+  Serial.flush();
+  Serial.end();
 }
 
 // Initializes DRA818V pins
 void initializeDra818v(bool highPower = true) {
-    // Setup PTT pin
-    pinMode(vhfPttPin, OUTPUT);
-    digitalWrite(vhfPttPin, LOW);
+  // Setup PTT pin
+  pinMode(vhfPttPin, OUTPUT);
+  digitalWrite(vhfPttPin, LOW);
 
-    // Setup sleep pin
-    pinMode(vhfSleepPin, OUTPUT);
-    digitalWrite(vhfSleepPin, HIGH);
+  // Setup sleep pin
+  pinMode(vhfSleepPin, OUTPUT);
+  digitalWrite(vhfSleepPin, HIGH);
 
-    // Setup power mode
-    if (highPower) {
-        pinMode(vhfPowerLevelPin, INPUT);
-    }
-    else {
-        pinMode(vhfPowerLevelPin, OUTPUT);
-        pinMode(vhfPowerLevelPin, LOW);
-    }
+  // Setup power mode
+  if (highPower) {
+    pinMode(vhfPowerLevelPin, INPUT);
+  } else {
+    pinMode(vhfPowerLevelPin, OUTPUT);
+    pinMode(vhfPowerLevelPin, LOW);
+  }
 
-    // Wait for module to boot
-    delay(vhfEnableDelay);
+  // Wait for module to boot
+  delay(vhfEnableDelay);
 }
 
 // Configures DRA818V settings
-bool configureDra818v(float txFrequency = 144.39, float rxFrequency = 144.39, bool emphasis = false, bool hpf = false, bool lpf = false){
-    // Open serial connection
-    SerialPIO serial = SerialPIO(vhfRxPin, vhfTxPin);
-    serial.begin(9600);
-    serial.setTimeout(vhfTimeout);
+bool configureDra818v(float txFrequency = 144.39, float rxFrequency = 144.39,
+                      bool emphasis = false, bool hpf = false,
+                      bool lpf = false) {
+  // Open serial connection
+  SerialPIO serial = SerialPIO(vhfRxPin, vhfTxPin);
+  serial.begin(9600);
+  serial.setTimeout(vhfTimeout);
 
-    // Handshake
-    serial.println("AT+DMOCONNECT");
-    if(!serial.find("+DMOCONNECT:0")) return false;
-    delay(vhfEnableDelay);
+  // Handshake
+  serial.println("AT+DMOCONNECT");
+  if (!serial.find("+DMOCONNECT:0")) return false;
+  delay(vhfEnableDelay);
 
-    // Set frequencies and group
-    serial.print("AT+DMOSETGROUP=0,");
-    serial.print(txFrequency, 4);
-    serial.print(',');
-    serial.print(rxFrequency, 4);
-    serial.println(",0000,0,0000");
-    if(!Serial1.find("+DMOSETGROUP:0")) return false;
-    delay(serial);
+  // Set frequencies and group
+  serial.print("AT+DMOSETGROUP=0,");
+  serial.print(txFrequency, 4);
+  serial.print(',');
+  serial.print(rxFrequency, 4);
+  serial.println(",0000,0,0000");
+  if (!Serial1.find("+DMOSETGROUP:0")) return false;
+  delay(serial);
 
-    // Set filter settings
-    serial.print("AT+SETFILTER=");
-    serial.print(emphasis);
-    serial.print(',');
-    serial.print(hpf);
-    serial.print(',');
-    serial.println(lpf);
-    if(!serial.find("+DMOSETFILTER:0")) return false;
-    delay(vhfEnableDelay);
-    serial.end();
-    return true;
+  // Set filter settings
+  serial.print("AT+SETFILTER=");
+  serial.print(emphasis);
+  serial.print(',');
+  serial.print(hpf);
+  serial.print(',');
+  serial.println(lpf);
+  if (!serial.find("+DMOSETFILTER:0")) return false;
+  delay(vhfEnableDelay);
+  serial.end();
+  return true;
 }
 
 // Sets the push to talk state
-void setPttState(bool state) {
-    digitalWrite(vhfPttPin, state);
-}
+void setPttState(bool state) { digitalWrite(vhfPttPin, state); }
 
 // Sets the VHF module state
-void setVhfState(bool state) {
-    digitalWrite(vhfSleepPin, state);
+void setVhfState(bool state) { digitalWrite(vhfSleepPin, state); }
+
+void initLed() {
+  pinMode(ledPin, OUTPUT);
+  digitalWrite(ledPin, false);
 }
 
-void initLed(){
-    pinMode(ledPin, OUTPUT);
-    digitalWrite(ledPin, false);
+void setup() {
+  initLed();
+  setLed(true);
+  Serial.begin(115200);
+  delay(5000);
+  Serial1.setTX(0);
+  Serial1.setRX(1);
+  while (!swarm.begin(Serial1))  // Begin communication with the modem
+  {
+    Serial.println(
+        F("Could not communicate with the modem. Please check the serial "
+          "connections. Freezing..."));
+    delay(1200);
+  }
+  Serial.println("Configuring DRA818V...");
+  // Initialize DRA818V
+  initializeDra818v();
+  configureDra818v();
+  //    while(!configureDra818v()){
+  //        Serial.println("Failed to configure, trying again");
+  //        delay(3000);
+  //    }
+  setPttState(false);
+  setVhfState(true);
+  Serial.println("DRA818V configured");
+  Serial.println("Configuring DAC...");
+  initializeOutput();
+  Serial.println("DAC configured");
+  Serial.println("Setup complete");
+  setLed(false);
+  delay(1000);
 }
 
-
-void setup()
-{
-    initLed();
-    setLed(true);
-    Serial.begin(115200);
-    delay(5000);
-    Serial1.setTX(0);
-    Serial1.setRX(1);
-    while (!swarm.begin(Serial1)) // Begin communication with the modem
-    {
-      Serial.println(F("Could not communicate with the modem. Please check the serial connections. Freezing..."));
-      delay(1200);
-    }
-    Serial.println("Configuring DRA818V...");
-    // Initialize DRA818V
-    initializeDra818v();
-    configureDra818v();
-//    while(!configureDra818v()){
-//        Serial.println("Failed to configure, trying again");
-//        delay(3000);
-//    }
-    setPttState(false);
-    setVhfState(true);
-    Serial.println("DRA818V configured");
-    Serial.println("Configuring DAC...");
-    initializeOutput();
-    Serial.println("DAC configured");
-    Serial.println("Setup complete");
-    setLed(false);
-    delay(1000);
-}
-
-void loop()
-{
-    Swarm_M138_GeospatialData_t *info = new Swarm_M138_GeospatialData_t; // Allocate memory for the information
-    swarm.getGeospatialInfo(info);    
-//    Serial.printf("lat: %f, lon: %f, heading: %d, speed %f \n", info->lat, info->lon, info-> course, info->speed/1.852);/
-    uint32_t startPacket = millis();
-    send_packet(info);
-    //send_packet(_BEACON);
-    uint32_t packetDuration = millis() - startPacket;
-    delete info;
-    Serial.println("Packet sent in: " + String(packetDuration) + " ms");
-    delay(tx_delay);
+void loop() {
+  Swarm_M138_GeospatialData_t *info =
+      new Swarm_M138_GeospatialData_t;  // Allocate memory for the information
+  swarm.getGeospatialInfo(info);
+  //    Serial.printf("lat: %f, lon: %f, heading: %d, speed %f \n", info->lat,
+  //    info->lon, info-> course, info->speed/1.852);/
+  uint32_t startPacket = millis();
+  send_packet(info);
+  // send_packet(_BEACON);
+  uint32_t packetDuration = millis() - startPacket;
+  delete info;
+  Serial.println("Packet sent in: " + String(packetDuration) + " ms");
+  delay(tx_delay);
 }

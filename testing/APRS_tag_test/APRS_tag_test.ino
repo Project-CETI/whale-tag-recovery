@@ -15,27 +15,26 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
+#include <MCP_DAC.h>
+#include <Wire.h>
 #include <math.h>
 #include <stdio.h>
-#include <Wire.h>
-#include <MCP_DAC.h>
-#define _1200   1
-#define _2400   0
-#define _FLAG       0x7e
-#define _CTRL_ID    0x03
-#define _PID        0xf0
-#define _DT_EXP     ','
-#define _DT_STATUS  '>'
-#define _DT_POS     '!'
+#define _1200 1
+#define _2400 0
+#define _FLAG 0x7e
+#define _CTRL_ID 0x03
+#define _PID 0xf0
+#define _DT_EXP ','
+#define _DT_STATUS '>'
+#define _DT_POS '!'
 
-#define _GPRMC          1
-#define _FIXPOS         2
-#define _FIXPOS_STATUS  3
-#define _STATUS         4
-#define _BEACON         5
+#define _GPRMC 1
+#define _FIXPOS 2
+#define _FIXPOS_STATUS 3
+#define _STATUS 4
+#define _BEACON 5
 
 MCP4801 dac;
-
 
 // VHF control pins
 const uint8_t vhfPowerLevelPin = 11;
@@ -95,43 +94,42 @@ void set_io(void);
 void print_code_version(void);
 void print_debug(char type);
 
-const uint16_t sin2400Values[16] = {
-    2831, 3495, 3939, 4095, 3939, 3495, 2831, 2048, 1264, 600, 156, 1, 156, 600, 1264, 2047
-};
+const uint16_t sin2400Values[16] = {2831, 3495, 3939, 4095, 3939, 3495,
+                                    2831, 2048, 1264, 600,  156,  1,
+                                    156,  600,  1264, 2047};
 
 const uint16_t sin1200Values[32] = {
-    2447, 2831, 3185, 3495, 3750, 3939, 4055, 4095, 4055, 3939, 3750, 3495, 3185, 2831, 2447, 2048, 1648, 1264, 910, 600, 345, 156, 40, 1, 40, 156, 345, 600, 910, 1264, 1648, 2047
-};
+    2447, 2831, 3185, 3495, 3750, 3939, 4055, 4095, 4055, 3939, 3750,
+    3495, 3185, 2831, 2447, 2048, 1648, 1264, 910,  600,  345,  156,
+    40,   1,    40,   156,  345,  600,  910,  1264, 1648, 2047};
 
 uint8_t msg[3];
 
-void setSave(bool save){
-    if(save){
-        msg[0] = 0x60;
-    }
-    else{
-        msg[0] = 0x40;
-    }
+void setSave(bool save) {
+  if (save) {
+    msg[0] = 0x60;
+  } else {
+    msg[0] = 0x40;
+  }
 }
 
-void set_nada_1200(void)
-{
-  for(uint8_t currSinVal = 0; currSinVal < sizeof(sin1200Values)/2; currSinVal++){
+void set_nada_1200(void) {
+  for (uint8_t currSinVal = 0; currSinVal < sizeof(sin1200Values) / 2;
+       currSinVal++) {
     dac.fastWriteA(sin1200Values[currSinVal]);
   }
 }
 
-void set_nada_2400(void)
-{
-  for(uint8_t sinNum = 0; sinNum < 2; sinNum++){
-    for(uint8_t currSinVal = 0; currSinVal < sizeof(sin2400Values)/2; currSinVal++){
+void set_nada_2400(void) {
+  for (uint8_t sinNum = 0; sinNum < 2; sinNum++) {
+    for (uint8_t currSinVal = 0; currSinVal < sizeof(sin2400Values) / 2;
+         currSinVal++) {
       dac.fastWriteA(sin2400Values[currSinVal]);
     }
   }
 }
 
-void set_nada(bool nada)
-{
+void set_nada(bool nada) {
   if (nada)
     set_nada_1200();
   else
@@ -145,19 +143,16 @@ void set_nada(bool nada)
    Using 0x1021 as polynomial generator. The CRC registers are initialized with
    0xFFFF
 */
-void calc_crc(bool in_bit)
-{
+void calc_crc(bool in_bit) {
   unsigned short xor_in;
 
   xor_in = crc ^ in_bit;
   crc >>= 1;
 
-  if (xor_in & 0x01)
-    crc ^= 0x8408;
+  if (xor_in & 0x01) crc ^= 0x8408;
 }
 
-void send_crc(void)
-{
+void send_crc(void) {
   unsigned char crc_lo = crc ^ 0xff;
   unsigned char crc_hi = (crc >> 8) ^ 0xff;
 
@@ -165,8 +160,7 @@ void send_crc(void)
   send_char_NRZI(crc_hi, true);
 }
 
-void send_header(char msg_type)
-{
+void send_header(char msg_type) {
   char temp;
 
   /*
@@ -189,47 +183,31 @@ void send_header(char msg_type)
   */
 
   /********* DEST ***********/
-  if (msg_type == _BEACON)
-  {
+  if (msg_type == _BEACON) {
     temp = strlen(dest_beacon);
-    for (int j = 0; j < temp; j++)
-      send_char_NRZI(dest_beacon[j] << 1, true);
-  }
-  else
-  {
+    for (int j = 0; j < temp; j++) send_char_NRZI(dest_beacon[j] << 1, true);
+  } else {
     temp = strlen(dest);
-    for (int j = 0; j < temp; j++)
-      send_char_NRZI(dest[j] << 1, true);
+    for (int j = 0; j < temp; j++) send_char_NRZI(dest[j] << 1, true);
   }
-  if (temp < 6)
-  {
-    for (int j = 0; j < (6 - temp); j++)
-      send_char_NRZI(' ' << 1, true);
+  if (temp < 6) {
+    for (int j = 0; j < (6 - temp); j++) send_char_NRZI(' ' << 1, true);
   }
   send_char_NRZI('0' << 1, true);
 
-
-
   /********* SOURCE *********/
   temp = strlen(mycall);
-  for (int j = 0; j < temp; j++)
-    send_char_NRZI(mycall[j] << 1, true);
-  if (temp < 6)
-  {
-    for (int j = 0; j < (6 - temp); j++)
-      send_char_NRZI(' ' << 1, true);
+  for (int j = 0; j < temp; j++) send_char_NRZI(mycall[j] << 1, true);
+  if (temp < 6) {
+    for (int j = 0; j < (6 - temp); j++) send_char_NRZI(' ' << 1, true);
   }
   send_char_NRZI((myssid + '0') << 1, true);
 
-
   /********* DIGI ***********/
   temp = strlen(digi);
-  for (int j = 0; j < temp; j++)
-    send_char_NRZI(digi[j] << 1, true);
-  if (temp < 6)
-  {
-    for (int j = 0; j < (6 - temp); j++)
-      send_char_NRZI(' ' << 1, true);
+  for (int j = 0; j < temp; j++) send_char_NRZI(digi[j] << 1, true);
+  if (temp < 6) {
+    for (int j = 0; j < (6 - temp); j++) send_char_NRZI(' ' << 1, true);
   }
   send_char_NRZI(((digissid + '0') << 1) + 1, true);
 
@@ -238,8 +216,7 @@ void send_header(char msg_type)
   send_char_NRZI(_PID, true);
 }
 
-void send_payload(char type)
-{
+void send_payload(char type) {
   /*
      APRS AX.25 Payloads
 
@@ -268,9 +245,9 @@ void send_payload(char type)
 
      TYPE : POSITION & STATUS
      ..............................................................................
-     |DATA TYPE |    LAT   |SYMB. OVL.|    LON   |SYMB. TBL.|    STATUS TEXT      |
+     |DATA TYPE |    LAT   |SYMB. OVL.|    LON   |SYMB. TBL.|    STATUS TEXT |
      ------------------------------------------------------------------------------
-     |  1 byte  |  8 bytes |  1 byte  |  9 bytes |  1 byte  |       N bytes       |
+     |  1 byte  |  8 bytes |  1 byte  |  9 bytes |  1 byte  |       N bytes |
      ------------------------------------------------------------------------------
 
      DATA TYPE  : !
@@ -282,26 +259,19 @@ void send_payload(char type)
      All of the data are sent in the form of ASCII Text, not shifted.
 
   */
-  if (type == _GPRMC)
-  {
+  if (type == _GPRMC) {
     send_char_NRZI('$', true);
     send_string_len(rmc, strlen(rmc) - 1);
-  }
-  else if (type == _FIXPOS)
-  {
+  } else if (type == _FIXPOS) {
     send_char_NRZI(_DT_POS, true);
     send_string_len(lati, strlen(lati));
     send_char_NRZI(sym_ovl, true);
     send_string_len(lon, strlen(lon));
     send_char_NRZI(sym_tab, true);
-  }
-  else if (type == _STATUS)
-  {
+  } else if (type == _STATUS) {
     send_char_NRZI(_DT_STATUS, true);
     send_string_len(mystatus, strlen(mystatus));
-  }
-  else if (type == _FIXPOS_STATUS)
-  {
+  } else if (type == _FIXPOS_STATUS) {
     send_char_NRZI(_DT_POS, true);
     send_string_len(lati, strlen(lati));
     send_char_NRZI(sym_ovl, true);
@@ -309,9 +279,7 @@ void send_payload(char type)
     send_char_NRZI(sym_tab, true);
 
     send_string_len(comment, strlen(comment));
-  }
-  else
-  {
+  } else {
     send_string_len(mystatus, strlen(mystatus));
   }
 }
@@ -324,31 +292,25 @@ void send_payload(char type)
    bit 1 : transmitted as no change in tone
    bit 0 : transmitted as change in tone
 */
-void send_char_NRZI(unsigned char in_byte, bool enBitStuff)
-{
+void send_char_NRZI(unsigned char in_byte, bool enBitStuff) {
   bool bits;
 
-  for (int i = 0; i < 8; i++)
-  {
+  for (int i = 0; i < 8; i++) {
     bits = in_byte & 0x01;
 
     calc_crc(bits);
 
-    if (bits)
-    {
+    if (bits) {
       set_nada(nada);
       bit_stuff++;
 
-      if ((enBitStuff) && (bit_stuff == 5))
-      {
+      if ((enBitStuff) && (bit_stuff == 5)) {
         nada ^= 1;
         set_nada(nada);
 
         bit_stuff = 0;
       }
-    }
-    else
-    {
+    } else {
       nada ^= 1;
       set_nada(nada);
 
@@ -359,16 +321,12 @@ void send_char_NRZI(unsigned char in_byte, bool enBitStuff)
   }
 }
 
-void send_string_len(const char *in_string, int len)
-{
-  for (int j = 0; j < len; j++)
-    send_char_NRZI(in_string[j], true);
+void send_string_len(const char *in_string, int len) {
+  for (int j = 0; j < len; j++) send_char_NRZI(in_string[j], true);
 }
 
-void send_flag(unsigned char flag_len)
-{
-  for (int j = 0; j < flag_len; j++)
-    send_char_NRZI(_FLAG, LOW);
+void send_flag(unsigned char flag_len) {
+  for (int j = 0; j < flag_len; j++) send_char_NRZI(_FLAG, LOW);
 }
 
 /*
@@ -377,14 +335,13 @@ void send_flag(unsigned char flag_len)
    delimiter. In this example, 100 flags is used the preamble and 3 flags as
    the postamble.
 */
-void send_packet(char packet_type)
-{
+void send_packet(char packet_type) {
   print_debug(packet_type);
 
   digitalWrite(LED_BUILTIN, HIGH);
   setPttState(true);
 
-  //delay(100);
+  // delay(100);
 
   /*
      AX25 FRAME
@@ -407,13 +364,12 @@ void send_packet(char packet_type)
   send_payload(packet_type);
   send_crc();
   send_flag(3);
-  
+
   setPttState(false);
   digitalWrite(LED_BUILTIN, LOW);
 }
 
-void print_debug(char type)
-{
+void print_debug(char type) {
   /*
      PROTOCOL DEBUG.
 
@@ -444,26 +400,19 @@ void print_debug(char type)
   Serial.print(':');
 
   /******* PAYLOAD ******/
-  if (type == _GPRMC)
-  {
+  if (type == _GPRMC) {
     Serial.print('$');
     Serial.print(rmc);
-  }
-  else if (type == _FIXPOS)
-  {
+  } else if (type == _FIXPOS) {
     Serial.print(_DT_POS);
     Serial.print(lati);
     Serial.print(sym_ovl);
     Serial.print(lon);
     Serial.print(sym_tab);
-  }
-  else if (type == _STATUS)
-  {
+  } else if (type == _STATUS) {
     Serial.print(_DT_STATUS);
     Serial.print(mystatus);
-  }
-  else if (type == _FIXPOS_STATUS)
-  {
+  } else if (type == _FIXPOS_STATUS) {
     Serial.print(_DT_POS);
     Serial.print(lati);
     Serial.print(sym_ovl);
@@ -471,9 +420,7 @@ void print_debug(char type)
     Serial.print(sym_tab);
 
     Serial.print(comment);
-  }
-  else
-  {
+  } else {
     Serial.print(mystatus);
   }
 
@@ -484,79 +431,76 @@ void print_debug(char type)
 }
 
 // Initializes DRA818V pins
-void initializeDra818v(bool highPower = true){
-    // Setup PTT pin
-    pinMode(vhfPttPin, OUTPUT);
-    digitalWrite(vhfPttPin, HIGH);
+void initializeDra818v(bool highPower = true) {
+  // Setup PTT pin
+  pinMode(vhfPttPin, OUTPUT);
+  digitalWrite(vhfPttPin, HIGH);
 
-    // Setup sleep pin
-    pinMode(vhfSleepPin, OUTPUT);
-    digitalWrite(vhfSleepPin, HIGH);
+  // Setup sleep pin
+  pinMode(vhfSleepPin, OUTPUT);
+  digitalWrite(vhfSleepPin, HIGH);
 
-    // Setup power mode
-    if(highPower){
-        pinMode(vhfPowerLevelPin, INPUT);
-    }
-    else{
-        pinMode(vhfPowerLevelPin, OUTPUT);
-        pinMode(vhfPowerLevelPin, LOW);
-    }
+  // Setup power mode
+  if (highPower) {
+    pinMode(vhfPowerLevelPin, INPUT);
+  } else {
+    pinMode(vhfPowerLevelPin, OUTPUT);
+    pinMode(vhfPowerLevelPin, LOW);
+  }
 
-    // Setup VHF UART
-    // pinMode(vhfRxPin, INPUT);
-    // pinMode(vhfTxPin, OUTPUT);
+  // Setup VHF UART
+  // pinMode(vhfRxPin, INPUT);
+  // pinMode(vhfTxPin, OUTPUT);
 
-    // Wait for module to boot
-    delay(vhfEnableDelay);
+  // Wait for module to boot
+  delay(vhfEnableDelay);
 }
 
 // Configures DRA818V settings
-bool configureDra818v(float txFrequency = 144.39, float rxFrequency = 144.39, bool emphasis = false, bool hpf = false, bool lpf = false){
-    // Open serial connection
-    Serial2.setTX(8);
-    Serial2.setRX(9);
-    Serial2.begin(9600);
-    Serial2.setTimeout(vhfTimeout);
+bool configureDra818v(float txFrequency = 144.39, float rxFrequency = 144.39,
+                      bool emphasis = false, bool hpf = false,
+                      bool lpf = false) {
+  // Open serial connection
+  Serial2.setTX(8);
+  Serial2.setRX(9);
+  Serial2.begin(9600);
+  Serial2.setTimeout(vhfTimeout);
 
-    // Handshake
-    Serial2.println("AT+DMOCONNECT");
-    if(!Serial2.find("+DMOcvf          ")) return false;
-    delay(vhfEnableDelay);
+  // Handshake
+  Serial2.println("AT+DMOCONNECT");
+  if (!Serial2.find("+DMOcvf          ")) return false;
+  delay(vhfEnableDelay);
 
-    // Set frequencies and group
-    Serial2.print("AT+DMOSETGROUP=0,");
-    Serial2.print(txFrequency, 4);
-    Serial2.print(',');
-    Serial2.print(rxFrequency, 4);
-    Serial2.println(",0000,0,0000");
-    if(!Serial2.find("+DMOSETGROUP:0")) return false;
-    delay(vhfEnableDelay);
+  // Set frequencies and group
+  Serial2.print("AT+DMOSETGROUP=0,");
+  Serial2.print(txFrequency, 4);
+  Serial2.print(',');
+  Serial2.print(rxFrequency, 4);
+  Serial2.println(",0000,0,0000");
+  if (!Serial2.find("+DMOSETGROUP:0")) return false;
+  delay(vhfEnableDelay);
 
-    // Set filter settings
-    Serial2.print("AT+SETFILTER=");
-    Serial2.print(emphasis);
-    Serial2.print(',');
-    Serial2.print(hpf);
-    Serial2.print(',');
-    Serial2.println(lpf);
-    if(!Serial2.find("+DMOSETFILTER:0")) return false;
-    delay(vhfEnableDelay);
+  // Set filter settings
+  Serial2.print("AT+SETFILTER=");
+  Serial2.print(emphasis);
+  Serial2.print(',');
+  Serial2.print(hpf);
+  Serial2.print(',');
+  Serial2.println(lpf);
+  if (!Serial2.find("+DMOSETFILTER:0")) return false;
+  delay(vhfEnableDelay);
 
-    Serial2.end();
-    return true;
+  Serial2.end();
+  return true;
 }
 
 // Sets the push to talk state
-void setPttState(bool state){
-    digitalWrite(vhfPttPin, state);
-}
+void setPttState(bool state) { digitalWrite(vhfPttPin, state); }
 
 // Sets the VHF module state
-void setVhfState(bool state){
-    digitalWrite(vhfSleepPin, state);
-}
+void setVhfState(bool state) { digitalWrite(vhfSleepPin, state); }
 
-void setup(){
+void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, HIGH);
   Serial.begin(115200);
@@ -564,8 +508,7 @@ void setup(){
   Serial.println("Configuring DRA818V...");
   // Initialize DRA818V
   initializeDra818v();
-  while(!configureDra818v())
-  Serial.println("DRA818V config failed");
+  while (!configureDra818v()) Serial.println("DRA818V config failed");
   setPttState(false);
   setVhfState(true);
   // TODO Optimize for power, etc
@@ -583,8 +526,7 @@ void setup(){
   delay(5000);
 }
 
-void loop(){
-
+void loop() {
   /*
     parse_gprmc();
     coord_valid = get_coord();
