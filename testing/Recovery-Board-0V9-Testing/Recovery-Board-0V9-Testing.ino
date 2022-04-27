@@ -598,10 +598,11 @@ void setup()
     Serial.println("Configuring DRA818V...");
     // Initialize DRA818V
     initializeDra818v();
-    while(!configureDra818v()){
-        Serial.println("Failed to configure, trying again");
-        delay(3000);
-    }
+    configureDra818v();
+//    while(!configureDra818v()){
+//        Serial.println("Failed to configure, trying again");
+//        delay(3000);
+//    }
     setPttState(false);
     setVhfState(true);
     Serial.println("DRA818V configured");
