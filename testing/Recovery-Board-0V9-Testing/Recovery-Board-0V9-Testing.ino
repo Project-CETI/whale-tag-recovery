@@ -2,10 +2,6 @@
 #include <math.h>
 #include <stdio.h>
 #include "pico/stdlib.h"
-
-#define _1200 1
-#define _2400 0
-
 #define _FLAG 0x7e
 #define _CTRL_ID 0x03
 #define _PID 0xf0
@@ -21,48 +17,47 @@
 SWARM_M138 swarm;
 
 // LED Pin
-const uint8_t ledPin = 29;
-// VHF control pins
-const uint8_t vhfPowerLevelPin = 15;
-const uint8_t vhfPttPin = 16;
-const uint8_t vhfSleepPin = 14;
-const uint8_t vhfTxPin = 13;
-const uint8_t vhfRxPin = 12;
+#define ledPin 29
 
+// VHF control pins
+#define vhfPowerLevelPin 15
+#define vhfPttPin 16
+#define vhfSleepPin 14
+#define vhfTxPin 13
+#define vhfRxPin 12
 // VHF control params
-const uint16_t vhfTimeout = 500;
-const uint16_t vhfEnableDelay = 1000;
+#define vhfTimeout 500
+#define vhfEnableDelay 1000
 
 // VHF Output pins
-const uint8_t out0Pin = 18;
-const uint8_t out1Pin = 19;
-const uint8_t out2Pin = 20;
-const uint8_t out3Pin = 21;
-const uint8_t out4Pin = 22;
-const uint8_t out5Pin = 23;
-const uint8_t out6Pin = 24;
-const uint8_t out7Pin = 25;
+#define out0Pin 18
+#define out1Pin 19
+#define out2Pin 20
+#define out3Pin 21
+#define out4Pin 22
+#define out5Pin 23
+#define out6Pin 24
+#define out7Pin 25
 
-void setLed(bool state) { digitalWrite(ledPin, state); }
-bool nada = _2400;
+void setLed(bool state) {
+  digitalWrite(ledPin, state);
+}
+bool nada = 0;
 char mycall[8] = "KC1QXQ";
-char myssid = 3;
+char myssid = 5;
 char dest[8] = "APLIGA";
 char dest_beacon[8] = "BEACON";
-char digi[8] = "WIDE1";
+char digi[8] = "WIDE2";
 char digissid = 1;
 char comment[128] = "v0.9";
 char mystatus[128] = "Status";
 char lati[9] = "4221.78N";
 char lon[10] = "07107.52W";
-
 int coord_va9id;
 const char sym_ovl = 'T';
 const char sym_tab = 'a';
-
 unsigned int tx_delay = 5000;
 unsigned int str_len = 400;
-
 char bit_stuff = 0;
 unsigned short crc = 0xffff;
 
@@ -86,15 +81,16 @@ void send_header(char mssinValuesg_type);
 
 void print_debug(char type);
 
-const uint16_t bitPeriod = 832;
+#define bitPeriod 832
 #define delay1200 19  // 23
 #define delay2200 9   // 11
-const uint8_t numSinValues = 32;
+#define numSinValues 32
 
 const uint8_t sinValues[numSinValues] = {
-    152, 176, 198, 217, 233, 245, 252, 255, 252, 245, 233,
-    217, 198, 176, 152, 127, 103, 79,  57,  38,  22,  10,
-    3,   1,   3,   10,  22,  38,  57,  79,  103, 128};
+  152, 176, 198, 217, 233, 245, 252, 255, 252, 245, 233,
+  217, 198, 176, 152, 127, 103, 79,  57,  38,  22,  10,
+  3,   1,   3,   10,  22,  38,  57,  79,  103, 128
+};
 
 uint8_t currOutput = 0;
 
@@ -107,6 +103,7 @@ void initializeOutput() {
   pinMode(out5Pin, OUTPUT);
   pinMode(out6Pin, OUTPUT);
   pinMode(out7Pin, OUTPUT);
+
 }
 
 void setOutput(uint8_t state) {
@@ -116,7 +113,7 @@ void setOutput(uint8_t state) {
   digitalWrite(out3Pin, state & 0b00001000);
   digitalWrite(out4Pin, state & 0b00010000);
   digitalWrite(out5Pin, state & 0b00100000);
-  digitalWrite(out6Pin, state & 0b01000000);
+  digitalWrite(out6Pin, state & 0b01000000);  
   digitalWrite(out7Pin, state & 0b10000000);
 }
 
@@ -305,25 +302,25 @@ void floatSplit(float whole, int integer, int decimal) {
 
 void sendPayload(Swarm_M138_GeospatialData_t *locationInfo, char *status_) {
   float latFloat = locationInfo->lat;
+  if (locationInfo->lat == 0) {
+    return;
+  }
   bool south = false;
   if (latFloat < 0) {
     south = true;
     latFloat = fabs(latFloat);
   }
-  int latDeg;
-  float latMin;
-  latDeg = 42;
-  latMin = 21.782;
+  int latDeg = (int) latFloat;
+  int latMin = latFloat - latDeg; // get decimal degress from float
+  latMin = latMin * 60; // convert decimal degrees to minutes
   uint8_t latMinInt = (int)latMin;
-  uint8_t latMinDec = round((latMin-latMinInt)*100);
-  //  latDeg = (int) latFloat;
-  //  latMin = latFloat - latDeg; // get decimal degress from float
-  //  latMin = latMin * 60; // convert decimal degrees to minutes
+  uint8_t latMinDec = round((latMin - latMinInt) * 100);
+
   char lati[9];
   if (south) {
-      snprintf(lati, 9, "%02d%02d.%02dS", latDeg, latMinInt, latMinDec);
+    snprintf(lati, 9, "%02d%02d.%02dS", latDeg, latMinInt, latMinDec);
   } else {
-      snprintf(lati, 9, "%02d%02d.%02dN", latDeg, latMinInt, latMinDec);
+    snprintf(lati, 9, "%02d%02d.%02dN", latDeg, latMinInt, latMinDec);
   }
   float lonFloat = locationInfo->lon;
   bool west = true;
@@ -331,19 +328,10 @@ void sendPayload(Swarm_M138_GeospatialData_t *locationInfo, char *status_) {
     west = true;
     lonFloat = fabs(lonFloat);
   }
-  int lonDeg;
-  lonDeg = 71;
-  float lonMin;
-  lonMin = 07.5244;
-  //  lonDeg = (int) lonDeg;
-  //  lonMin = lonFloat - lonDeg;
-  //  lonMin = lonMin * 60; // convert decimal degrees to minutes
-  //  Serial.println();
-  //  Serial.print(" Lon: ");
-  //  Serial.print(lonDeg);
-  //  Serial.print(lonMin);
+  int lonDeg = (int) lonFloat;
+  float lonMin = lonFloat - lonDeg; // get decimal degress from float
   uint8_t lonMinInt = (int)lonMin;
-  uint8_t lonMinDec = round((lonMin-lonMinInt)*100);
+  uint8_t lonMinDec = round((lonMin - lonMinInt) * 100);
   char lon[10];
   if (west) {
     snprintf(lon, 10, "%03d%02d.%02dW", lonDeg, lonMinInt, lonMinDec);
@@ -352,42 +340,42 @@ void sendPayload(Swarm_M138_GeospatialData_t *locationInfo, char *status_) {
   }
 
   double speed =
-      locationInfo->speed / 1.852;  // convert speed from km/h to knots
+    locationInfo->speed / 1.852;  // convert speed from km/h to knots
   int course = (int)locationInfo->course;
   if (course ==
       0) {  // APRS wants course in 1-360 and swarm provides it as 0-359
     course = 360;
   }
   char cogSpeed[7];
-    Serial.begin(115200);
-    /****** MYCALL ********/
-    Serial.print(mycall);
-    Serial.print('-');
-    Serial.print(myssid, DEC);
-    Serial.print('>');
-    /******** DEST ********/
-    Serial.print(dest);
-    Serial.print(',');
-    /******** DIGI ********/
-    Serial.print(digi);
-    Serial.print('-');
-    Serial.print(digissid, DEC);
-    Serial.print(':');
-    /******* PAYLOAD ******/
-    Serial.print(_DT_POS);
-    Serial.print(lati);
-    Serial.print(sym_ovl);
-    Serial.print(lon);
-    Serial.print(sym_tab);
-    Serial.println(' ');
-    Serial.flush();
+  Serial.begin(115200);
+  /****** MYCALL ********/
+  Serial.print(mycall);
+  Serial.print('-');
+  Serial.print(myssid, DEC);
+  Serial.print('>');
+  /******** DEST ********/
+  Serial.print(dest);
+  Serial.print(',');
+  /******** DIGI ********/
+  Serial.print(digi);
+  Serial.print('-');
+  Serial.print(digissid, DEC);
+  Serial.print(':');
+  /******* PAYLOAD ******/
+  Serial.print(_DT_POS);
+  Serial.print(lati);
+  Serial.print(sym_ovl);
+  Serial.print(lon);
+  Serial.print(sym_tab);
+  Serial.println(' ');
+  Serial.flush();
   send_char_NRZI(_DT_POS, true);
   send_string_len(lati, strlen(lati));
   send_char_NRZI(sym_ovl, true);
   send_string_len(lon, strlen(lon));
   //    send_string_len(cogSpeed, strlen(cogSpeed));
   send_char_NRZI(sym_tab, true);
-  send_string_len(status_, strlen(status_));
+  send_string_len(comment, strlen(comment));
 }
 
 /*
@@ -471,7 +459,9 @@ void send_packet(Swarm_M138_GeospatialData_t *locationInfo) {
   send_flag(150);
   crc = 0xffff;
   send_header(_FIXPOS_STATUS);
-  sendPayload(locationInfo, "");
+  if (locationInfo->lat != 0) {
+    sendPayload(locationInfo, "");
+  }
   send_crc();
   send_flag(3);
   setLed(false);
@@ -521,10 +511,10 @@ void print_debug(char type) {
   /*
      PROTOCOL DEBUG.
 
-     Will outputs the transmitted data to the serial monitor
-     in the form of TNC2 string format.
+       Will outputs the transmitted data to the serial monitor
+       in the form of TNC2 string format.
 
-     MYCALL-N>APRS,DIGIn-N:<PAYLOAD STRING> <CR><LF>
+       MYCALL-N>APRS,DIGIn-N:<PAYLOAD STRING> <CR><LF>
   */
   Serial.begin(115200);
 
@@ -637,10 +627,14 @@ bool configureDra818v(float txFrequency = 144.39, float rxFrequency = 144.39,
 }
 
 // Sets the push to talk state
-void setPttState(bool state) { digitalWrite(vhfPttPin, state); }
+void setPttState(bool state) {
+  digitalWrite(vhfPttPin, state);
+}
 
 // Sets the VHF module state
-void setVhfState(bool state) { digitalWrite(vhfSleepPin, state); }
+void setVhfState(bool state) {
+  digitalWrite(vhfSleepPin, state);
+}
 
 void initLed() {
   pinMode(ledPin, OUTPUT);
@@ -657,8 +651,8 @@ void setup() {
   while (!swarm.begin(Serial1))  // Begin communication with the modem
   {
     Serial.println(
-        F("Could not communicate with the modem. Please check the serial "
-          "connections. Freezing..."));
+      F("Could not communicate with the modem. Please check the serial "
+        "connections. Freezing..."));
     delay(1200);
   }
   Serial.println("Configuring DRA818V...");
@@ -682,14 +676,15 @@ void setup() {
 
 void loop() {
   Swarm_M138_GeospatialData_t *info =
-      new Swarm_M138_GeospatialData_t;  // Allocate memory for the information
+    new Swarm_M138_GeospatialData_t;  // Allocate memory for the information
   swarm.getGeospatialInfo(info);
-  uint32_t startPacket = millis();
-  send_packet(info);
-  // send_packet(_BEACON);
-  uint32_t packetDuration = millis() - startPacket;
-  delete info;
-  Serial.println("Packet sent in: " + String(packetDuration) + " ms");
+  if (!info ->lat == 0 && !info -> lon == 0) {
+    uint32_t startPacket = millis();
+    send_packet(info);
+    // send_packet(_BEACON);
+    uint32_t packetDuration = millis() - startPacket;
+    delete info;
+    Serial.println("Packet sent in: " + String(packetDuration) + " ms");
+  }
   delay(tx_delay);
-  Serial.println();
 }
