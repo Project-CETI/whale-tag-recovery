@@ -556,7 +556,6 @@ void print_debug(char type) {
     Serial.print(sym_ovl);
     Serial.print(lon);
     Serial.print(sym_tab);
-
     Serial.print(comment);
   } else {
     Serial.print(mystatus);
