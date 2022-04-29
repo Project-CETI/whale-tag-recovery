@@ -12,14 +12,19 @@
 #define numSinValues 32
 #define delay1200 19
 #define bitPeriod 832
+#include "Arduino.h"
+#define aprsFrequencyMhz 144.39
 // configures the DRA818V VHF module over UART returns true if config us successful and false if unsuccessful.
 //
-APRS::APRS(const char callSign[8]) {
+APRS::APRS(const char callSign[8], uint8_t ssid) {
         for(uint8_t i =0; i< 8; i++){
             this->callSign[i] = callSign[i];
         }
+        this->ssid = ssid;
     }
-bool APRS::configDra818v(HardwareSerial &hardSerial, float txFrequency, float rxFrequency, bool emphasis, bool hpf, bool lpf) {
+
+
+bool APRS::configDra818v(HardwareSerial &hardSerial, bool emphasis, bool hpf, bool lpf, float txFrequency=aprsFrequencyMhz, float rxFrequency=aprsFrequencyMhz) {
     // Open serial connection
     HardwareSerial *serial;
     serial = &hardSerial;
@@ -50,37 +55,36 @@ bool APRS::configDra818v(HardwareSerial &hardSerial, float txFrequency, float rx
     return true;
 }
 
-bool APRS::configDra818v(SerialPIO serial, float txFrequency, float rxFrequency, bool emphasis, bool hpf, bool lpf) {
+bool APRS::configDra818v(SerialPIO serial, bool emphasis, bool hpf, bool lpf, float txFrequency=aprsFrequencyMhz, float rxFrequency=aprsFrequencyMhz) {
     // Open serial connection
     serial.begin(9600);
-    serial->setTimeout(dra818vTimeout);
+    serial.setTimeout(dra818vTimeout);
     // Handshake
-    serial->println("AT+DMOCONNECT");
-    if(!serial->find("+DMOcvf          ")) return false;
+    serial.println("AT+DMOCONNECT");
+    if(!serial.find("+DMOcvf          ")) return false;
     delay(dra818vEnableDelay);
     // Set frequencies and group
-    serial->print("AT+DMOSETGROUP=0,");
-    serial->print(txFrequency, 4);
-    serial->print(',');
-    serial->print(rxFrequency, 4);
-    serial->println(",0000,0,0000");
+    serial.print("AT+DMOSETGROUP=0,");
+    serial.print(txFrequency, 4);
+    serial.print(',');
+    serial.print(rxFrequency, 4);
+    serial.println(",0000,0,0000");
     if(!serial->find("+DMOSETGROUP:0")) return false;
     delay(dra818vEnableDelay);
     // Set filter settings
-    serial->print("AT+SETFILTER=");
-    serial->print(emphasis);
-    serial->print(',');
-    serial->print(hpf);
-    serial->print(',');
-    serial->println(lpf);
-    if(!serial->find("+DMOSETFILTER:0")) return false;
+    serial.print("AT+SETFILTER=");
+    serial.print(emphasis);
+    serial.print(',');
+    serial.print(hpf);
+    serial.print(',');
+    serial.println(lpf);
+    if(!serial.find("+DMOSETFILTER:0")) return false;
     delay(dra818vEnableDelay);
-    serial->end();
+    serial.end();
     return true;
 }
 
-
-void setOutput(uint8_t state) {
+void APRS::setOutput(uint8_t state) {
     digitalWrite(dacPin0, state & 0b00000001);
     digitalWrite(dacPin1, state & 0b00000010);
     digitalWrite(dacPin2, state & 0b00000100);

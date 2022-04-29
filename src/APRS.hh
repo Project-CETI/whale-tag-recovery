@@ -12,18 +12,19 @@
 
 class APRS {
 public:
-    APRS(const char callSign[8]);
-    APRS(const char callSign[8], const uint8_t ssid, const char dest[8]);
-    APRS(const char callSign[8], const uint8_t ssid, const char dest[8], const char digi[8], const uint8_t digi_ssid);
+    APRS(const char callSign[8], uint8_t ssid);
+    APRS(const char callSign[8], uint8_t ssid, const char dest[8]);
+    APRS(const char callSign[8], uint8_t ssid, const char dest[8], const char digi[8], const uint8_t digi_ssid);
     void sendPacket(Swarm_M138_GeospatialData_t *locationInfo, char* status);
-    void sendPayload(Swarm_M138_GeospatialData_t *locationInfo, char* status);
+   void sendPayload(Swarm_M138_GeospatialData_t *locationInfo, char* status);
 #ifdef APRS_SoftwareSerial_enabled
     static bool configDra818v(SoftwareSerial serial, float txFrequency, float rxFrequency, bool emphasis, bool hpf, bool lpf)
 #endif
-    static bool configDra818v(HardwareSerial &hardSerial, float txFrequency, float rxFrequency, bool emphasis, bool hpf, bool lpf);
-    static bool configDra818v(SerialPIO serial, float txFrequency, float rxFrequency, bool emphasis, bool hpf, bool lpf);
+    static bool configDra818v(HardwareSerial &hardSerial, bool emphasis, bool hpf, bool lpf, float txFrequency, float rxFrequency);
+    static bool configDra818v(SerialPIO serial, bool emphasis, bool hpf, bool lpf, float txFrequency, float rxFrequency);
 private:
     char callSign[8];
+    uint8_t ssid;
     char bitStuff = 0;
     uint16_t crc = 0xffff;
     uint8_t currOutput = 0;
@@ -40,7 +41,6 @@ private:
     };
 #endif
     char bit_stuff = 0;
-    void sendPayload(char type);
     void sendCharNrzi(char in_byte, bool enBitStuff);
     void setNextSin();
     inline void setNada2400();

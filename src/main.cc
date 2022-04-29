@@ -11,7 +11,7 @@
 enum recovery_board_state_t : uint8_t {in_setup=0, pre_application=1, sleep=2, transmitting=3, recovery=4};
 SWARM_M138 swarm;
 
-APRS aprs("KC1QXQ");
+APRS aprs("KC1QXQ", 1);
 char comment[] = " v0.9 https://projectceti.org";
 
 struct swarmTxPacket{
@@ -20,7 +20,7 @@ struct swarmTxPacket{
 
 void setup() {
     SerialPIO vhfSerial = SerialPIO(dra818vUartRxPin, dra818vUartTxPin);
-    APRS::configDra818v();
+    APRS::configDra818v(vhfSerial);
 
 }
 
