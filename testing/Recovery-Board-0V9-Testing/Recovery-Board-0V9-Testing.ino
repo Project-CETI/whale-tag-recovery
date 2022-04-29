@@ -51,12 +51,12 @@ char digi[8] = "WIDE2";
 char digissid = 1;
 char comment[128] = "v0.9";
 char mystatus[128] = "Status";
-char lati[9] = "4221.78N";
-char lon[10] = "07107.52W";
+char lati[9];
+char lon[10];
 int coord_va9id;
 const char sym_ovl = 'T';
 const char sym_tab = 'a';
-unsigned int tx_delay = 5000;
+unsigned int tx_delay = 60000;
 unsigned int str_len = 400;
 char bit_stuff = 0;
 unsigned short crc = 0xffff;
@@ -113,7 +113,7 @@ void setOutput(uint8_t state) {
   digitalWrite(out3Pin, state & 0b00001000);
   digitalWrite(out4Pin, state & 0b00010000);
   digitalWrite(out5Pin, state & 0b00100000);
-  digitalWrite(out6Pin, state & 0b01000000);  
+  digitalWrite(out6Pin, state & 0b01000000);
   digitalWrite(out7Pin, state & 0b10000000);
 }
 
@@ -467,45 +467,6 @@ void send_packet(Swarm_M138_GeospatialData_t *locationInfo) {
   setLed(false);
   setPttState(false);
 }
-//
-// void send_packet(packet_type)
-//{
-//    print_debug(packet_type);
-//
-//    setLed(true);
-////    setPttState(true);
-//
-//    // TODO TEST IF THIS IMPROVES RECEPTION
-//    // Send initialize sequence for receiver
-//    send_char_NRZI(0x99, true);
-//    send_char_NRZI(0x99, true);
-//    send_char_NRZI(0x99, true);
-//
-//    // delay(100);
-//
-//    /*
-//       AX25 FRAME
-//
-//       ........................................................
-//       |  FLAG(s) |  HEADER  | PAYLOAD  | FCS(CRC) |  FLAG(s) |
-//       --------------------------------------------------------
-//       |  N bytes | 22 bytes |  N bytes | 2 bytes  |  N bytes |
-//       --------------------------------------------------------
-//
-//       FLAG(s)  : 0x7e
-//       HEADER   : see header
-//       PAYLOAD  : 1 byte data type + N byte info
-//       FCS      : 2 bytes calculated from HEADER + PAYLOAD
-//    */
-//
-//    send_flag(150);
-//    crc = 0xffff;
-//    send_header(packet_type);
-//    send_payload(packet_type);
-//    send_crc();
-//    send_flag(3);
-//    setLed(false);
-//}
 
 void print_debug(char type) {
   /*
@@ -658,10 +619,6 @@ void setup() {
   // Initialize DRA818V
   initializeDra818v();
   configureDra818v();
-  //    while(!configureDra818v()){
-  //        Serial.println("Failed to configure, trying again");
-  //        delay(3000);
-  //    }
   setPttState(false);
   setVhfState(true);
   Serial.println("DRA818V configured");
@@ -677,10 +634,9 @@ void loop() {
   Swarm_M138_GeospatialData_t *info =
     new Swarm_M138_GeospatialData_t;  // Allocate memory for the information
   swarm.getGeospatialInfo(info);
-  if (!info ->lat == 0 && !info -> lon == 0) {
+  if (!(info ->lat == 0.0) && !(info -> lon == 0.0)) {
     uint32_t startPacket = millis();
     send_packet(info);
-    // send_packet(_BEACON);
     uint32_t packetDuration = millis() - startPacket;
     delete info;
     Serial.println("Packet sent in: " + String(packetDuration) + " ms");
