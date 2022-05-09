@@ -49,14 +49,14 @@ char dest[8] = "APLIGA";
 char dest_beacon[8] = "BEACON";
 char digi[8] = "WIDE2";
 char digissid = 1;
-char comment[128] = "v0.9";
+char comment[128] = "Ceti v0.9 5";
 char mystatus[128] = "Status";
 char lati[9];
 char lon[10];
 int coord_va9id;
 const char sym_ovl = 'T';
 const char sym_tab = 'a';
-unsigned int tx_delay = 60000;
+unsigned int tx_delay = 30000;
 unsigned int str_len = 400;
 char bit_stuff = 0;
 unsigned short crc = 0xffff;
@@ -347,6 +347,8 @@ void sendPayload(Swarm_M138_GeospatialData_t *locationInfo, char *status_) {
     course = 360;
   }
   char cogSpeed[7];
+  int sog = (int) locationInfo->speed;
+  snprintf(cogSpeed, 7, "%03d/%03d", course, sog);
   Serial.begin(115200);
   /****** MYCALL ********/
   Serial.print(mycall);
@@ -373,7 +375,7 @@ void sendPayload(Swarm_M138_GeospatialData_t *locationInfo, char *status_) {
   send_string_len(lati, strlen(lati));
   send_char_NRZI(sym_ovl, true);
   send_string_len(lon, strlen(lon));
-  //    send_string_len(cogSpeed, strlen(cogSpeed));
+  send_string_len(cogSpeed, strlen(cogSpeed));
   send_char_NRZI(sym_tab, true);
   send_string_len(comment, strlen(comment));
 }
@@ -634,7 +636,7 @@ void loop() {
   Swarm_M138_GeospatialData_t *info =
     new Swarm_M138_GeospatialData_t;  // Allocate memory for the information
   swarm.getGeospatialInfo(info);
-  if (!(info ->lat == 0.0) && !(info -> lon == 0.0)) {
+  if (info ->lat != 0.0 && info -> lon != 0.0) {
     uint32_t startPacket = millis();
     send_packet(info);
     uint32_t packetDuration = millis() - startPacket;
