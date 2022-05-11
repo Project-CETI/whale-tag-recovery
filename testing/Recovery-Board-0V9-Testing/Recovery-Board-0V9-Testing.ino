@@ -2,13 +2,16 @@
 #include <math.h>
 #include <stdio.h>
 #include "pico/stdlib.h"
+#include <time.h>
+
+
 #define _FLAG 0x7e
 #define _CTRL_ID 0x03
 #define _PID 0xf0
 #define _DT_EXP ','
 #define _DT_STATUS '>'
 #define _DT_POS '!'
-
+#define tag_serial 2
 #define _GPRMC 1
 #define _FIXPOS 2
 #define _FIXPOS_STATUS 3
@@ -630,18 +633,51 @@ void setup() {
   Serial.println("Setup complete");
   setLed(false);
   delay(1000);
+  txSwarm(300000);
 }
+uint64_t prevAprsTx = 0;
+uint64_t prevSwarmQueue = 0;
+uint64_t swarmInterval = 300000; // swarm Tx update interval in ms
 
 void loop() {
-  Swarm_M138_GeospatialData_t *info =
-    new Swarm_M138_GeospatialData_t;  // Allocate memory for the information
-  swarm.getGeospatialInfo(info);
-  if (info ->lat != 0.0 && info -> lon != 0.0) {
-    uint32_t startPacket = millis();
-    send_packet(info);
-    uint32_t packetDuration = millis() - startPacket;
-    delete info;
-    Serial.println("Packet sent in: " + String(packetDuration) + " ms");
+  if (millis() - prevAprsTx >= tx_delay) {
+    prevAprsTx = millis();
+    Swarm_M138_GeospatialData_t *info =
+      new Swarm_M138_GeospatialData_t;
+    swarm.getGeospatialInfo(info);
+    if (info ->lat != 0.0 && info -> lon != 0.0) {
+      uint32_t startPacket = millis();
+      send_packet(info);
+      uint32_t packetDuration = millis() - startPacket;
+      delete info;
+      Serial.println("Packet sent in: " + String(packetDuration) + " ms");
+    }
+
   }
-  delay(tx_delay);
+  if (millis() - prevSwarmQueue >= swarmInterval) {
+    prevSwarmQueue = millis();
+    txSwarm(swarmInterval);
+  }
+}
+
+void txSwarm(uint16_t expireSeconds) {
+  Swarm_M138_GeospatialData_t *info = new Swarm_M138_GeospatialData_t;
+  swarm.getGeospatialInfo(info);
+  Swarm_M138_DateTimeData_t *dateTime = new Swarm_M138_DateTimeData_t;
+  swarm.getDateTime(dateTime);
+  char* message;
+  sprintf(message, "SN%d=%f,%f@%d/%d/%d:%d:%d:%d", tag_serial, info->lat, info->lon, dateTime->YYYY, dateTime->MM, dateTime->DD, dateTime->hh, dateTime->mm, dateTime->ss);
+  uint64_t *id;
+  swarm.transmitTextExpire(message, id, swarmTimetoEpoch(dateTime) + expireSeconds);
+  }
+
+  uint32_t swarmTimetoEpoch(Swarm_M138_DateTimeData_t* swarmTime) {
+  struct tm t;
+  t.tm_year = swarmTime->YYYY - 1900;
+  t.tm_mon = swarmTime->MM - 1;
+  t.tm_mday = swarmTime->DD;
+  t.tm_hour = swarmTime->hh;
+  t.tm_min = swarmTime->mm;
+  t.tm_sec = swarmTime->mm;
+  return (uint32_t)mktime(&t);
 }
