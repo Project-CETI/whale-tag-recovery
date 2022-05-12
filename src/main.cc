@@ -24,10 +24,28 @@ void setup() {
     LittleFS.setConfig(cfg);
 }
 
-void loop() {
-
+void loop(swarm_gps) {
 }
 
+void txSwarm(Swarm_M138_GeospatialData_t *gps, uint8_t tagId, uint8_t mode, uint8_t diveNum, uint8_t batterySoc, uint16_t detachTime){
+  char message[22];
+  char lat[4];
+  char lon[4];
+  char speed = (char)gps->speed;
+  char course[2];
+  char time[5];
+  char id = (char)tagId;
+  char mode_c = (char)mode;
+  char dives = (char)diveNum;
+  char bat = (char)batterySoc;
+  char detachTime_c[2];
+  memcpy(lat, &gps->lat, sizeof(float));
+  memcpy(lon, &gps->lon, sizeof(float));
+  memcpy(course, &gps->course, sizeof(uint16_t));
+  swarm
+  memcpy(time, )
+
+}
 
 void txAprs(){
   auto *gpsQuality = new Swarm_M138_GPS_Fix_Quality_t;
