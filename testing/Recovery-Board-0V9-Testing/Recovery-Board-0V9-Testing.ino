@@ -660,18 +660,7 @@ void loop() {
   }
 }
 
-void txSwarm(uint16_t expireSeconds) {
-  Swarm_M138_GeospatialData_t *info = new Swarm_M138_GeospatialData_t;
-  swarm.getGeospatialInfo(info);
-  Swarm_M138_DateTimeData_t *dateTime = new Swarm_M138_DateTimeData_t;
-  swarm.getDateTime(dateTime);
-  char* message;
-  sprintf(message, "SN%d=%f,%f@%d/%d/%d:%d:%d:%d", tag_serial, info->lat, info->lon, dateTime->YYYY, dateTime->MM, dateTime->DD, dateTime->hh, dateTime->mm, dateTime->ss);
-  uint64_t *id;
-  swarm.transmitTextExpire(message, id, swarmTimetoEpoch(dateTime) + expireSeconds);
-  }
-
-  uint32_t swarmTimetoEpoch(Swarm_M138_DateTimeData_t* swarmTime) {
+uint32_t swarmTimetoEpoch(Swarm_M138_DateTimeData_t* swarmTime) {
   struct tm t;
   t.tm_year = swarmTime->YYYY - 1900;
   t.tm_mon = swarmTime->MM - 1;
@@ -681,3 +670,18 @@ void txSwarm(uint16_t expireSeconds) {
   t.tm_sec = swarmTime->mm;
   return (uint32_t)mktime(&t);
 }
+
+void txSwarm(uint16_t expireSeconds) {
+  
+  Swarm_M138_GeospatialData_t *info = new Swarm_M138_GeospatialData_t;
+  swarm.getGeospatialInfo(info);
+  Swarm_M138_DateTimeData_t *dateTime = new Swarm_M138_DateTimeData_t;
+  swarm.getDateTime(dateTime);
+  char* message;
+  sprintf(message, "SN%d=%f,%f@%d/%d/%d:%d:%d:%d", tag_serial, info->lat, info->lon, dateTime->YYYY, dateTime->MM, dateTime->DD, dateTime->hh, dateTime->mm, dateTime->ss);
+  uint64_t *id;
+  swarm.deleteAllTxMessages();
+  swarm.transmitTextExpire(message, id, swarmTimetoEpoch(dateTime) + expireSeconds);
+  char* printMessage;
+  Serial.println(printMessage);
+  }
