@@ -637,9 +637,18 @@ void setup() {
 }
 uint64_t prevAprsTx = 0;
 uint64_t prevSwarmQueue = 0;
-uint64_t swarmInterval = 300000; // swarm Tx update interval in ms
+uint64_t swarmInterval = 1000; // swarm Tx update interval in ms
+bool ledState = false;
+uint64_t prevLedTime = 0;
+uint32_t ledOn = 0; 
 
 void loop() {
+  if (ledState){
+    if(millis()-prevLedTime>=ledOn){
+      digitalWrite(ledPin, false);
+      ledState = false;
+    }
+  }
   if (millis() - prevAprsTx >= tx_delay) {
     prevAprsTx = millis();
     Swarm_M138_GeospatialData_t *info =
@@ -655,8 +664,15 @@ void loop() {
 
   }
   if (millis() - prevSwarmQueue >= swarmInterval) {
+    Swarm_M138_GPS_Fix_Quality_t *gpsQuality = new Swarm_M138_GPS_Fix_Quality_t;
+    swarm.getGpsFixQuality(gpsQuality);
     prevSwarmQueue = millis();
-    txSwarm(swarmInterval);
+    if(gpsQuality->fix_type != SWARM_M138_GPS_FIX_TYPE_TT && gpsQuality->fix_type != SWARM_M138_GPS_FIX_TYPE_TT && gpsQuality->fix_type != SWARM_M138_GPS_FIX_TYPE_NF){
+      txSwarm(swarmInterval);
+    }
+    else{
+      Serial.println("No GPS");
+    }
   }
 }
 
@@ -681,7 +697,14 @@ void txSwarm(uint16_t expireSeconds) {
   sprintf(message, "SN%d=%f,%f@%d/%d/%d:%d:%d:%d", tag_serial, info->lat, info->lon, dateTime->YYYY, dateTime->MM, dateTime->DD, dateTime->hh, dateTime->mm, dateTime->ss);
   uint64_t *id;
   swarm.deleteAllTxMessages();
-  swarm.transmitTextExpire(message, id, swarmTimetoEpoch(dateTime) + expireSeconds);
-  char* printMessage;
-  Serial.println(printMessage);
+  if(swarm.transmitTextExpire(message, id, swarmTimetoEpoch(dateTime) + expireSeconds) == SWARM_M138_ERROR_SUCCESS){
+    digitalWrite(ledPin, true);
+    prevLedTime = millis();
+    ledOn = 500;
+    ledState = true;
   }
+  char* printMessage;
+  Serial.print("sent swarm ");
+  Serial.printf("SN%d=%f,%f@%d/%d/%d:%d:%d:%d", tag_serial, info->lat, info->lon, dateTime->YYYY, dateTime->MM, dateTime->DD, dateTime->hh, dateTime->mm, dateTime->ss);
+  Serial.println();
+}
