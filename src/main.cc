@@ -33,7 +33,7 @@ void txSwarm(Swarm_M138_GeospatialData_t *gps, uint8_t tagId, uint8_t mode, uint
   char lon[4];
   char speed = (char)gps->speed;
   char course[2];
-  char time[5];
+  char time[4];
   char id = (char)tagId;
   char mode_c = (char)mode;
   char dives = (char)diveNum;
@@ -42,9 +42,11 @@ void txSwarm(Swarm_M138_GeospatialData_t *gps, uint8_t tagId, uint8_t mode, uint
   memcpy(lat, &gps->lat, sizeof(float));
   memcpy(lon, &gps->lon, sizeof(float));
   memcpy(course, &gps->course, sizeof(uint16_t));
-  swarm
-  memcpy(time, )
-
+  Swarm_M138_DateTimeData_t* swarmTime = new Swarm_M138_DateTimeData_t;
+  swarm.getDateTime(swarmTime);
+  uint32_t epochTime = Swarm::swarmTimetoEpoch(swarmTime);
+  memcpy(time, &epochTime, sizeof(uint32_t));
+  memcpy(detachTime_c, &detachTime, sizeof(uint16_t));
 }
 
 void txAprs(){

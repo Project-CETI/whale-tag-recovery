@@ -1,0 +1,72 @@
+//
+// Created by Louis Adamian on 5/16/22.
+//
+#include "Arduino.h"
+#include "TagUart.hh"
+#include "TagRecoveryBoardv0_9.h"
+#include <stdio.h>
+#include "pico/stdlib.h"
+#include "pico/sleep.h"
+
+
+TagUart::TagUart(uint8_t txPin, uint8_t rxPin) {
+  tagSerial.setTX(txPin);
+  tagSerial.setRX(rxPin);
+  tagSerial.begin(115200);
+}
+
+void TagUart::receiveInterupt() {
+  char* buff;
+  tagSerial.readBytesUntil('\n', buff, 32);
+  TagUart::parseReceive(buff);
+}
+
+int8_t TagUart::parseReceive(char* buff){
+  if(buff[0] == 'G'){
+    // gps
+
+  }
+  else if (buff[0] == 'S'){
+    // sleep
+    tagSerial.println('s');
+    sleep_goto_dormant_until_edge_high(tagSerialRxPin);
+  }
+  else {
+    return -1;
+  }
+}
+
+uint8_t TagUart::parseStatus(char* status) {
+  uint8_t mode = (uint8_t)status[1];
+  uint8_t batteryPercent = (uint8_t)status[2];
+  uint16_t batteryTime;
+  memcpy(batteryTime, );
+  uint8_t diveNum = status[4];
+}
+
+
+uint8_t TagUart::sendDetach() {
+  tagSerial.println("D");
+  while(tagSerial.available()<2);
+  char* buff;
+  tagSerial.readBytesUntil('\n', buff, 32);
+  if (buff[0] == 'R'){
+    return 0;
+  }
+  return 1;
+}
+
+uint8_t TagUart::sendGpsTime() {
+  Swarm_M138_GeospatialData_t* gps = new Swarm_M138_GeospatialData_t;
+  Swarm_M138_DateTimeData_t* dateTime = new Swarm_M138_DateTimeData_t;
+  char message[19];
+  message[0] = 'g';
+  message[18] = '\n';
+  char lat[4];
+  char lon[4];
+  char speed = round(gps->speed/1.852);
+  char course[2];
+  memcpy(lat, &gps->lat, sizeof(float));
+  memcpy(lon, &gps->lon, sizeof(float));
+  memcpy(course, &gps->course, sizeof(uint16_t));
+}

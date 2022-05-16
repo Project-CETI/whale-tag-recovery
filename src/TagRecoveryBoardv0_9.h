@@ -26,7 +26,7 @@
 #define swarmSerialTxPin
 #define swarmSerialRxPin
 
-#define tagSerial Serial2
+#define tagSerial Serial
 #define tagSerialTxPin
 #define tagSerialRxPin
 

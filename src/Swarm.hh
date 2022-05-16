@@ -13,7 +13,7 @@ public:
     Swarm(HardwareSerial *serial);
 
     Swarm_M138_GeospatialData_t getGpsData();
+    static uint32_t swarmTimetoEpoch(Swarm_M138_DateTimeData_t* swarmTime);
 };
-
 
 #endif //CETI_TAG_TRACKING_SWARM_H
