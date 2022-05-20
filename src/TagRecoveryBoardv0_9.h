@@ -14,7 +14,6 @@
 #define dacPin6 24
 #define dacPin7 25
 
-#define dra818vEnableDelay 1000
 #define dra818vTimeout 500
 #define dra818vPowerLevelPin 15
 #define dra818vSquelchPin 17
@@ -26,7 +25,7 @@
 #define swarmSerialTxPin
 #define swarmSerialRxPin
 
-#define tagSerial Serial
+#define tagUartBus uart1
 #define tagSerialTxPin
 #define tagSerialRxPin
 

@@ -13,9 +13,14 @@ APRS aprs(APRS_CALL, APRS_SSID);
 byte* swarmTxPacket;
 uint8_t battery_level;
 uint16_t detach;
-
+uint32_t prevSwarmQueue = 0;
+uint32_t swarmQueueInterval = 300000;
+uint32_t swarmTransmitInterval = 7.2e+6;
+uint32_t arpsTransmitInterval = 300000;
+uint32_t prevAprsTx = 0;
 LittleFSConfig cfg;
 
+bool swarmQueuing = false;
 
 void setup() {
     SerialPIO vhfSerial = SerialPIO(dra818vUartRxPin, dra818vUartTxPin);
@@ -24,10 +29,19 @@ void setup() {
     LittleFS.setConfig(cfg);
 }
 
-void loop(swarm_gps) {
+void loop() {
+  if(swarmQueuing){
+    if (millis()-prevSwarmQueue()>=swarmQueueInterval){
+      queueSwarm();
+    }
+  }
+  if(millis()-LittleFSConfig>= aprsQueueInterval){
+    txAprs();
+  }
 }
 
-void txSwarm(Swarm_M138_GeospatialData_t *gps, uint8_t tagId, uint8_t mode, uint8_t diveNum, uint8_t batterySoc, uint16_t detachTime){
+
+void queueSwarm(Swarm_M138_GeospatialData_t *gps, uint8_t tagId, uint8_t mode, uint8_t diveNum, uint8_t batterySoc, uint16_t detachTime){
   char message[22];
   char lat[4];
   char lon[4];
@@ -85,10 +99,8 @@ uint8_t dive(){
 }
 
 uint8_t breachTransmit(){
-    /*
-     *
-     */
-    return 0;
+
+  return 0;
 }
 
 uint8_t breachLoop(){

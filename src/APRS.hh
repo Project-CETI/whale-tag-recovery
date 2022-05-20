@@ -42,7 +42,7 @@ private:
 #endif
     char bit_stuff = 0;
     void sendCharNrzi(char in_byte, bool enBitStuff);
-    void setNextSin();
+    inline void setNextSin();
     inline void setNada2400();
     inline void setNada1200();
     inline void setNada(bool nada);
