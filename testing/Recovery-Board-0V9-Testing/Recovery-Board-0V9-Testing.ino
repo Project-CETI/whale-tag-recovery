@@ -103,40 +103,6 @@ const uint8_t sinValues[numSinValues] = {
   3,   1,   3,   10,  22,  38,  57,  79,  103, 128
 };
 
-void txSwarm() {
-  Serial.println("TX swarm");
-  Swarm_M138_GPS_Fix_Quality_t *gpsQuality = new Swarm_M138_GPS_Fix_Quality_t;
-  swarm.getGpsFixQuality(gpsQuality);
-  Serial.print("fix quality = ");
-  Serial.println(gpsQuality->fix_type);
-  if (gpsQuality->fix_type != SWARM_M138_GPS_FIX_TYPE_TT && gpsQuality->fix_type != SWARM_M138_GPS_FIX_TYPE_INVALID && gpsQuality->fix_type != SWARM_M138_GPS_FIX_TYPE_NF) {
-    prevSwarmQueue = millis();
-    Swarm_M138_GeospatialData_t *info = new Swarm_M138_GeospatialData_t;
-    swarm.getGeospatialInfo(info);
-    Swarm_M138_DateTimeData_t *dateTime = new Swarm_M138_DateTimeData_t;
-    swarm.getDateTime(dateTime);
-    char* message;
-    sprintf(message, "SN%d=%f,%f@%d/%d/%d:%d:%d:%d", tag_serial, info->lat, info->lon, dateTime->YYYY, dateTime->MM,dateTime->DD, dateTime->hh, dateTime->mm, dateTime->ss);
-    uint64_t *id;
-    swarm.deleteAllTxMessages();
-    if (swarm.transmitText(message, id) == SWARM_M138_ERROR_SUCCESS) {
-      digitalWrite(ledPin, true);
-      prevLedTime = millis();
-      ledOn = 500;
-      ledState = true;
-    }
-    char* printMessage;
-    Serial.print("sent swarm ");
-    Serial.printf("SN%d=%f,%f@%d/%d/%d:%d:%d:%d", tag_serial, info->lat, info->lon, dateTime->YYYY, dateTime->MM, dateTime->DD, dateTime->hh, dateTime->mm, dateTime->ss);
-    Serial.println();
-  }
-  else {
-    Serial.println("No GPS");
-  }
-  delete gpsQuality;
-
-}
-
 void initializeOutput() {
   pinMode(out0Pin, OUTPUT);
   pinMode(out1Pin, OUTPUT);
@@ -479,9 +445,9 @@ void send_packet(Swarm_M138_GeospatialData_t *locationInfo) {
 
   // TODO TEST IF THIS IMPROVES RECEPTION
   // Send initialize sequence for receiver
-  send_char_NRZI(0x99, true);
-  send_char_NRZI(0x99, true);
-  send_char_NRZI(0x99, true);
+  //send_char_NRZI(0x99, true);
+  //send_char_NRZI(0x99, true);
+  //send_char_NRZI(0x99, true);
 
 
   /*
@@ -642,6 +608,39 @@ void initLed() {
   digitalWrite(ledPin, false);
 }
 
+void txSwarm() {
+  Serial.println("TX swarm");
+  Swarm_M138_GPS_Fix_Quality_t *gpsQuality = new Swarm_M138_GPS_Fix_Quality_t;
+  swarm.getGpsFixQuality(gpsQuality);
+  Serial.print("fix quality = ");
+  Serial.println(gpsQuality->fix_type);
+  if (gpsQuality->fix_type != SWARM_M138_GPS_FIX_TYPE_TT && gpsQuality->fix_type != SWARM_M138_GPS_FIX_TYPE_INVALID && gpsQuality->fix_type != SWARM_M138_GPS_FIX_TYPE_NF) {
+    prevSwarmQueue = millis();
+    Swarm_M138_GeospatialData_t *info = new Swarm_M138_GeospatialData_t;
+    swarm.getGeospatialInfo(info);
+    Swarm_M138_DateTimeData_t *dateTime = new Swarm_M138_DateTimeData_t;
+    swarm.getDateTime(dateTime);
+    char* message;
+    sprintf(message, "SN%d=%f,%f@%d/%d/%d:%d:%d:%d", tag_serial, info->lat, info->lon, dateTime->YYYY, dateTime->MM,dateTime->DD, dateTime->hh, dateTime->mm, dateTime->ss);
+    uint64_t *id;
+    swarm.deleteAllTxMessages();
+    if (swarm.transmitText(message, id) == SWARM_M138_ERROR_SUCCESS) {
+      digitalWrite(ledPin, true);
+      prevLedTime = millis();
+      ledOn = 500;
+      ledState = true;
+    }
+    char* printMessage;
+    Serial.print("sent swarm ");
+    Serial.printf("SN%d=%f,%f@%d/%d/%d:%d:%d:%d", tag_serial, info->lat, info->lon, dateTime->YYYY, dateTime->MM, dateTime->DD, dateTime->hh, dateTime->mm, dateTime->ss);
+    Serial.println();
+  }
+  else {
+    Serial.println("No GPS");
+  }
+  delete gpsQuality;
+}
+
 void logSwarm(){
   File f = LittleFS.open("/swarmlog.csv", "a");
   Swarm_M138_DateTimeData_t *dateTime = new Swarm_M138_DateTimeData_t;
@@ -652,6 +651,7 @@ void logSwarm(){
   delete dateTime;
   delete rxTest;
 }
+
 void txAprs(){
   prevAprsTx = millis();
   Swarm_M138_GPS_Fix_Quality_t *gpsQuality = new Swarm_M138_GPS_Fix_Quality_t;
@@ -667,14 +667,14 @@ void txAprs(){
 //  }
   delete gpsQuality;
 }
+
 void setup() {
   initLed();
   setLed(true);
   Serial.begin(115200);
   delay(5000);
-  Serial1.setTX(0);
-  Serial1.setRX(1);
-  swarm.begin(Serial1);
+
+  // Initialize DRA818V
   Serial.println("Configuring DRA818V...");
   // Initialize DRA818V
   initializeDra818v();
@@ -682,46 +682,66 @@ void setup() {
   setPttState(false);
   setVhfState(true);
   Serial.println("DRA818V configured");
+  
+  // Initialize DAC
   Serial.println("Configuring DAC...");
   initializeOutput();
   Serial.println("DAC configured");
+
+  // Initialize Swarm
+  Serial.println("Configuring swarm...");
+  Serial1.setTX(0);
+  Serial1.setRX(1);
+  swarm.begin(Serial1);
   while (!swarm.begin(Serial1)){
     Serial.println(
       F("Could not communicate with the modem. Please check the serial "
         "connections. Freezing..."));
     delay(1200);
   }
+
+  // Initialize littleFS
   LittleFS.setConfig(cfg);
   LittleFS.begin();
+  
   setLed(false);
   Serial.println("Setup complete");
-  Swarm_M138_GPS_Fix_Quality_t *gpsQuality = new Swarm_M138_GPS_Fix_Quality_t;
-  Serial.println("waiting for GPS acquisition");
-  while(1){
-    swarm.getGpsFixQuality(gpsQuality);
-    if(gpsQuality->fix_type != SWARM_M138_GPS_FIX_TYPE_TT && gpsQuality->fix_type != SWARM_M138_GPS_FIX_TYPE_INVALID && gpsQuality->fix_type != SWARM_M138_GPS_FIX_TYPE_NF) {
-      break;
-      }
-    delay(200);
-  }
-  Serial.println("GPS acquired");
-//  txSwarm();
+
+  // Wait for GPS fix
+//  Swarm_M138_GPS_Fix_Quality_t *gpsQuality = new Swarm_M138_GPS_Fix_Quality_t;
+//  Serial.println("waiting for GPS acquisition");
+//  while(1){
+//    swarm.getGpsFixQuality(gpsQuality);
+//    if(gpsQuality->fix_type != SWARM_M138_GPS_FIX_TYPE_TT && gpsQuality->fix_type != SWARM_M138_GPS_FIX_TYPE_INVALID && gpsQuality->fix_type != SWARM_M138_GPS_FIX_TYPE_NF) {
+//      break;
+//      }
+//    delay(200);
+//  }
+//  Serial.println("GPS acquired");
+
+
+  // Queue Swarm and transmit APRS
+  txSwarm();
   txAprs();
 }
 
 void loop() {
+  // Update LED state
   if (ledState) {
     if (millis() - prevLedTime >= ledOn) {
       digitalWrite(ledPin, false);
       ledState = false;
     }
   }
-    if (millis() - prevAprsTx >= aprsInterva) {
-      txAprs();
-    }
-  
-//  if (millis() - prevSwarmQueue >= swarmInterval) {
-//    txSwarm();
-//  }
+
+  // Transmit APRS
+//    if (millis() - prevAprsTx >= aprsInterval) {
+//      txAprs();
+//    }
+
+  // Queue Swarm
+  if (millis() - prevSwarmQueue >= swarmInterval) {
+    txSwarm();
+  }
 
 }
