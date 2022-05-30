@@ -11,7 +11,7 @@
 #define _DT_EXP ','
 #define _DT_STATUS '>'
 #define _DT_POS '!'
-#define tag_serial 2
+#define tagSerial 2
 #define _GPRMC 1
 #define _FIXPOS 2
 #define _FIXPOS_STATUS 3
@@ -44,7 +44,11 @@
 #define delay1200 19  // 23
 #define delay2200 9   // 11
 #define numSinValues 32
-#define board_SN 2;
+#define boardSN 2;
+
+//intervals
+uint32_t aprsInterval = 5000;
+uint32_t swarmInterval = 300000; // swarm Tx update interval in ms
 
 SWARM_M138 swarm;
 LittleFSConfig cfg;
@@ -52,7 +56,7 @@ LittleFSConfig cfg;
 void setLed(bool state) {
   digitalWrite(ledPin, state);
 }
-bool nada = 0;
+// APRS communication config
 char mycall[8] = "KC1QXQ";
 char myssid = 5;
 char dest[8] = "APLIGA";
@@ -61,18 +65,16 @@ char digi[8] = "WIDE2";
 char digissid = 1;
 char comment[128] = "Ceti v0.9 5";
 char mystatus[128] = "Status";
-char lati[9];
-char lon[10];
-int coord_va9id;
+
+// APRS protocol config
+bool nada = 0;
 const char sym_ovl = 'T';
 const char sym_tab = 'a';
-unsigned int aprsInterval = 5000;
 unsigned int str_len = 400;
-char bit_stuff = 0;
+char bitStuff = 0;
 unsigned short crc = 0xffff;
 uint64_t prevAprsTx = 0;
 uint64_t prevSwarmQueue = 0;
-uint64_t swarmInterval = 300000; // swarm Tx update interval in ms
 bool ledState = false;
 uint64_t prevLedTime = 0;
 uint32_t ledOn = 0;
@@ -80,22 +82,20 @@ uint8_t currOutput = 0;
 char rmc[100];
 char rmc_stat;
 
-void set_nada_1200(void);
-void set_nada_2400(void);
+void setNada1200(void);
+void setNada2400(void);
 void set_nada(bool nada);
 
-void send_char_NRZI(unsigned char in_byte, bool enBitStuff);
-void send_string_len(const char *in_string, int len);
+void sendCharNRZI(unsigned char in_byte, bool enBitStuff);
+void sendStrLen(const char *in_string, int len);
 void sendPayload(Swarm_M138_GeospatialData_t *locationInfo, char *status);
 
-void calc_crc(bool in_bit);
-void send_crc(void);
+void calcCrc(bool in_bit);
+void sendCrc(void);
 
-void send_packet(char packet_type);
-void send_flag(unsigned char flag_len);
-void send_header(char mssinValuesg_type);
+void sendFlag(unsigned char flag_len);
+void sendHeader();
 
-void print_debug(char type);
 
 const uint8_t sinValues[numSinValues] = {
   152, 176, 198, 217, 233, 245, 252, 255, 252, 245, 233,
@@ -132,7 +132,7 @@ void setNextSin() {
   setOutput(sinValues[currOutput]);
 }
 
-void set_nada_1200(void) {
+void setNada1200(void) {
   uint32_t endTime = micros() + bitPeriod;
   while (micros() < endTime) {
     setNextSin();
@@ -140,7 +140,7 @@ void set_nada_1200(void) {
   }
 }
 
-void set_nada_2400(void) {
+void setNada2400(void) {
   uint32_t endTime = micros() + bitPeriod;
   while (micros() < endTime) {
     setNextSin();
@@ -150,9 +150,9 @@ void set_nada_2400(void) {
 
 void set_nada(bool nada) {
   if (nada)
-    set_nada_1200();
+    setNada1200();
   else
-    set_nada_2400();
+    setNada2400();
 }
 
 /*
@@ -162,24 +162,24 @@ void set_nada(bool nada) {
    Using 0x1021 as polynomial generator. The CRC registers are initialized with
    0xFFFF
 */
-void calc_crc(bool in_bit) {
-  unsigned short xor_in;
+void calc_crc(bool inBit) {
+  unsigned short xorIn;
 
-  xor_in = crc ^ in_bit;
+  xorIn = crc ^ inBit;
   crc >>= 1;
 
-  if (xor_in & 0x01) crc ^= 0x8408;
+  if (xorIn & 0x01) crc ^= 0x8408;
 }
 
-void send_crc(void) {
-  unsigned char crc_lo = crc ^ 0xff;
-  unsigned char crc_hi = (crc >> 8) ^ 0xff;
+void sendCrc(void) {
+  unsigned char crcLo = crc ^ 0xff;
+  unsigned char crcHi = (crc >> 8) ^ 0xff;
 
-  send_char_NRZI(crc_lo, true);
-  send_char_NRZI(crc_hi, true);
+  sendCharNRZI(crcLo, true);
+  sendCharNRZI(crcHi, true);
 }
 
-void send_header(char msg_type) {
+void sendHeader() {
   char temp;
 
   /*
@@ -202,111 +202,33 @@ void send_header(char msg_type) {
   */
 
   /********* DEST ***********/
-  if (msg_type == _BEACON) {
-    temp = strlen(dest_beacon);
-    for (int j = 0; j < temp; j++) send_char_NRZI(dest_beacon[j] << 1, true);
-  } else {
-    temp = strlen(dest);
-    for (int j = 0; j < temp; j++) send_char_NRZI(dest[j] << 1, true);
-  }
+
+  temp = strlen(dest);
+  for (int j = 0; j < temp; j++) sendCharNRZI(dest[j] << 1, true);
   if (temp < 6) {
-    for (int j = 0; j < (6 - temp); j++) send_char_NRZI(' ' << 1, true);
+    for (int j = 0; j < (6 - temp); j++) sendCharNRZI(' ' << 1, true);
   }
-  send_char_NRZI('0' << 1, true);
+  sendCharNRZI('0' << 1, true);
 
   /********* SOURCE *********/
   temp = strlen(mycall);
-  for (int j = 0; j < temp; j++) send_char_NRZI(mycall[j] << 1, true);
+  for (int j = 0; j < temp; j++) sendCharNRZI(mycall[j] << 1, true);
   if (temp < 6) {
-    for (int j = 0; j < (6 - temp); j++) send_char_NRZI(' ' << 1, true);
+    for (int j = 0; j < (6 - temp); j++) sendCharNRZI(' ' << 1, true);
   }
-  send_char_NRZI((myssid + '0') << 1, true);
+  sendCharNRZI((myssid + '0') << 1, true);
 
   /********* DIGI ***********/
   temp = strlen(digi);
-  for (int j = 0; j < temp; j++) send_char_NRZI(digi[j] << 1, true);
+  for (int j = 0; j < temp; j++) sendCharNRZI(digi[j] << 1, true);
   if (temp < 6) {
-    for (int j = 0; j < (6 - temp); j++) send_char_NRZI(' ' << 1, true);
+    for (int j = 0; j < (6 - temp); j++) sendCharNRZI(' ' << 1, true);
   }
-  send_char_NRZI(((digissid + '0') << 1) + 1, true);
+  sendCharNRZI(((digissid + '0') << 1) + 1, true);
 
   /***** CTRL FLD & PID *****/
-  send_char_NRZI(_CTRL_ID, true);
-  send_char_NRZI(_PID, true);
-}
-
-void send_payload(char type) {
-  /*
-     APRS AX.25 Payloads
-
-     TYPE : POSITION
-     ........................................................
-     |DATA TYPE |    LAT   |SYMB. OVL.|    LON   |SYMB. TBL.|
-     --------------------------------------------------------
-     |  1 byte  |  8 bytes |  1 byte  |  9 bytes |  1 byte  |
-     --------------------------------------------------------
-
-     DATA TYPE  : !
-     LAT        : ddmm.ssN or ddmm.ssS
-     LON        : dddmm.ssE or dddmm.ssW
-
-
-     TYPE : STATUS
-     ..................................
-     |DATA TYPE |    STATUS TEXT      |
-     ----------------------------------
-     |  1 byte  |       N bytes       |
-     ----------------------------------
-
-     DATA TYPE  : >
-     STATUS TEXT: Free form text
-
-
-     TYPE : POSITION & STATUS
-     ..............................................................................
-     |DATA TYPE |    LAT   |SYMB. OVL.|    LON   |SYMB. TBL.|    STATUS TEXT |
-     ------------------------------------------------------------------------------
-     |  1 byte  |  8 bytes |  1 byte  |  9 bytes |  1 byte  |       N bytes |
-     ------------------------------------------------------------------------------
-
-     DATA TYPE  : !
-     LAT        : ddmm.ssN or ddmm.ssS
-     LON        : dddmm.ssE or dddmm.ssW
-     STATUS TEXT: Free form text
-
-
-     All of the data are sent in the form of ASCII Text, not shifted.
-
-  */
-  if (type == _GPRMC) {
-    send_char_NRZI('$', true);
-    send_string_len(rmc, strlen(rmc) - 1);
-  } else if (type == _FIXPOS) {
-    send_char_NRZI(_DT_POS, true);
-    send_string_len(lati, strlen(lati));
-    send_char_NRZI(sym_ovl, true);
-    send_string_len(lon, strlen(lon));
-
-    send_char_NRZI(sym_tab, true);
-  } else if (type == _STATUS) {
-    send_char_NRZI(_DT_STATUS, true);
-    send_string_len(mystatus, strlen(mystatus));
-  } else if (type == _FIXPOS_STATUS) {
-    send_char_NRZI(_DT_POS, true);
-    send_string_len(lati, strlen(lati));
-    send_char_NRZI(sym_ovl, true);
-    send_string_len(lon, strlen(lon));
-    send_char_NRZI(sym_tab, true);
-
-    send_string_len(comment, strlen(comment));
-  } else {
-    send_string_len(mystatus, strlen(mystatus));
-  }
-}
-
-void floatSplit(float whole, int integer, int decimal) {
-  integer = (int)whole;
-  decimal = (int)whole - integer;
+  sendCharNRZI(_CTRL_ID, true);
+  sendCharNRZI(_PID, true);
 }
 
 void sendPayload(Swarm_M138_GeospatialData_t *locationInfo, char *status_) {
@@ -379,13 +301,13 @@ void sendPayload(Swarm_M138_GeospatialData_t *locationInfo, char *status_) {
   Serial.print(sym_tab);
   Serial.println(' ');
   Serial.flush();
-  send_char_NRZI(_DT_POS, true);
-  send_string_len(lati, strlen(lati));
-  send_char_NRZI(sym_ovl, true);
-  send_string_len(lon, strlen(lon));
-  send_string_len(cogSpeed, strlen(cogSpeed));
-  send_char_NRZI(sym_tab, true);
-  send_string_len(comment, strlen(comment));
+  sendCharNRZI(_DT_POS, true);
+  sendStrLen(lati, strlen(lati));
+  sendCharNRZI(sym_ovl, true);
+  sendStrLen(lon, strlen(lon));
+  sendStrLen(cogSpeed, strlen(cogSpeed));
+  sendCharNRZI(sym_tab, true);
+  sendStrLen(comment, strlen(comment));
 }
 
 /*
@@ -396,7 +318,7 @@ void sendPayload(Swarm_M138_GeospatialData_t *locationInfo, char *status_) {
    bit 1 : transmitted as no change in tone
    bit 0 : transmitted as change in tone
 */
-void send_char_NRZI(unsigned char in_byte, bool enBitStuff) {
+void sendCharNRZI(unsigned char in_byte, bool enBitStuff) {
   bool bits;
 
   for (int i = 0; i < 8; i++) {
@@ -406,31 +328,31 @@ void send_char_NRZI(unsigned char in_byte, bool enBitStuff) {
 
     if (bits) {
       set_nada(nada);
-      bit_stuff++;
+      bitStuff++;
 
-      if ((enBitStuff) && (bit_stuff == 5)) {
+      if ((enBitStuff) && (bitStuff == 5)) {
         nada ^= 1;
         set_nada(nada);
 
-        bit_stuff = 0;
+        bitStuff = 0;
       }
     } else {
       nada ^= 1;
       set_nada(nada);
 
-      bit_stuff = 0;
+      bitStuff = 0;
     }
 
     in_byte >>= 1;
   }
 }
 
-void send_string_len(const char *in_string, int len) {
-  for (int j = 0; j < len; j++) send_char_NRZI(in_string[j], true);
+void sendStrLen(const char *in_string, int len) {
+  for (int j = 0; j < len; j++) sendCharNRZI(in_string[j], true);
 }
 
-void send_flag(unsigned char flag_len) {
-  for (int j = 0; j < flag_len; j++) send_char_NRZI(_FLAG, LOW);
+void sendFlag(unsigned char flag_len) {
+  for (int j = 0; j < flag_len; j++) sendCharNRZI(_FLAG, LOW);
 }
 
 /*
@@ -439,15 +361,15 @@ void send_flag(unsigned char flag_len) {
    delimiter. In this example, 100 flags is used the preamble and 3 flags as
    the postamble.
 */
-void send_packet(Swarm_M138_GeospatialData_t *locationInfo) {
+void sendPacket(Swarm_M138_GeospatialData_t *locationInfo) {
   setLed(true);
   setPttState(true);
 
   // TODO TEST IF THIS IMPROVES RECEPTION
   // Send initialize sequence for receiver
-  //send_char_NRZI(0x99, true);
-  //send_char_NRZI(0x99, true);
-  //send_char_NRZI(0x99, true);
+  //sendCharNRZI(0x99, true);
+  //sendCharNRZI(0x99, true);
+  //sendCharNRZI(0x99, true);
 
 
   /*
@@ -465,76 +387,16 @@ void send_packet(Swarm_M138_GeospatialData_t *locationInfo) {
      FCS      : 2 bytes calculated from HEADER + PAYLOAD
   */
 
-  send_flag(150);
+  sendFlag(150);
   crc = 0xffff;
-  send_header(_FIXPOS_STATUS);
+  sendHeader();
   if (locationInfo->lat != 0) {
     sendPayload(locationInfo, "");
   }
-  send_crc();
-  send_flag(3);
+  sendCrc();
+  sendFlag(3);
   setLed(false);
   setPttState(false);
-}
-
-void print_debug(char type) {
-  /*
-     PROTOCOL DEBUG.
-
-       Will outputs the transmitted data to the serial monitor
-       in the form of TNC2 string format.
-
-       MYCALL-N>APRS,DIGIn-N:<PAYLOAD STRING> <CR><LF>
-  */
-  Serial.begin(115200);
-
-  /****** MYCALL ********/
-  Serial.print(mycall);
-  Serial.print('-');
-  Serial.print(myssid, DEC);
-  Serial.print('>');
-
-  /******** DEST ********/
-  if (type == _BEACON)
-    Serial.print(dest_beacon);
-  else
-    Serial.print(dest);
-  Serial.print(',');
-
-  /******** DIGI ********/
-  Serial.print(digi);
-  Serial.print('-');
-  Serial.print(digissid, DEC);
-  Serial.print(':');
-
-  /******* PAYLOAD ******/
-  if (type == _GPRMC) {
-    Serial.print('$');
-    Serial.print(rmc);
-  } else if (type == _FIXPOS) {
-    Serial.print(_DT_POS);
-    Serial.print(lati);
-    Serial.print(sym_ovl);
-    Serial.print(lon);
-    Serial.print(sym_tab);
-  } else if (type == _STATUS) {
-    Serial.print(_DT_STATUS);
-    Serial.print(mystatus);
-  } else if (type == _FIXPOS_STATUS) {
-    Serial.print(_DT_POS);
-    Serial.print(lati);
-    Serial.print(sym_ovl);
-    Serial.print(lon);
-    Serial.print(sym_tab);
-    Serial.print(comment);
-  } else {
-    Serial.print(mystatus);
-  }
-
-  Serial.println(' ');
-
-  Serial.flush();
-  Serial.end();
 }
 
 // Initializes DRA818V pins
@@ -621,7 +483,7 @@ void txSwarm() {
     Swarm_M138_DateTimeData_t *dateTime = new Swarm_M138_DateTimeData_t;
     swarm.getDateTime(dateTime);
     char* message;
-    sprintf(message, "SN%d=%f,%f@%d/%d/%d:%d:%d:%d", tag_serial, info->lat, info->lon, dateTime->YYYY, dateTime->MM,dateTime->DD, dateTime->hh, dateTime->mm, dateTime->ss);
+    sprintf(message, "SN%d=%f,%f@%d/%d/%d:%d:%d:%d", tagSerial, info->lat, info->lon, dateTime->YYYY, dateTime->MM,dateTime->DD, dateTime->hh, dateTime->mm, dateTime->ss);
     uint64_t *id;
     swarm.deleteAllTxMessages();
     if (swarm.transmitText(message, id) == SWARM_M138_ERROR_SUCCESS) {
@@ -632,7 +494,7 @@ void txSwarm() {
     }
     char* printMessage;
     Serial.print("sent swarm ");
-    Serial.printf("SN%d=%f,%f@%d/%d/%d:%d:%d:%d", tag_serial, info->lat, info->lon, dateTime->YYYY, dateTime->MM, dateTime->DD, dateTime->hh, dateTime->mm, dateTime->ss);
+    Serial.printf("SN%d=%f,%f@%d/%d/%d:%d:%d:%d", tagSerial, info->lat, info->lon, dateTime->YYYY, dateTime->MM, dateTime->DD, dateTime->hh, dateTime->mm, dateTime->ss);
     Serial.println();
   }
   else {
@@ -660,7 +522,7 @@ void txAprs(){
     Swarm_M138_GeospatialData_t *info = new Swarm_M138_GeospatialData_t;
     swarm.getGeospatialInfo(info);
     uint32_t startPacket = millis();
-    send_packet(info);
+    sendPacket(info);
     uint32_t packetDuration = millis() - startPacket;
     Serial.println("Packet sent in: " + String(packetDuration) + " ms");
     delete info;
@@ -735,9 +597,9 @@ void loop() {
   }
 
   // Transmit APRS
-//    if (millis() - prevAprsTx >= aprsInterval) {
-//      txAprs();
-//    }
+    if (millis() - prevAprsTx >= aprsInterval) {
+      txAprs();
+    }
 
   // Queue Swarm
   if (millis() - prevSwarmQueue >= swarmInterval) {
