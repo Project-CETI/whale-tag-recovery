@@ -53,6 +53,8 @@ uint32_t swarmInterval = 300000; // swarm Tx update interval in ms
 SWARM_M138 swarm;
 LittleFSConfig cfg;
 
+
+
 void setLed(bool state) {
   digitalWrite(ledPin, state);
 }
@@ -485,16 +487,32 @@ void txSwarm() {
     char* message;
     sprintf(message, "SN%d=%f,%f@%d/%d/%d:%d:%d:%d", tagSerial, info->lat, info->lon, dateTime->YYYY, dateTime->MM,dateTime->DD, dateTime->hh, dateTime->mm, dateTime->ss);
     uint64_t *id;
-    swarm.deleteAllTxMessages();
-    if (swarm.transmitText(message, id) == SWARM_M138_ERROR_SUCCESS) {
+    Swarm_M138_Error_e err = swarm.transmitText(message, id);
+//    swarm.deleteAllTxMessages();
+    if (err == SWARM_M138_SUCCESS) {
       digitalWrite(ledPin, true);
       prevLedTime = millis();
       ledOn = 500;
       ledState = true;
     }
+    else {
+      Serial.print(F("Swarm communication error: "));
+      Serial.print((int)err);
+      Serial.print(F(" : "));
+      Serial.print(swarm.modemErrorString(err)); // Convert the error into printable text
+      if (err == SWARM_M138_ERROR_ERR) // If we received a command error (ERR), print it
+      {
+        Serial.print(F(" : "));
+        Serial.print(swarm.commandError); 
+        Serial.print(F(" : "));
+        Serial.println(swarm.commandErrorString((const char *)swarm.commandError)); 
+      }
+      else
+        Serial.println();
+    }
     char* printMessage;
     Serial.print("sent swarm ");
-    Serial.printf("SN%d=%f,%f@%d/%d/%d:%d:%d:%d", tagSerial, info->lat, info->lon, dateTime->YYYY, dateTime->MM, dateTime->DD, dateTime->hh, dateTime->mm, dateTime->ss);
+    Serial.printf(message);
     Serial.println();
   }
   else {
@@ -561,6 +579,13 @@ void setup() {
         "connections. Freezing..."));
     delay(1200);
   }
+  swarm.setDateTimeRate(0);
+  swarm.setGpsJammingIndicationRate(0);
+  swarm.setGeospatialInfoRate(0);
+  swarm.setGpsFixQualityRate(0);
+  swarm.setPowerStatusRate(0);
+  swarm.setReceiveTestRate(0);
+  swarm.setMessageNotifications(false);
 
   // Initialize littleFS
   LittleFS.setConfig(cfg);
@@ -586,13 +611,19 @@ void setup() {
   txSwarm();
   txAprs();
 }
-
+uint16_t qCount;
 void loop() {
   // Update LED state
   if (ledState) {
     if (millis() - prevLedTime >= ledOn) {
       digitalWrite(ledPin, false);
       ledState = false;
+      swarm.getUnsentMessageCount(&qCount); // Get the number of untransmitted messages
+
+      Serial.print(F("There are "));
+      Serial.print(qCount);
+      Serial.println(F(" unsent messages in the TX queue"));
+      Serial.println();
     }
   }
 
