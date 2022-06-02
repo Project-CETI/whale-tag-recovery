@@ -48,7 +48,7 @@
 
 //intervals
 uint32_t aprsInterval = 5000;
-uint32_t swarmInterval = 300000; // swarm Tx update interval in ms
+uint32_t swarmInterval = 30000; // swarm Tx update interval in ms
 
 SWARM_M138 swarm;
 LittleFSConfig cfg;
@@ -510,10 +510,13 @@ void txSwarm() {
       else
         Serial.println();
     }
-    char* printMessage;
     Serial.print("sent swarm ");
     Serial.printf(message);
     Serial.println();
+    delete dateTime;
+    delete info;
+    delete message;
+    delete id;
   }
   else {
     Serial.println("No GPS");
