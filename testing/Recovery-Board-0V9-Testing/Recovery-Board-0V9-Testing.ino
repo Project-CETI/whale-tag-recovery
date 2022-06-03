@@ -70,6 +70,7 @@ char mystatus[128] = "Status";
 bool nada = 0;
 const char sym_ovl = 'T';
 const char sym_tab = 'a';
+unsigned int aprsInterval = 5000;
 unsigned int str_len = 400;
 char bitStuff = 0;
 unsigned short crc = 0xffff;
@@ -491,16 +492,50 @@ void txSwarm() {
       prevLedTime = millis();
       ledOn = 500;
       ledState = true;
+
+      char* printMessage;
+      Serial.print("sent swarm ");
+      Serial.printf("SN%d=%f,%f@%d/%d/%d:%d:%d:%d", tag_serial, info->lat, info->lon, dateTime->YYYY, dateTime->MM, dateTime->DD, dateTime->hh, dateTime->mm, dateTime->ss);
+      Serial.println();
+
+      uint16_t count;
+      swarm.getUnsentMessageCount(&count);
+      Serial.print("Messages in queue: ");
+      Serial.println(count);
+
     }
-    char* printMessage;
-    Serial.print("sent swarm ");
-    Serial.printf("SN%d=%f,%f@%d/%d/%d:%d:%d:%d", tagSerial, info->lat, info->lon, dateTime->YYYY, dateTime->MM, dateTime->DD, dateTime->hh, dateTime->mm, dateTime->ss);
-    Serial.println();
+    else{
+        Serial.println("Error with queuing...");
+    }
   }
   else {
     Serial.println("No GPS");
   }
   delete gpsQuality;
+}
+
+void printSwarmStatus(){
+    Swarm_M138_Receive_Test_t *rxTest = new Swarm_M138_Receive_Test_t; // Allocate memory for the information
+    swarm.getReceiveTest(rxTest);
+
+    uint16_t count;
+    swarm.getUnsentMessageCount(&count);
+
+    if (rxTest->background) // Check if rxTest contains only the background RSSI
+    {
+        Serial.print("RSSI: ");
+        Serial.print(rxTest->rssi_background);
+    }
+    else{
+       Serial.print("RSSI SAT: ");
+        Serial.print(rxTest->rssi_sat);
+    }
+
+    Serial.print("\tMessages in queue: ");
+    Serial.println(count);
+
+    delete rxTest; // Free the memory
+    prevSwarmStatusUpdate = millis();
 }
 
 void logSwarm(){
@@ -556,8 +591,7 @@ void setup() {
   Serial1.setRX(1);
   swarm.begin(Serial1);
   while (!swarm.begin(Serial1)){
-    Serial.println(
-      F("Could not communicate with the modem. Please check the serial "
+    Serial.println(F("Could not communicate with the modem. Please check the serial "
         "connections. Freezing..."));
     delay(1200);
   }
@@ -582,9 +616,10 @@ void setup() {
 //  Serial.println("GPS acquired");
 
 
-  // Queue Swarm and transmit APRS
-  txSwarm();
+  //  transmit APRS, queue Swarm and print Swarm status
   txAprs();
+  txSwarm();
+  printSwarmStatus();
 }
 
 void loop() {
@@ -604,6 +639,10 @@ void loop() {
   // Queue Swarm
   if (millis() - prevSwarmQueue >= swarmInterval) {
     txSwarm();
+  }
+
+  if (millis() - prevSwarmStatusUpdate >= swarmStatusUpdateInterval){
+    printSwarmStatus();
   }
 
 }
