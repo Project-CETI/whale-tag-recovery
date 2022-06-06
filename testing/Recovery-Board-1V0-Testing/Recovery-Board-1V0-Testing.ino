@@ -48,7 +48,7 @@
 
 //intervals
 uint32_t aprsInterval = 5000;
-uint32_t swarmInterval = 5000; // swarm Tx update interval in ms
+uint32_t swarmInterval = 30000; // swarm Tx update interval in ms
 
 SWARM_M138 swarm;
 LittleFSConfig cfg;
@@ -65,12 +65,14 @@ char dest[8] = "APLIGA";
 char dest_beacon[8] = "BEACON";
 char digi[8] = "WIDE2";
 char digissid = 1;
-char comment[128] = "Ceti v0.9 5";
+char comment[128] = "Ceti v1.0b3";
 char mystatus[128] = "Status";
 
 // APRS protocol config
 bool nada = 0;
 const char sym_ovl = 'T';
+const char sym_sti = '/'; // Symbol Table Identifier
+const char sym_house = '-'; // 'house' Symbol Code
 const char sym_tab = 'a';
 unsigned int str_len = 400;
 char bitStuff = 0;
@@ -259,25 +261,26 @@ void sendPayload(Swarm_M138_GeospatialData_t *locationInfo, char *status_) {
     latFloat = fabs(latFloat);
   }
   int latDeg = (int) latFloat;
-  int latMin = latFloat - latDeg; // get decimal degress from float
+  float latMin = latFloat - latDeg; // get decimal degress from float
   latMin = latMin * 60; // convert decimal degrees to minutes
   uint8_t latMinInt = (int)latMin;
   uint8_t latMinDec = round((latMin - latMinInt) * 100);
 
-  char lati[9];
+  char lati[10];
   if (south) {
     snprintf(lati, 9, "%02d%02d.%02dS", latDeg, latMinInt, latMinDec);
   } else {
     snprintf(lati, 9, "%02d%02d.%02dN", latDeg, latMinInt, latMinDec);
   }
   float lonFloat = locationInfo->lon;
-  bool west = true;
+  bool west = false;
   if (lonFloat < 0) {
     west = true;
     lonFloat = fabs(lonFloat);
   }
   int lonDeg = (int) lonFloat;
   float lonMin = lonFloat - lonDeg; // get decimal degress from float
+  lonMin = lonMin * 60;
   uint8_t lonMinInt = (int)lonMin;
   uint8_t lonMinDec = round((lonMin - lonMinInt) * 100);
   char lon[10];
@@ -320,9 +323,10 @@ void sendPayload(Swarm_M138_GeospatialData_t *locationInfo, char *status_) {
   Serial.flush();
   sendCharNRZI(_DT_POS, true);
   sendStrLen(lati, strlen(lati));
-  sendCharNRZI(sym_ovl, true);
+  sendCharNRZI(sym_sti, true);
   sendStrLen(lon, strlen(lon));
-  sendStrLen(cogSpeed, strlen(cogSpeed));
+  sendCharNRZI(sym_house, true);
+//  sendStrLen(cogSpeed, strlen(cogSpeed));
   sendCharNRZI(sym_tab, true);
   sendStrLen(comment, strlen(comment));
 }
@@ -645,12 +649,12 @@ void loop() {
       Serial.print(qCount);
       Serial.println(F(" unsent messages in the SWARM TX queue"));
       Serial.println();
-//      if (qCount >= 10) {
-//        Serial.println("Clearing SWARM TX queue ...");
-//        swarm.deleteAllTxMessages();
-//        Serial.println("Restart queue from current ...");
-//        txSwarm();
-//      }
+      if (qCount >= 900) {
+        Serial.println("Clearing SWARM TX queue ...");
+        swarm.deleteAllTxMessages();
+        Serial.println("Restart queue from current ...");
+        txSwarm();
+      }
     }
   }
 

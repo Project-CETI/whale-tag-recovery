@@ -48,7 +48,7 @@
 
 //intervals
 uint32_t aprsInterval = 5000;
-uint32_t swarmInterval = 5000; // swarm Tx update interval in ms
+uint32_t swarmInterval = 300000; // swarm Tx update interval in ms
 
 SWARM_M138 swarm;
 LittleFSConfig cfg;
@@ -576,13 +576,13 @@ void setup() {
   delay(5000);
 
   // Initialize DRA818V
-  Serial.println("Configuring DRA818V...");
-  // Initialize DRA818V
-  initializeDra818v();
-  configureDra818v();
-  setPttState(false);
-  setVhfState(true);
-  Serial.println("DRA818V configured");
+//  Serial.println("Configuring DRA818V...");
+//  // Initialize DRA818V
+//  initializeDra818v();
+//  configureDra818v();
+//  setPttState(false);
+//  setVhfState(true);
+//  Serial.println("DRA818V configured");
 
   // Initialize DAC
   Serial.println("Configuring DAC...");
@@ -609,8 +609,8 @@ void setup() {
   swarm.setMessageNotifications(false);
 
   // Initialize littleFS
-  LittleFS.setConfig(cfg);
-  LittleFS.begin();
+//  LittleFS.setConfig(cfg);
+//  LittleFS.begin();
 
   setLed(false);
   Serial.println("Setup complete");
@@ -630,7 +630,7 @@ void setup() {
 
   // Queue Swarm and transmit APRS
   txSwarm();
-  txAprs();
+//  txAprs();
 }
 uint16_t qCount;
 void loop() {
@@ -655,9 +655,9 @@ void loop() {
   }
 
   // Transmit APRS
-  if (millis() - prevAprsTx >= aprsInterval) {
-    txAprs();
-  }
+//  if (millis() - prevAprsTx >= aprsInterval) {
+//    txAprs();
+//  }
 
   // Queue Swarm
   if (millis() - prevSwarmQueue >= swarmInterval) {
