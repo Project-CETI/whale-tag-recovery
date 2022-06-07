@@ -48,9 +48,15 @@
 
 //intervals
 uint32_t aprsInterval = 60000;
-uint32_t swarmInterval = 5000; // swarm Tx update interval in ms
+uint32_t swarmInterval = 300000; // swarm Tx update interval in ms
+long logInterval = 60000;
+
+// stall on gps?
 bool aprsGpsStall = false; // Stall for GPS signal before sending APRS (keep false unless really necessary)
 bool swarmGpsStall = true; // Stall for GPS signal before sending Swarm (keep true unless really necessary)
+
+// log extra(s)
+long prevLogTime = 0;
 
 SWARM_M138 swarm;
 LittleFSConfig cfg;
@@ -590,7 +596,8 @@ void logSwarm() {
   printSwarmError(err);
   if (err != SWARM_M138_ERROR_ERROR) {
   //  f.printf("%d/%d/%d:%d:%d:%d,%d", dateTime->YYYY, dateTime->MM, dateTime->DD, dateTime->hh, dateTime->mm, dateTime->ss, rxTest->rssi_background);
-    Serial.printf("Rx Rcv Test: background rssi: %d | sat rssi: %d | snr: %d | sat_id: %d | fdev: %d\n", rxTest->rssi_background, rxTest->rssi_sat, rxTest->snr, rxTest->sat_id, rxTest->fdev);
+    Serial.printf("Rx Rcv Test: background rssi: %d | sat rssi: %d | snr: %d | sat_id: %d | fdev: %d", rxTest->rssi_background, rxTest->rssi_sat, rxTest->snr, rxTest->sat_id, rxTest->fdev);
+    Serial.println();
   }
 //  delete dateTime;
   delete rxTest;
@@ -643,14 +650,14 @@ void setup() {
         "connections. Freezing..."));
     delay(1200);
   }
-  swarm.setDateTimeRate(0);
-  swarm.setGpsJammingIndicationRate(0);
-  swarm.setGeospatialInfoRate(0);
-  swarm.setGpsFixQualityRate(0);
-  swarm.setPowerStatusRate(0);
-  swarm.setReceiveTestRate(0);
-  swarm.setMessageNotifications(false);
-  swarmGpsStall = false; // uncomment ONLY if expecting 0 GPS signal
+//  swarm.setDateTimeRate(0);
+//  swarm.setGpsJammingIndicationRate(0);
+//  swarm.setGeospatialInfoRate(0);
+//  swarm.setGpsFixQualityRate(0);
+//  swarm.setPowerStatusRate(0);
+//  swarm.setReceiveTestRate(0);
+//  swarm.setMessageNotifications(false);
+//  swarmGpsStall = false; // uncomment ONLY if expecting 0 GPS signal
 
   // Initialize littleFS
   LittleFS.setConfig(cfg);
@@ -671,6 +678,11 @@ void loop() {
       ledState = false;
       logSwarm();
     }
+  }
+
+  if (millis() - prevLogTime >= logInterval) {
+    prevLogTime = millis();
+    logSwarm();
   }
 
   // Transmit APRS
