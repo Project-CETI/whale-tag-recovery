@@ -47,20 +47,19 @@
 #define boardSN 2;
 
 //intervals
-uint32_t aprsInterval = 5000;
-uint32_t swarmInterval = 30000; // swarm Tx update interval in ms
+uint32_t aprsInterval = 60000;
+uint32_t swarmInterval = 5000; // swarm Tx update interval in ms
 
 SWARM_M138 swarm;
 LittleFSConfig cfg;
-
-
+uint16_t qCount;
 
 void setLed(bool state) {
   digitalWrite(ledPin, state);
 }
 // APRS communication config
 char mycall[8] = "KC1QXQ";
-char myssid = 5;
+char myssid = 1; // Shashank's test board gets meaningless fun priority
 char dest[8] = "APLIGA";
 char dest_beacon[8] = "BEACON";
 char digi[8] = "WIDE2";
@@ -79,7 +78,7 @@ char bitStuff = 0;
 unsigned short crc = 0xffff;
 uint64_t prevAprsTx = 0;
 uint64_t prevSwarmQueue = 0;
-bool ledState = false;
+bool ledState = true;
 uint64_t prevLedTime = 0;
 uint32_t ledOn = 0;
 uint8_t currOutput = 0;
@@ -496,7 +495,14 @@ void txSwarm() {
   Swarm_M138_GPS_Fix_Quality_t *gpsQuality = new Swarm_M138_GPS_Fix_Quality_t;
   swarm.getGpsFixQuality(gpsQuality);
   Serial.print("fix quality = ");
-  Serial.println(gpsQuality->fix_type);
+  Serial.print(gpsQuality->fix_type);
+  while (gpsQuality->fix_type == SWARM_M138_GPS_FIX_TYPE_TT || gpsQuality->fix_type == SWARM_M138_GPS_FIX_TYPE_INVALID || gpsQuality->fix_type == SWARM_M138_GPS_FIX_TYPE_NF) {
+    delay(1000);
+    swarm.getGpsFixQuality(gpsQuality);
+    Serial.print(" ... ");
+    Serial.print(gpsQuality->fix_type);
+  }
+  Serial.println();
   if (gpsQuality->fix_type != SWARM_M138_GPS_FIX_TYPE_TT && gpsQuality->fix_type != SWARM_M138_GPS_FIX_TYPE_INVALID && gpsQuality->fix_type != SWARM_M138_GPS_FIX_TYPE_NF) {
     prevSwarmQueue = millis();
     Swarm_M138_GeospatialData_t *info = new Swarm_M138_GeospatialData_t;
@@ -508,30 +514,28 @@ void txSwarm() {
     Swarm_M138_DateTimeData_t *dateTime = new Swarm_M138_DateTimeData_t;
     swarm.getDateTime(dateTime);
     char message[200];
-    sprintf(message, "SN%d=%s,%s@%d/%d/%d/%d/%d/%d\0", tagSerial, lat, lon, dateTime->YYYY, dateTime->MM, dateTime->DD, dateTime->hh, dateTime->mm, dateTime->ss);
+    sprintf(message, "SN%d=%s,%s@%u/%u/%u/%u/%u/%u:%u\0", tagSerial, lat, lon, dateTime->YYYY, dateTime->MM, dateTime->DD, dateTime->hh, dateTime->mm, dateTime->ss, qCount);
     uint64_t *id;
     Swarm_M138_Error_e err = swarm.transmitText(message, id);
     if (err == SWARM_M138_SUCCESS) {
       digitalWrite(ledPin, true);
       prevLedTime = millis();
-      ledOn = 500;
+      ledOn = 50;
       ledState = true;
     }
-    else {
-      Serial.print(F("Swarm communication error: "));
-      Serial.print((int)err);
+    Serial.print(F("Swarm communication error: "));
+    Serial.print((int)err);
+    Serial.print(F(" : "));
+    Serial.print(swarm.modemErrorString(err)); // Convert the error into printable text
+    if (err == SWARM_M138_ERROR_ERR) // If we received a command error (ERR), print it
+    {
       Serial.print(F(" : "));
-      Serial.print(swarm.modemErrorString(err)); // Convert the error into printable text
-      if (err == SWARM_M138_ERROR_ERR) // If we received a command error (ERR), print it
-      {
-        Serial.print(F(" : "));
-        Serial.print(swarm.commandError);
-        Serial.print(F(" : "));
-        Serial.println(swarm.commandErrorString((const char *)swarm.commandError));
-      }
-      else
-        Serial.println();
+      Serial.print(swarm.commandError);
+      Serial.print(F(" : "));
+      Serial.println(swarm.commandErrorString((const char *)swarm.commandError));
     }
+    else
+      Serial.println();
     Serial.print("sent swarm ");
     Serial.print(message);
     Serial.println();
@@ -636,7 +640,7 @@ void setup() {
   txSwarm();
   txAprs();
 }
-uint16_t qCount;
+
 void loop() {
   // Update LED state
   if (ledState) {
@@ -649,7 +653,8 @@ void loop() {
       Serial.print(qCount);
       Serial.println(F(" unsent messages in the SWARM TX queue"));
       Serial.println();
-      if (qCount >= 900) {
+      logSwarm();
+      if (qCount >= 1024) {
         Serial.println("Clearing SWARM TX queue ...");
         swarm.deleteAllTxMessages();
         Serial.println("Restart queue from current ...");
