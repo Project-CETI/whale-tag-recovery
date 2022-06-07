@@ -49,6 +49,8 @@
 //intervals
 uint32_t aprsInterval = 60000;
 uint32_t swarmInterval = 5000; // swarm Tx update interval in ms
+bool aprsGpsStall = false; // Stall for GPS signal before sending APRS (keep false unless really necessary)
+bool swarmGpsStall = true; // Stall for GPS signal before sending Swarm (keep true unless really necessary)
 
 SWARM_M138 swarm;
 LittleFSConfig cfg;
@@ -490,81 +492,114 @@ void initLed() {
   digitalWrite(ledPin, false);
 }
 
-void txSwarm() {
-  Serial.println("TX swarm");
-  Swarm_M138_GPS_Fix_Quality_t *gpsQuality = new Swarm_M138_GPS_Fix_Quality_t;
+void stallForGps(Swarm_M138_GPS_Fix_Quality_t *gpsQuality, bool stall) {
   swarm.getGpsFixQuality(gpsQuality);
   Serial.print("fix quality = ");
   Serial.print(gpsQuality->fix_type);
-  while (gpsQuality->fix_type == SWARM_M138_GPS_FIX_TYPE_TT || gpsQuality->fix_type == SWARM_M138_GPS_FIX_TYPE_INVALID || gpsQuality->fix_type == SWARM_M138_GPS_FIX_TYPE_NF) {
-    delay(1000);
-    swarm.getGpsFixQuality(gpsQuality);
-    Serial.print(" ... ");
-    Serial.print(gpsQuality->fix_type);
+  if (stall) {
+    while (gpsQuality->fix_type == SWARM_M138_GPS_FIX_TYPE_TT || gpsQuality->fix_type == SWARM_M138_GPS_FIX_TYPE_INVALID || gpsQuality->fix_type == SWARM_M138_GPS_FIX_TYPE_NF) {
+      delay(1000);
+      swarm.getGpsFixQuality(gpsQuality);
+      Serial.print(" ... ");
+      Serial.print(gpsQuality->fix_type);
+    }
+  }
+  else if (!stall && (gpsQuality->fix_type == SWARM_M138_GPS_FIX_TYPE_TT || gpsQuality->fix_type == SWARM_M138_GPS_FIX_TYPE_INVALID || gpsQuality->fix_type == SWARM_M138_GPS_FIX_TYPE_NF)) {
+    Serial.print(" ... No GPS.");
   }
   Serial.println();
-  if (gpsQuality->fix_type != SWARM_M138_GPS_FIX_TYPE_TT && gpsQuality->fix_type != SWARM_M138_GPS_FIX_TYPE_INVALID && gpsQuality->fix_type != SWARM_M138_GPS_FIX_TYPE_NF) {
-    prevSwarmQueue = millis();
-    Swarm_M138_GeospatialData_t *info = new Swarm_M138_GeospatialData_t;
-    swarm.getGeospatialInfo(info);
-    char lat[7];
-    dtostrf(info->lat,4,3,lat);
-    char lon[7];
-    dtostrf(info->lon,4,3,lon);
-    Swarm_M138_DateTimeData_t *dateTime = new Swarm_M138_DateTimeData_t;
-    swarm.getDateTime(dateTime);
-    char message[200];
-    sprintf(message, "SN%d=%s,%s@%u/%u/%u/%u/%u/%u:%u\0", tagSerial, lat, lon, dateTime->YYYY, dateTime->MM, dateTime->DD, dateTime->hh, dateTime->mm, dateTime->ss, qCount);
-    uint64_t *id;
-    Swarm_M138_Error_e err = swarm.transmitText(message, id);
-    if (err == SWARM_M138_SUCCESS) {
-      digitalWrite(ledPin, true);
-      prevLedTime = millis();
-      ledOn = 50;
-      ledState = true;
-    }
-    Serial.print(F("Swarm communication error: "));
-    Serial.print((int)err);
+}
+
+void printSwarmError(Swarm_M138_Error_e err) {
+  Serial.print(F("Swarm communication error: "));
+  Serial.print((int)err);
+  Serial.print(F(" : "));
+  Serial.print(swarm.modemErrorString(err)); // Convert the error into printable text
+  if (err == SWARM_M138_ERROR_ERR) // If we received a command error (ERR), print it
+  {
     Serial.print(F(" : "));
-    Serial.print(swarm.modemErrorString(err)); // Convert the error into printable text
-    if (err == SWARM_M138_ERROR_ERR) // If we received a command error (ERR), print it
-    {
-      Serial.print(F(" : "));
-      Serial.print(swarm.commandError);
-      Serial.print(F(" : "));
-      Serial.println(swarm.commandErrorString((const char *)swarm.commandError));
-    }
-    else
-      Serial.println();
-    Serial.print("sent swarm ");
-    Serial.print(message);
+    Serial.print(swarm.commandError);
+    Serial.print(F(" : "));
+    Serial.println(swarm.commandErrorString((const char *)swarm.commandError));
+  }
+  else
     Serial.println();
-    delete dateTime;
-    delete info;
-    delete id;
+}
+
+void printSwarmQueueStatus() {
+  swarm.getUnsentMessageCount(&qCount); // Get the number of untransmitted messages
+  Serial.print(F("There are "));
+  Serial.print(qCount);
+  Serial.println(F(" unsent messages in the SWARM TX queue"));
+  Serial.println();
+  logSwarm();
+  if (qCount >= 1024) {
+    Serial.println("Clearing SWARM TX queue ...");
+    swarm.deleteAllTxMessages();
+    Serial.println("Restart queue from current ...");
+    txSwarm();
   }
-  else {
-    Serial.println("No GPS");
+}
+
+void printSwarmTxStatus(const char *msg, Swarm_M138_Error_e err) {
+  printSwarmError(err);
+  Serial.print("TX Text");
+  Serial.print(msg);
+  Serial.println();
+  // Housekeeping on queue count
+  printSwarmQueueStatus();
+}
+
+void txSwarm() {
+  Swarm_M138_GPS_Fix_Quality_t *gpsQuality = new Swarm_M138_GPS_Fix_Quality_t;
+  // START OF STATUS PRINTING
+  stallForGps(gpsQuality, swarmGpsStall);
+  // END OF STATUS PRINTING
+  prevSwarmQueue = millis();
+  Swarm_M138_GeospatialData_t *info = new Swarm_M138_GeospatialData_t;
+  swarm.getGeospatialInfo(info);
+  char lat[7]; dtostrf(info->lat,4,3,lat);
+  char lon[7]; dtostrf(info->lon,4,3,lon);
+  Swarm_M138_DateTimeData_t *dateTime = new Swarm_M138_DateTimeData_t;
+  swarm.getDateTime(dateTime);
+  char message[200];
+  sprintf(message, "SN%d=%s,%s@%d/%d/%d/%d/%d/%d:%d\0", tagSerial, lat, lon, dateTime->YYYY, dateTime->MM, dateTime->DD, dateTime->hh, dateTime->mm, dateTime->ss, qCount);
+  uint64_t *id;
+  Swarm_M138_Error_e err = swarm.transmitText(message, id);
+  if (err == SWARM_M138_SUCCESS) {
+    digitalWrite(ledPin, true);
+    prevLedTime = millis();
+    ledOn = 50;
+    ledState = true;
   }
+  // START OF STATUS PRINTING
+  printSwarmTxStatus(message, err);
+  // END OF STATUS PRINTING
+  delete dateTime;
+  delete info;
+  delete id;
   delete gpsQuality;
 }
 
 void logSwarm() {
-  File f = LittleFS.open("/swarmlog.csv", "a");
-  Swarm_M138_DateTimeData_t *dateTime = new Swarm_M138_DateTimeData_t;
-  swarm.getDateTime(dateTime);
+//  File f = LittleFS.open("/swarmlog.csv", "a");
+//  Swarm_M138_DateTimeData_t *dateTime = new Swarm_M138_DateTimeData_t;
+//  swarm.getDateTime(dateTime);
   Swarm_M138_Receive_Test_t *rxTest = new Swarm_M138_Receive_Test_t;
-  swarm.getReceiveTest(rxTest);
-  f.printf("%d/%d/%d:%d:%d:%d,%d", dateTime->YYYY, dateTime->MM, dateTime->DD, dateTime->hh, dateTime->mm, dateTime->ss, rxTest->rssi_background);
-  delete dateTime;
+  Swarm_M138_Error_e err = swarm.getReceiveTest(rxTest);
+  printSwarmError(err);
+  if (err != SWARM_M138_ERROR_ERROR) {
+  //  f.printf("%d/%d/%d:%d:%d:%d,%d", dateTime->YYYY, dateTime->MM, dateTime->DD, dateTime->hh, dateTime->mm, dateTime->ss, rxTest->rssi_background);
+    Serial.printf("Rx Rcv Test: background rssi: %d | sat rssi: %d | snr: %d | sat_id: %d | fdev: %d\n", rxTest->rssi_background, rxTest->rssi_sat, rxTest->snr, rxTest->sat_id, rxTest->fdev);
+  }
+//  delete dateTime;
   delete rxTest;
 }
 
 void txAprs() {
   prevAprsTx = millis();
   Swarm_M138_GPS_Fix_Quality_t *gpsQuality = new Swarm_M138_GPS_Fix_Quality_t;
-  swarm.getGpsFixQuality(gpsQuality);
-  Serial.printf("Gps fix type: %d\n", gpsQuality->fix_type);
+  stallForGps(gpsQuality, aprsGpsStall);
   //  if(gpsQuality->fix_type != SWARM_M138_GPS_FIX_TYPE_TT && gpsQuality->fix_type != SWARM_M138_GPS_FIX_TYPE_INVALID && gpsQuality->fix_type != SWARM_M138_GPS_FIX_TYPE_NF) {
   Swarm_M138_GeospatialData_t *info = new Swarm_M138_GeospatialData_t;
   swarm.getGeospatialInfo(info);
@@ -615,28 +650,15 @@ void setup() {
   swarm.setPowerStatusRate(0);
   swarm.setReceiveTestRate(0);
   swarm.setMessageNotifications(false);
+  swarmGpsStall = false; // uncomment ONLY if expecting 0 GPS signal
 
   // Initialize littleFS
   LittleFS.setConfig(cfg);
   LittleFS.begin();
-
+  // Turn off LED, we're done setting up
   setLed(false);
   Serial.println("Setup complete");
-
-  // Wait for GPS fix
-  //  Swarm_M138_GPS_Fix_Quality_t *gpsQuality = new Swarm_M138_GPS_Fix_Quality_t;
-  //  Serial.println("waiting for GPS acquisition");
-  //  while(1){
-  //    swarm.getGpsFixQuality(gpsQuality);
-  //    if(gpsQuality->fix_type != SWARM_M138_GPS_FIX_TYPE_TT && gpsQuality->fix_type != SWARM_M138_GPS_FIX_TYPE_INVALID && gpsQuality->fix_type != SWARM_M138_GPS_FIX_TYPE_NF) {
-  //      break;
-  //      }
-  //    delay(200);
-  //  }
-  //  Serial.println("GPS acquired");
-
-
-  // Queue Swarm and transmit APRS
+  // Start off by queueing Swarm and transmitting APRS at once
   txSwarm();
   txAprs();
 }
@@ -647,19 +669,7 @@ void loop() {
     if (millis() - prevLedTime >= ledOn) {
       digitalWrite(ledPin, false);
       ledState = false;
-      swarm.getUnsentMessageCount(&qCount); // Get the number of untransmitted messages
-
-      Serial.print(F("There are "));
-      Serial.print(qCount);
-      Serial.println(F(" unsent messages in the SWARM TX queue"));
-      Serial.println();
       logSwarm();
-      if (qCount >= 1024) {
-        Serial.println("Clearing SWARM TX queue ...");
-        swarm.deleteAllTxMessages();
-        Serial.println("Restart queue from current ...");
-        txSwarm();
-      }
     }
   }
 
