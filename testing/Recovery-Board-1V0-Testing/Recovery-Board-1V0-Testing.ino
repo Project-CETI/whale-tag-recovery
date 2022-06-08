@@ -67,7 +67,7 @@ void setLed(bool state) {
 }
 // APRS communication config
 char mycall[8] = "KC1QXQ";
-char myssid = 1; // Shashank's test board gets meaningless fun priority
+char myssid = 5; // Shashank's test board gets meaningless fun priority
 char dest[8] = "APLIGA";
 char dest_beacon[8] = "BEACON";
 char digi[8] = "WIDE2";
@@ -587,6 +587,51 @@ void txSwarm() {
   delete gpsQuality;
 }
 
+void printRxTest(const Swarm_M138_Receive_Test_t *rxTest)
+{
+  Serial.print(F("New receive test message received:"));
+  if (rxTest->background) // Check if rxTest contains only the background RSSI
+  {
+    Serial.print(F("  rssi_background: "));
+    Serial.print(rxTest->rssi_background);
+    if (rxTest->rssi_background <= -105)
+      Serial.println(F(" (Great)"));
+    else if (rxTest->rssi_background <= -100)
+      Serial.println(F(" (Good)"));
+    else if (rxTest->rssi_background <= -97)
+      Serial.println(F(" (OK)"));
+    else if (rxTest->rssi_background <= -93)
+      Serial.println(F(" (Marginal)"));
+    else
+      Serial.println(F(" (Bad)"));
+  }
+  else
+  {
+    Serial.print(F("  rssi_background: "));
+    Serial.print(rxTest->rssi_background);
+    Serial.print(F("  rssi_sat: "));
+    Serial.print(rxTest->rssi_sat);
+    Serial.print(F("  snr: "));
+    Serial.print(rxTest->snr);
+    Serial.print(F("  fdev: "));
+    Serial.print(rxTest->fdev);
+    Serial.print(F("  "));
+    Serial.print(rxTest->time.YYYY);
+    Serial.print(F("/"));
+    if (rxTest->time.MM < 10) Serial.print(F("0")); Serial.print(rxTest->time.MM); // Print the month. Add a leading zero if required
+    Serial.print(F("/"));
+    if (rxTest->time.DD < 10) Serial.print(F("0")); Serial.print(rxTest->time.DD); // Print the day of month. Add a leading zero if required
+    Serial.print(F(" "));
+    if (rxTest->time.hh < 10) Serial.print(F("0")); Serial.print(rxTest->time.hh); // Print the hour. Add a leading zero if required
+    Serial.print(F(":"));
+    if (rxTest->time.mm < 10) Serial.print(F("0")); Serial.print(rxTest->time.mm); // Print the minute. Add a leading zero if required
+    Serial.print(F(":"));
+    if (rxTest->time.ss < 10) Serial.print(F("0")); Serial.print(rxTest->time.ss); // Print the second. Add a leading zero if required
+    Serial.print(F("  sat_id: 0x"));
+    Serial.println(rxTest->sat_id, HEX);
+  }
+}
+
 void logSwarm() {
 //  File f = LittleFS.open("/swarmlog.csv", "a");
 //  Swarm_M138_DateTimeData_t *dateTime = new Swarm_M138_DateTimeData_t;
@@ -594,11 +639,7 @@ void logSwarm() {
   Swarm_M138_Receive_Test_t *rxTest = new Swarm_M138_Receive_Test_t;
   Swarm_M138_Error_e err = swarm.getReceiveTest(rxTest);
   printSwarmError(err);
-  if (err != SWARM_M138_ERROR_ERROR) {
-  //  f.printf("%d/%d/%d:%d:%d:%d,%d", dateTime->YYYY, dateTime->MM, dateTime->DD, dateTime->hh, dateTime->mm, dateTime->ss, rxTest->rssi_background);
-    Serial.printf("Rx Rcv Test: background rssi: %d | sat rssi: %d | snr: %d | sat_id: %d | fdev: %d", rxTest->rssi_background, rxTest->rssi_sat, rxTest->snr, rxTest->sat_id, rxTest->fdev);
-    Serial.println();
-  }
+  printRxTest(rxTest);
 //  delete dateTime;
   delete rxTest;
 }
@@ -650,6 +691,7 @@ void setup() {
         "connections. Freezing..."));
     delay(1200);
   }
+  
 //  swarm.setDateTimeRate(0);
 //  swarm.setGpsJammingIndicationRate(0);
 //  swarm.setGeospatialInfoRate(0);
@@ -665,6 +707,14 @@ void setup() {
   // Turn off LED, we're done setting up
   setLed(false);
   Serial.println("Setup complete");
+
+  // Debug statements from Rohan@SWARM
+//  Serial1.println("$RT 1*17");
+//  Serial1.println("$MT C=U*12");
+//  Serial1.println("$TD \"Test 1\"*17");
+//  Serial1.println("$TD \"Test 2\"*14");
+//  Serial1.println("$TD \"Test 3\"*15");
+
   // Start off by queueing Swarm and transmitting APRS at once
   txSwarm();
   txAprs();
