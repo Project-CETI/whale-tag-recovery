@@ -330,10 +330,11 @@ void sendPayload(Swarm_M138_GeospatialData_t *locationInfo, char *status_) {
   Serial.flush();
   sendCharNRZI(_DT_POS, true);
   sendStrLen(lati, strlen(lati));
-  sendCharNRZI(sym_sti, true);
+//  sendCharNRZI(sym_sti, true);
+  sendCharNRZI(sym_ovl, true);
   sendStrLen(lon, strlen(lon));
-  sendCharNRZI(sym_house, true);
-//  sendStrLen(cogSpeed, strlen(cogSpeed));
+//  sendCharNRZI(sym_house, true);
+  sendStrLen(cogSpeed, strlen(cogSpeed));
   sendCharNRZI(sym_tab, true);
   sendStrLen(comment, strlen(comment));
 }
@@ -699,7 +700,7 @@ void setup() {
 //  swarm.setPowerStatusRate(0);
 //  swarm.setReceiveTestRate(0);
 //  swarm.setMessageNotifications(false);
-//  swarmGpsStall = false; // uncomment ONLY if expecting 0 GPS signal
+  swarmGpsStall = false; // uncomment ONLY if expecting 0 GPS signal
 
   // Initialize littleFS
   LittleFS.setConfig(cfg);
@@ -726,23 +727,23 @@ void loop() {
     if (millis() - prevLedTime >= ledOn) {
       digitalWrite(ledPin, false);
       ledState = false;
-      logSwarm();
+//      logSwarm();
     }
   }
 
   if (millis() - prevLogTime >= logInterval) {
     prevLogTime = millis();
-    logSwarm();
+//    logSwarm();
   }
 
   // Transmit APRS
-  if (millis() - prevAprsTx >= aprsInterval) {
+  if (millis() + random(50) - prevAprsTx >= aprsInterval) {
     txAprs();
   }
 
   // Queue Swarm
-  if (millis() - prevSwarmQueue >= swarmInterval) {
-    txSwarm();
-  }
+//  if (millis() - prevSwarmQueue >= swarmInterval) {
+//    txSwarm();
+//  }
 
 }
