@@ -76,9 +76,11 @@ void serialCopyToModem() {
       modem_wr_buf_pos++;
     }
     else {
-      modem_wr_buf[modem_wr_buf_pos] = '\n';
+      modem_wr_buf[modem_wr_buf_pos] = '\0';
       modem_wr_buf_pos = 0;
-      Serial1.print(modem_wr_buf);
+      if (modem_wr_buf[0] == '$') {
+        writeToModem(modem_wr_buf);
+      }
     }
   }
 }
@@ -112,7 +114,6 @@ void setup() {
   while(!bootConfirmed) {
     readFromModem();
   }
-  Serial.println("Booted.");
   while(!initDTAck) {
     readFromModem();
   }
