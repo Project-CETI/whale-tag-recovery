@@ -115,6 +115,7 @@ void setup() {
     readFromModem();
   }
   while(!initDTAck) {
+    serialCopyToModem();
     readFromModem();
   }
   getRxTestOutput();
