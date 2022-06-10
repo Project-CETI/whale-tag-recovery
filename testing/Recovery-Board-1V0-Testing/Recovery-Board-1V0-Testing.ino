@@ -499,22 +499,28 @@ void initLed() {
   digitalWrite(ledPin, false);
 }
 
-void stallForGps(Swarm_M138_GPS_Fix_Quality_t *gpsQuality, bool stall) {
+void stallForGps(Swarm_M138_GPS_Fix_Quality_t *gpsQuality, bool stall, bool pStat) {
   swarm.getGpsFixQuality(gpsQuality);
-  Serial.print("fix quality = ");
-  Serial.print(gpsQuality->fix_type);
+  if (pStat) {
+    Serial.print("fix quality = ");
+    Serial.print(gpsQuality->fix_type);
+  }
   if (stall) {
     while (gpsQuality->fix_type == SWARM_M138_GPS_FIX_TYPE_TT || gpsQuality->fix_type == SWARM_M138_GPS_FIX_TYPE_INVALID || gpsQuality->fix_type == SWARM_M138_GPS_FIX_TYPE_NF) {
       delay(1000);
       swarm.getGpsFixQuality(gpsQuality);
-      Serial.print(" ... ");
-      Serial.print(gpsQuality->fix_type);
+      if (pStat) {
+        Serial.print(" ... ");
+        Serial.print(gpsQuality->fix_type);
+      }
     }
   }
-  else if (!stall && (gpsQuality->fix_type == SWARM_M138_GPS_FIX_TYPE_TT || gpsQuality->fix_type == SWARM_M138_GPS_FIX_TYPE_INVALID || gpsQuality->fix_type == SWARM_M138_GPS_FIX_TYPE_NF)) {
+  else if (!stall && pStat && (gpsQuality->fix_type == SWARM_M138_GPS_FIX_TYPE_TT || gpsQuality->fix_type == SWARM_M138_GPS_FIX_TYPE_INVALID || gpsQuality->fix_type == SWARM_M138_GPS_FIX_TYPE_NF)) {
     Serial.print(" ... No GPS.");
   }
-  Serial.println();
+  if (pStat) {
+    Serial.println();
+  }
 }
 
 void printSwarmError(Swarm_M138_Error_e err) {
@@ -560,7 +566,7 @@ void printSwarmTxStatus(const char *msg, Swarm_M138_Error_e err) {
 void txSwarm() {
   Swarm_M138_GPS_Fix_Quality_t *gpsQuality = new Swarm_M138_GPS_Fix_Quality_t;
   // START OF STATUS PRINTING
-  stallForGps(gpsQuality, swarmGpsStall);
+  stallForGps(gpsQuality, swarmGpsStall, true);
   // END OF STATUS PRINTING
   prevSwarmQueue = millis();
   Swarm_M138_GeospatialData_t *info = new Swarm_M138_GeospatialData_t;
@@ -608,8 +614,6 @@ void printRxTest(const Swarm_M138_Receive_Test_t *rxTest)
   }
   else
   {
-    Serial.print(F("  rssi_background: "));
-    Serial.print(rxTest->rssi_background);
     Serial.print(F("  rssi_sat: "));
     Serial.print(rxTest->rssi_sat);
     Serial.print(F("  snr: "));
@@ -648,7 +652,7 @@ void logSwarm() {
 void txAprs() {
   prevAprsTx = millis();
   Swarm_M138_GPS_Fix_Quality_t *gpsQuality = new Swarm_M138_GPS_Fix_Quality_t;
-  stallForGps(gpsQuality, aprsGpsStall);
+  stallForGps(gpsQuality, aprsGpsStall, true);
   //  if(gpsQuality->fix_type != SWARM_M138_GPS_FIX_TYPE_TT && gpsQuality->fix_type != SWARM_M138_GPS_FIX_TYPE_INVALID && gpsQuality->fix_type != SWARM_M138_GPS_FIX_TYPE_NF) {
   Swarm_M138_GeospatialData_t *info = new Swarm_M138_GeospatialData_t;
   swarm.getGeospatialInfo(info);

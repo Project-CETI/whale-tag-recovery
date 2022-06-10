@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include <time.h>
-#include "LittleFS.h"
 
 #define _FLAG 0x7e
 #define _CTRL_ID 0x03
@@ -50,8 +49,9 @@
 uint32_t swarmInterval = 300000; // swarm Tx update interval in ms
 long logInterval = 60000;
 
-// stall on gps?
+// swarm bools
 bool swarmGpsStall = true; // Stall for GPS signal before sending Swarm (keep true, alter in setup)
+bool pStatSwarm = false; // Provide additional Serial output beyond the modem's replies
 
 // log extra(s)
 long prevLogTime = 0;
@@ -61,7 +61,6 @@ uint64_t prevLedTime = 0;
 uint32_t ledOn = 0;
 
 SWARM_M138 swarm;
-LittleFSConfig cfg;
 uint16_t qCount;
 
 void setLed(bool state) {
@@ -142,12 +141,9 @@ void printSwarmQueueStatus() {
   Serial.print(qCount);
   Serial.println(F(" unsent messages in the SWARM TX queue"));
   Serial.println();
-  logSwarm();
   if (qCount >= 1024) {
     Serial.println("Clearing SWARM TX queue ...");
     swarm.deleteAllTxMessages();
-    Serial.println("Restart queue from current ...");
-    txSwarm();
   }
 }
 
@@ -160,10 +156,10 @@ void printSwarmTxStatus(const char *msg, Swarm_M138_Error_e err) {
   printSwarmQueueStatus();
 }
 
-void txSwarm() {
+void txSwarm(bool pStat) {
   Swarm_M138_GPS_Fix_Quality_t *gpsQuality = new Swarm_M138_GPS_Fix_Quality_t;
   // START OF STATUS PRINTING
-  stallForGps(gpsQuality, swarmGpsStall, true);
+  stallForGps(gpsQuality, swarmGpsStall, pStat);
   // END OF STATUS PRINTING
   prevSwarmQueue = millis();
   Swarm_M138_GeospatialData_t *info = new Swarm_M138_GeospatialData_t;
@@ -183,7 +179,7 @@ void txSwarm() {
     ledState = true;
   }
   // START OF STATUS PRINTING
-  printSwarmTxStatus(message, err);
+  if (pStat) {printSwarmTxStatus(message, err);}
   // END OF STATUS PRINTING
   delete dateTime;
   delete info;
@@ -234,14 +230,16 @@ void printRxTest(const Swarm_M138_Receive_Test_t *rxTest)
   }
 }
 
-void logSwarm() {
+void logSwarm(bool pStat) {
 //  File f = LittleFS.open("/swarmlog.csv", "a");
 //  Swarm_M138_DateTimeData_t *dateTime = new Swarm_M138_DateTimeData_t;
 //  swarm.getDateTime(dateTime);
   Swarm_M138_Receive_Test_t *rxTest = new Swarm_M138_Receive_Test_t;
   Swarm_M138_Error_e err = swarm.getReceiveTest(rxTest);
-  printSwarmError(err);
-  printRxTest(rxTest);
+  if (pStat) {
+    printSwarmError(err);
+    printRxTest(rxTest);
+  }
 //  delete dateTime;
   delete rxTest;
 }
@@ -259,6 +257,7 @@ void setup() {
 
   // Initialize Swarm
   Serial.println("Configuring swarm...");
+  swarm.enableDebugging();
   Serial1.setTX(0);
   Serial1.setRX(1);
   swarm.begin(Serial1);
@@ -276,24 +275,21 @@ void setup() {
 //  swarm.setPowerStatusRate(0);
 //  swarm.setReceiveTestRate(0);
 //  swarm.setMessageNotifications(false);
-//  swarmGpsStall = false; // uncomment ONLY if expecting 0 GPS signal
+  swarmGpsStall = false; // uncomment ONLY if expecting 0 GPS signal
+//  pStatSwarm = true; // uncomment ONLY if want additional serial output (aside from debug msgs)
 
-  // Initialize littleFS
-  LittleFS.setConfig(cfg);
-  LittleFS.begin();
   // Turn off LED, we're done setting up
   setLed(false);
   Serial.println("Setup complete");
-  swarm.enableDebugging();
+
+  // Optionally start off by queueing Swarm once
+  txSwarm(pStatSwarm);
   // Debug statements from Rohan@SWARM
   Serial1.println("$RT 1*17");
   Serial1.println("$MT C=U*12");
   Serial1.println("$TD \"Test 1\"*17");
   Serial1.println("$TD \"Test 2\"*14");
   Serial1.println("$TD \"Test 3\"*15");
-
-  // Start off by queueing Swarm and transmitting APRS at once
-  txSwarm();
 }
 
 void loop() {
@@ -307,12 +303,12 @@ void loop() {
 
   if (millis() - prevLogTime >= logInterval) {
     prevLogTime = millis();
-    logSwarm();
+    logSwarm(pStatSwarm);
   }
 
   // Queue Swarm
   if (millis() - prevSwarmQueue >= swarmInterval) {
-    txSwarm();
+    txSwarm(pStatSwarm);
   }
   swarm.checkUnsolicitedMsg();
 }
