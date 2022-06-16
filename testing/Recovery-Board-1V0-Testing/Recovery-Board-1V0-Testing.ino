@@ -47,7 +47,7 @@
 #define boardSN 2;
 
 //intervals
-uint32_t aprsInterval = 60000;
+uint32_t aprsInterval = 30000;
 uint32_t swarmInterval = 300000; // swarm Tx update interval in ms
 long logInterval = 60000;
 
@@ -721,7 +721,7 @@ void setup() {
 //  Serial1.println("$TD \"Test 3\"*15");
 
   // Start off by queueing Swarm and transmitting APRS at once
-  txSwarm();
+//  txSwarm();
   txAprs();
 }
 
@@ -746,8 +746,8 @@ void loop() {
   }
 
   // Queue Swarm
-//  if (millis() - prevSwarmQueue >= swarmInterval) {
-//    txSwarm();
-//  }
+  if (millis() - prevSwarmQueue >= swarmInterval) {
+    txSwarm();
+  }
 
 }
