@@ -1,16 +1,16 @@
-#include <SparkFun_Swarm_Satellite_Arduino_Library.h>
-#include <math.h>
-#include <stdio.h>
 #include "pico/stdlib.h"
+#include <stdio.h>
+#include <math.h>
 #include <time.h>
-#include "LittleFS.h"
 
+// APRS DEFS [START] ----------------------------------------------------
 #define _FLAG 0x7e
 #define _CTRL_ID 0x03
 #define _PID 0xf0
 #define _DT_EXP ','
 #define _DT_STATUS '>'
-#define _DT_POS '!'
+//#define _DT_POS '!'
+#define _DT_POS '>'
 #define tagSerial 2
 #define _GPRMC 1
 #define _FIXPOS 2
@@ -45,43 +45,44 @@
 #define delay2200 9   // 11
 #define numSinValues 32
 #define boardSN 2;
+// APRS DEFS [END] ------------------------------------------------------
 
-//intervals
-uint32_t aprsInterval = 5000;
-uint32_t swarmInterval = 300000; // swarm Tx update interval in ms
+// SWARM DEFS [START] ---------------------------------------------------
+#define MAX_SWARM_MSG_LEN 500
+// SWARM DEFS [END] -----------------------------------------------------
 
-SWARM_M138 swarm;
-LittleFSConfig cfg;
-
-void setLed(bool state) {
-  digitalWrite(ledPin, state);
-}
+// APRS VARS [START] ----------------------------------------------------
 // APRS communication config
 char mycall[8] = "KC1QXQ";
 char myssid = 5;
-char dest[8] = "APLIGA";
+char dest[8] = "APRS";
 char dest_beacon[8] = "BEACON";
 char digi[8] = "WIDE2";
 char digissid = 1;
 char comment[128] = "Ceti v0.9 5";
 char mystatus[128] = "Status";
 
+char testsequence[20] = "Hello World";
+
 // APRS protocol config
 bool nada = 0;
-const char sym_ovl = 'T';
-const char sym_tab = 'a';
-unsigned int aprsInterval = 5000;
+const char sym_ovl = '/'; // Symbol Table ID, either \ or /
+const char sym_tab = '>'; // Symbol Code
 unsigned int str_len = 400;
 char bitStuff = 0;
 unsigned short crc = 0xffff;
 uint64_t prevAprsTx = 0;
-uint64_t prevSwarmQueue = 0;
-bool ledState = false;
-uint64_t prevLedTime = 0;
-uint32_t ledOn = 0;
 uint8_t currOutput = 0;
 char rmc[100];
 char rmc_stat;
+
+// APRS payload arrays
+char lati[9];
+char lon[10];
+char cogSpeed[7];
+
+//intervals
+uint32_t aprsInterval = 10000;
 
 void setNada1200(void);
 void setNada2400(void);
@@ -89,7 +90,7 @@ void set_nada(bool nada);
 
 void sendCharNRZI(unsigned char in_byte, bool enBitStuff);
 void sendStrLen(const char *in_string, int len);
-void sendPayload(Swarm_M138_GeospatialData_t *locationInfo, char *status);
+void setPayload();
 
 void calcCrc(bool in_bit);
 void sendCrc(void);
@@ -97,13 +98,39 @@ void sendCrc(void);
 void sendFlag(unsigned char flag_len);
 void sendHeader();
 
-
 const uint8_t sinValues[numSinValues] = {
   152, 176, 198, 217, 233, 245, 252, 255, 252, 245, 233,
   217, 198, 176, 152, 127, 103, 79,  57,  38,  22,  10,
   3,   1,   3,   10,  22,  38,  57,  79,  103, 128
 };
+// APRS VARS [END] ------------------------------------------------------
 
+// SWARM VARS [START] ---------------------------------------------------
+// swarm-communication processes
+char modem_wr_buf[MAX_SWARM_MSG_LEN];
+int modem_wr_buf_pos = 0;
+char modem_rd_buf[MAX_SWARM_MSG_LEN];
+int modem_rd_buf_pos = 0;
+int buf_len = 0;
+char endNmeaString = '*';
+uint8_t nmeaCS;
+
+// Parse SWARM
+bool bootConfirmed = false;
+bool initDTAck = false;
+bool initPosAck = false;
+// GPS data hacks
+float latlon[2] = {0,0};
+int acs[3] = {0,0,0};
+int gpsReadPos = 4;
+int gpsCopyPos = 0;
+char gpsParseBuf[MAX_SWARM_MSG_LEN];
+int gpsInsertPos = 0;
+int gpsMult = 1;
+bool gpsFloatQ = false;
+// SWARM VARS [END] -----------------------------------------------------
+
+// APRS FUNCTIONS [START] -----------------------------------------------
 void initializeOutput() {
   pinMode(out0Pin, OUTPUT);
   pinMode(out1Pin, OUTPUT);
@@ -207,7 +234,7 @@ void sendHeader() {
   temp = strlen(dest);
   for (int j = 0; j < temp; j++) sendCharNRZI(dest[j] << 1, true);
   if (temp < 6) {
-    for (int j = 0; j < (6 - temp); j++) sendCharNRZI(' ' << 1, true);
+    for (int j = temp; j < 6; j++) sendCharNRZI(' ' << 1, true);
   }
   sendCharNRZI('0' << 1, true);
 
@@ -215,7 +242,7 @@ void sendHeader() {
   temp = strlen(mycall);
   for (int j = 0; j < temp; j++) sendCharNRZI(mycall[j] << 1, true);
   if (temp < 6) {
-    for (int j = 0; j < (6 - temp); j++) sendCharNRZI(' ' << 1, true);
+    for (int j = temp; j < 6; j++) sendCharNRZI(' ' << 1, true);
   }
   sendCharNRZI((myssid + '0') << 1, true);
 
@@ -223,7 +250,7 @@ void sendHeader() {
   temp = strlen(digi);
   for (int j = 0; j < temp; j++) sendCharNRZI(digi[j] << 1, true);
   if (temp < 6) {
-    for (int j = 0; j < (6 - temp); j++) sendCharNRZI(' ' << 1, true);
+    for (int j = temp; j < 6; j++) sendCharNRZI(' ' << 1, true);
   }
   sendCharNRZI(((digissid + '0') << 1) + 1, true);
 
@@ -232,29 +259,25 @@ void sendHeader() {
   sendCharNRZI(_PID, true);
 }
 
-void sendPayload(Swarm_M138_GeospatialData_t *locationInfo, char *status_) {
-  float latFloat = locationInfo->lat;
-  if (locationInfo->lat == 0) {
-    return;
-  }
+void setPayload() {
+  float latFloat = latlon[0];
   bool south = false;
   if (latFloat < 0) {
     south = true;
     latFloat = fabs(latFloat);
   }
   int latDeg = (int) latFloat;
-  int latMin = latFloat - latDeg; // get decimal degress from float
+  float latMin = latFloat - latDeg; // get decimal degress from float
   latMin = latMin * 60; // convert decimal degrees to minutes
   uint8_t latMinInt = (int)latMin;
   uint8_t latMinDec = round((latMin - latMinInt) * 100);
 
-  char lati[9];
   if (south) {
-    snprintf(lati, 9, "%02d%02d.%02dS", latDeg, latMinInt, latMinDec);
+    snprintf(lati, 9, "%02d%02d.%02dS\0", latDeg, latMinInt, latMinDec);
   } else {
-    snprintf(lati, 9, "%02d%02d.%02dN", latDeg, latMinInt, latMinDec);
+    snprintf(lati, 9, "%02d%02d.%02dN\0", latDeg, latMinInt, latMinDec);
   }
-  float lonFloat = locationInfo->lon;
+  float lonFloat = latlon[1];
   bool west = true;
   if (lonFloat < 0) {
     west = true;
@@ -264,51 +287,20 @@ void sendPayload(Swarm_M138_GeospatialData_t *locationInfo, char *status_) {
   float lonMin = lonFloat - lonDeg; // get decimal degress from float
   uint8_t lonMinInt = (int)lonMin;
   uint8_t lonMinDec = round((lonMin - lonMinInt) * 100);
-  char lon[10];
   if (west) {
-    snprintf(lon, 10, "%03d%02d.%02dW", lonDeg, lonMinInt, lonMinDec);
+    snprintf(lon, 10, "%03d%02d.%02dW\0", lonDeg, lonMinInt, lonMinDec);
   } else {
-    snprintf(lon, 10, "%03d%02d.%02dE", lonDeg, lonMinInt, lonMinDec);
+    snprintf(lon, 10, "%03d%02d.%02dE\0", lonDeg, lonMinInt, lonMinDec);
   }
 
-  double speed = locationInfo->speed / 1.852;  // convert speed from km/h to knots
-  uint16_t course = (uint16_t)locationInfo->course;
-  if (course ==  0) { 
+  double speed = acs[2] / 1.852;  // convert speed from km/h to knots
+  uint16_t course = (uint16_t)acs[1];
+  if (course ==  0) {
     // APRS wants course in 1-360 and swarm provides it as 0-359
     course = 360;
   }
-  char cogSpeed[7];
-  int sog = (int) locationInfo->speed;
-  snprintf(cogSpeed, 7, "%03d/%03d", course, sog);
-  Serial.begin(115200);
-  /****** MYCALL ********/
-  Serial.print(mycall);
-  Serial.print('-');
-  Serial.print(myssid, DEC);
-  Serial.print('>');
-  /******** DEST ********/
-  Serial.print(dest);
-  Serial.print(',');
-  /******** DIGI ********/
-  Serial.print(digi);
-  Serial.print('-');
-  Serial.print(digissid, DEC);
-  Serial.print(':');
-  /******* PAYLOAD ******/
-  Serial.print(_DT_POS);
-  Serial.print(lati);
-  Serial.print(sym_ovl);
-  Serial.print(lon);
-  Serial.print(sym_tab);
-  Serial.println(' ');
-  Serial.flush();
-  sendCharNRZI(_DT_POS, true);
-  sendStrLen(lati, strlen(lati));
-  sendCharNRZI(sym_ovl, true);
-  sendStrLen(lon, strlen(lon));
-  sendStrLen(cogSpeed, strlen(cogSpeed));
-  sendCharNRZI(sym_tab, true);
-  sendStrLen(comment, strlen(comment));
+  int sog = (int) acs[2];
+  snprintf(cogSpeed, 7, "%03d/%03d\0", course, sog);
 }
 
 /*
@@ -356,15 +348,43 @@ void sendFlag(unsigned char flag_len) {
   for (int j = 0; j < flag_len; j++) sendCharNRZI(_FLAG, LOW);
 }
 
+void printPacket() {
+  // initial flag
+  Serial.print(_FLAG, DEC);
+  /******** DEST ********/
+  Serial.print(dest);
+  Serial.print('0');
+  /****** MYCALL ********/
+  Serial.print(mycall);
+  Serial.print(myssid, DEC);
+  /******** DIGI ********/
+  Serial.print(digi);
+  Serial.print(digissid, DEC);
+  // addn. stuff
+  Serial.print(_CTRL_ID,DEC);
+  Serial.print(_PID,DEC);
+  // payload
+  Serial.print(_DT_POS);
+  Serial.print(lati);
+  Serial.print(sym_ovl);
+  Serial.print(lon);
+  Serial.print(sym_tab);
+  Serial.print(cogSpeed);
+  Serial.print(comment);
+  Serial.print(crc);
+  Serial.println(_FLAG, DEC);
+}
+
 /*
    In this preliminary test, a packet is consists of FLAG(s) and PAYLOAD(s).
    Standard APRS FLAG is 0x7e character sent over and over again as a packet
    delimiter. In this example, 100 flags is used the preamble and 3 flags as
    the postamble.
 */
-void sendPacket(Swarm_M138_GeospatialData_t *locationInfo) {
+void sendPacket() {
   setLed(true);
   setPttState(true);
+  setPayload();
 
   // TODO TEST IF THIS IMPROVES RECEPTION
   // Send initialize sequence for receiver
@@ -391,9 +411,16 @@ void sendPacket(Swarm_M138_GeospatialData_t *locationInfo) {
   sendFlag(150);
   crc = 0xffff;
   sendHeader();
-  if (locationInfo->lat != 0) {
-    sendPayload(locationInfo, "");
-  }
+//  send payload
+  sendCharNRZI('>', true);
+  sendStrLen(lati, strlen(lati));
+  sendCharNRZI(sym_ovl, true);
+  sendStrLen(lon, strlen(lon));
+  sendCharNRZI(sym_tab, true);
+  sendStrLen(cogSpeed, strlen(cogSpeed));
+//  sendStrLen(comment, strlen(comment));
+
+//  sendStrLen(testsequence,strlen(testsequence));
   sendCrc();
   sendFlag(3);
   setLed(false);
@@ -466,112 +493,212 @@ void setVhfState(bool state) {
   digitalWrite(vhfSleepPin, state);
 }
 
-void initLed() {
-  pinMode(ledPin, OUTPUT);
-  digitalWrite(ledPin, false);
+// APRS FUNCTIONS [END] -------------------------------------------------
+
+// SWARM FUNCTIONS [START] ----------------------------------------------
+uint8_t nmeaChecksum(const char *sz, size_t len) {
+  size_t i = 0;
+  uint8_t cs;
+  if (sz[0] == '$')
+    i++;
+  for (cs = 0; (i < len) && sz [i]; i++)
+    cs ^= ((uint8_t) sz[i]);
+  return cs;
 }
+
+void storeGpsData() {
+  while(modem_rd_buf[gpsReadPos] != '*') {
+    while (modem_rd_buf[gpsReadPos] != ',' && modem_rd_buf[gpsReadPos] != '*') {
+      if (modem_rd_buf[gpsReadPos] == '-') {
+        gpsMult = -1;
+      }
+      else {
+        if (modem_rd_buf[gpsReadPos] == '.') {
+          gpsFloatQ = true;
+        }
+        gpsParseBuf[gpsCopyPos] = modem_rd_buf[gpsReadPos];
+        gpsCopyPos++;
+      }
+      gpsReadPos++;
+    }
+    gpsParseBuf[gpsCopyPos] = '\0';
+    if (gpsFloatQ) {
+      latlon[gpsInsertPos] = ((float)gpsMult) * atof(gpsParseBuf);
+    }
+    else {
+      acs[gpsInsertPos] = gpsMult * atoi(gpsParseBuf);
+    }
+    if (modem_rd_buf[gpsReadPos] == '*') {
+      gpsReadPos = 4;
+      gpsCopyPos = 0;
+      gpsInsertPos = 0;
+      gpsMult = 1;
+      break;
+    }
+    gpsReadPos++;
+    gpsCopyPos = 0;
+    (gpsFloatQ && gpsInsertPos==1) ? gpsInsertPos-- : gpsInsertPos++;
+    gpsFloatQ = false;
+    gpsMult = 1;
+  }
+}
+
+int parseModemOutput() {
+  if (modem_rd_buf[2] == 'N' && modem_rd_buf[4] != 'E' && modem_rd_buf[4] != 'O') {
+    storeGpsData();
+  }
+  else if (modem_rd_buf[1] == 'T' && modem_rd_buf[4] == 'S') {
+    txSwarm();
+  }
+  return 0;
+}
+
+void readFromModem() {
+  if (Serial1.available()) {
+    modem_rd_buf[modem_rd_buf_pos] = Serial1.read();
+    
+    if (modem_rd_buf[modem_rd_buf_pos] != '\n') {
+      modem_rd_buf_pos++;
+    }
+    else {
+      modem_rd_buf[modem_rd_buf_pos] = '\0';
+      buf_len = modem_rd_buf_pos;
+      modem_rd_buf_pos = 0;
+      Serial.println(modem_rd_buf);
+      parseModemOutput();
+    }
+  }
+}
+
+int checkSwarmBooted() {
+  if (buf_len != 21) {
+    return 0; // Can't be BOOT,RUNNING message
+  }
+  if (modem_rd_buf[6] != 'B') {
+    return 0; // Not BOOT sequence
+  }
+  if (modem_rd_buf[buf_len-1] != 'a') {
+    return 0; // Not the right checksum
+  }
+  bootConfirmed = true;
+  return 0;
+}
+
+int checkInitAck() {
+  if (modem_rd_buf[16] == '6') {
+    initDTAck = true;
+    return 0;
+  }
+  else if (modem_rd_buf[16] == 'e') {
+    initPosAck = true;
+  }
+  return 0;
+}
+
+void swarmBootSequence(bool waitForAcks) {
+  while(!bootConfirmed) {
+    readFromModem();
+    checkSwarmBooted();
+  }
+  while((!initDTAck || !initPosAck) && waitForAcks) {
+    serialCopyToModem();
+    readFromModem();
+    checkInitAck();
+  }
+}
+
+void serialCopyToModem() {
+  if (Serial.available()) {
+    modem_wr_buf[modem_wr_buf_pos] = Serial.read();
+    
+    if (modem_wr_buf[modem_wr_buf_pos] != '\n') {
+      modem_wr_buf_pos++;
+    }
+    else {
+      modem_wr_buf[modem_wr_buf_pos] = '\0';
+      modem_wr_buf_pos = 0;
+      if (modem_wr_buf[0] == '$') {
+        writeToModem(modem_wr_buf);
+      }
+    }
+  }
+}
+
+void writeToModem(char *sz) {
+  nmeaCS = nmeaChecksum(sz, strlen(sz));
+  Serial.printf("[SENT] %s%c%02X\n",sz,endNmeaString,nmeaCS);
+  Serial1.printf("%s%c%02X\n",sz,endNmeaString,nmeaCS);
+}
+
+void getRxTestOutput(bool onQ) {
+  onQ ? writeToModem("$RT 1") : writeToModem("$RT 0");
+}
+
+void getQCount() {
+  writeToModem("$MT C=U");
+}
+
+void swarmInit(bool swarmDebug) {
+  getRxTestOutput(false);
+  getQCount();
+  if (swarmDebug) {
+    writeToModem("$TD \"Test 1\"");
+    writeToModem("$TD \"Test 2\"");
+    writeToModem("$TD \"Test 3\"");
+  }
+  writeToModem("$GN 5");
+}
+// SWARM FUNCTIONS [END] ------------------------------------------------
+
+bool ledState = false;
+bool ledQ = false;
+uint64_t prevLedTime = 0;
+uint32_t ledOn = 0;
+void setLed(bool state) {digitalWrite(ledPin, state);}
+void initLed() {pinMode(ledPin, OUTPUT);}
+
+bool swarmRunning = false;
+bool waitForAcks = false;
+bool aprsRunning = false;
 
 void txSwarm() {
-  Serial.println("TX swarm");
-  Swarm_M138_GPS_Fix_Quality_t *gpsQuality = new Swarm_M138_GPS_Fix_Quality_t;
-  swarm.getGpsFixQuality(gpsQuality);
-  Serial.print("fix quality = ");
-  Serial.println(gpsQuality->fix_type);
-  if (gpsQuality->fix_type != SWARM_M138_GPS_FIX_TYPE_TT && gpsQuality->fix_type != SWARM_M138_GPS_FIX_TYPE_INVALID && gpsQuality->fix_type != SWARM_M138_GPS_FIX_TYPE_NF) {
-    prevSwarmQueue = millis();
-    Swarm_M138_GeospatialData_t *info = new Swarm_M138_GeospatialData_t;
-    swarm.getGeospatialInfo(info);
-    Swarm_M138_DateTimeData_t *dateTime = new Swarm_M138_DateTimeData_t;
-    swarm.getDateTime(dateTime);
-    char* message;
-    sprintf(message, "SN%d=%f,%f@%d/%d/%d:%d:%d:%d", tagSerial, info->lat, info->lon, dateTime->YYYY, dateTime->MM,dateTime->DD, dateTime->hh, dateTime->mm, dateTime->ss);
-    uint64_t *id;
-    swarm.deleteAllTxMessages();
-    if (swarm.transmitText(message, id) == SWARM_M138_ERROR_SUCCESS) {
-      digitalWrite(ledPin, true);
-      prevLedTime = millis();
-      ledOn = 500;
-      ledState = true;
-
-      char* printMessage;
-      Serial.print("sent swarm ");
-      Serial.printf("SN%d=%f,%f@%d/%d/%d:%d:%d:%d", tag_serial, info->lat, info->lon, dateTime->YYYY, dateTime->MM, dateTime->DD, dateTime->hh, dateTime->mm, dateTime->ss);
-      Serial.println();
-
-      uint16_t count;
-      swarm.getUnsentMessageCount(&count);
-      Serial.print("Messages in queue: ");
-      Serial.println(count);
-
-    }
-    else{
-        Serial.println("Error with queuing...");
-    }
+  if (initDTAck) {
+    writeToModem("$TD \"Transmit Queue\"");
   }
-  else {
-    Serial.println("No GPS");
-  }
-  delete gpsQuality;
 }
 
-void printSwarmStatus(){
-    Swarm_M138_Receive_Test_t *rxTest = new Swarm_M138_Receive_Test_t; // Allocate memory for the information
-    swarm.getReceiveTest(rxTest);
-
-    uint16_t count;
-    swarm.getUnsentMessageCount(&count);
-
-    if (rxTest->background) // Check if rxTest contains only the background RSSI
-    {
-        Serial.print("RSSI: ");
-        Serial.print(rxTest->rssi_background);
-    }
-    else{
-       Serial.print("RSSI SAT: ");
-        Serial.print(rxTest->rssi_sat);
-    }
-
-    Serial.print("\tMessages in queue: ");
-    Serial.println(count);
-
-    delete rxTest; // Free the memory
-    prevSwarmStatusUpdate = millis();
-}
-
-void logSwarm(){
-  File f = LittleFS.open("/swarmlog.csv", "a");
-  Swarm_M138_DateTimeData_t *dateTime = new Swarm_M138_DateTimeData_t;
-  swarm.getDateTime(dateTime);
-  Swarm_M138_Receive_Test_t *rxTest = new Swarm_M138_Receive_Test_t;
-  swarm.getReceiveTest(rxTest);
-  f.printf("%d/%d/%d:%d:%d:%d,%d", dateTime->YYYY, dateTime->MM, dateTime->DD, dateTime->hh, dateTime->mm, dateTime->ss, rxTest->rssi_background);
-  delete dateTime;
-  delete rxTest;
-}
-
-void txAprs(){
+void txAprs() {
   prevAprsTx = millis();
-  Swarm_M138_GPS_Fix_Quality_t *gpsQuality = new Swarm_M138_GPS_Fix_Quality_t;
-  Serial.printf("Gps fix type: %d\n", gpsQuality->fix_type);
-//  if(gpsQuality->fix_type != SWARM_M138_GPS_FIX_TYPE_TT && gpsQuality->fix_type != SWARM_M138_GPS_FIX_TYPE_INVALID && gpsQuality->fix_type != SWARM_M138_GPS_FIX_TYPE_NF) {
-    Swarm_M138_GeospatialData_t *info = new Swarm_M138_GeospatialData_t;
-    swarm.getGeospatialInfo(info);
-    uint32_t startPacket = millis();
-    sendPacket(info);
-    uint32_t packetDuration = millis() - startPacket;
-    Serial.println("Packet sent in: " + String(packetDuration) + " ms");
-    delete info;
-//  }
-  delete gpsQuality;
+  // What are we sending, hopefully?
+//  Serial.print("GPS Data|| lat: ");
+//  Serial.print(latlon[0],4);
+//  Serial.print(" | lon: ");
+//  Serial.print(latlon[1],4);
+//  Serial.printf(" | A: %d | C: %d | S: %d\n", acs[0], acs[1], acs[2]);
+  // End Debug
+  uint32_t startPacket = millis();
+  sendPacket();
+  uint32_t packetDuration = millis() - startPacket;
+  Serial.println("Packet sent in: " + String(packetDuration) + " ms");
+  printPacket();
 }
 
 void setup() {
+//  swarmRunning = true;
+  aprsRunning = true;
+//  waitForAcks = true;
   initLed();
   setLed(true);
-  Serial.begin(115200);
-  delay(5000);
 
-  // Initialize DRA818V
+  // Set SWARM first, we need to grab those acks
+  Serial.begin(115200);
+  Serial1.setTX(0);
+  Serial1.setRX(1);
+  Serial1.begin(115200);
+  swarmBootSequence(waitForAcks && swarmRunning);
+  Serial.println("Swarm booted.");
+
+  // DRA818V initialization
   Serial.println("Configuring DRA818V...");
   // Initialize DRA818V
   initializeDra818v();
@@ -579,70 +706,24 @@ void setup() {
   setPttState(false);
   setVhfState(true);
   Serial.println("DRA818V configured");
-  
+
   // Initialize DAC
   Serial.println("Configuring DAC...");
   initializeOutput();
   Serial.println("DAC configured");
 
-  // Initialize Swarm
-  Serial.println("Configuring swarm...");
-  Serial1.setTX(0);
-  Serial1.setRX(1);
-  swarm.begin(Serial1);
-  while (!swarm.begin(Serial1)){
-    Serial.println(F("Could not communicate with the modem. Please check the serial "
-        "connections. Freezing..."));
-    delay(1200);
-  }
-
-  // Initialize littleFS
-  LittleFS.setConfig(cfg);
-  LittleFS.begin();
-  
-  setLed(false);
-  Serial.println("Setup complete");
-
-  // Wait for GPS fix
-//  Swarm_M138_GPS_Fix_Quality_t *gpsQuality = new Swarm_M138_GPS_Fix_Quality_t;
-//  Serial.println("waiting for GPS acquisition");
-//  while(1){
-//    swarm.getGpsFixQuality(gpsQuality);
-//    if(gpsQuality->fix_type != SWARM_M138_GPS_FIX_TYPE_TT && gpsQuality->fix_type != SWARM_M138_GPS_FIX_TYPE_INVALID && gpsQuality->fix_type != SWARM_M138_GPS_FIX_TYPE_NF) {
-//      break;
-//      }
-//    delay(200);
-//  }
-//  Serial.println("GPS acquired");
-
-
-  //  transmit APRS, queue Swarm and print Swarm status
-  txAprs();
-  txSwarm();
-  printSwarmStatus();
+  if(swarmRunning) swarmInit(swarmRunning && waitForAcks);
 }
 
 void loop() {
+  serialCopyToModem();
+  readFromModem();
   // Update LED state
-  if (ledState) {
-    if (millis() - prevLedTime >= ledOn) {
-      digitalWrite(ledPin, false);
-      ledState = false;
-    }
-  }
-
+  ledQ = (millis() - prevLedTime >= ledOn);
+  setLed(!ledQ);
+  ledState = !ledQ;
   // Transmit APRS
-    if (millis() - prevAprsTx >= aprsInterval) {
-      txAprs();
-    }
-
-  // Queue Swarm
-  if (millis() - prevSwarmQueue >= swarmInterval) {
-    txSwarm();
+  if ((millis() - prevAprsTx >= aprsInterval) && aprsRunning) {
+    txAprs();
   }
-
-  if (millis() - prevSwarmStatusUpdate >= swarmStatusUpdateInterval){
-    printSwarmStatus();
-  }
-
 }
