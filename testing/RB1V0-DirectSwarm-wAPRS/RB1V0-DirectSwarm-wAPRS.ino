@@ -51,6 +51,10 @@
 #define MAX_SWARM_MSG_LEN 500
 // SWARM DEFS [END] -----------------------------------------------------
 
+// TAG DEFS [START] ---------------------------------------------------
+#define MAX_TAG_MSG_LEN 20
+// TAG DEFS [END] -----------------------------------------------------
+
 // APRS VARS [START] ----------------------------------------------------
 // APRS communication config
 char mycall[8] = "KC1QXQ";
@@ -111,7 +115,7 @@ char modem_wr_buf[MAX_SWARM_MSG_LEN];
 int modem_wr_buf_pos = 0;
 char modem_rd_buf[MAX_SWARM_MSG_LEN];
 int modem_rd_buf_pos = 0;
-int buf_len = 0;
+int modem_buf_len = 0;
 char endNmeaString = '*';
 uint8_t nmeaCS;
 
@@ -562,7 +566,7 @@ void readFromModem() {
     }
     else {
       modem_rd_buf[modem_rd_buf_pos] = '\0';
-      buf_len = modem_rd_buf_pos;
+      modem_buf_len = modem_rd_buf_pos;
       modem_rd_buf_pos = 0;
       Serial.println(modem_rd_buf);
       parseModemOutput();
@@ -571,13 +575,13 @@ void readFromModem() {
 }
 
 int checkSwarmBooted() {
-  if (buf_len != 21) {
+  if (modem_buf_len != 21) {
     return 0; // Can't be BOOT,RUNNING message
   }
   if (modem_rd_buf[6] != 'B') {
     return 0; // Not BOOT sequence
   }
-  if (modem_rd_buf[buf_len-1] != 'a') {
+  if (modem_rd_buf[modem_buf_len-1] != 'a') {
     return 0; // Not the right checksum
   }
   bootConfirmed = true;
@@ -650,6 +654,59 @@ void swarmInit(bool swarmDebug) {
 }
 // SWARM FUNCTIONS [END] ------------------------------------------------
 
+bool tagResponseIn = false;
+char tag_rd_buf[MAX_TAG_MSG_LEN];
+int tag_rd_buf_pos = 0;
+int tag_buf_len = 0;
+uint32_t tMsgSent = 0;
+uint32_t ackWaitT= 2000;
+// TAG FUNCTIONS [START] ------------------------------------------------
+int resetTagReading() {tag_rd_buf_pos = 0; tagResponseIn = true; return 1;}
+void readFromTag() {
+  if (Serial2.available()) {
+    tag_rd_buf[tag_rd_buf_pos] = Serial2.read();
+    (tag_rd_buf[tag_rd_buf_pos] != '\n') ? tag_rd_buf_pos++ : resetTagReading();
+  }
+}
+
+int parseTagStatus() {
+  return 0;
+}
+
+void getTagAckGps() {
+  // we legitimately could not care about this ack; do nothing
+  tagResponseIn = false;
+}
+
+bool getDetachAck() {
+  if (tag_rd_buf[0] != 'd') return false; return true;
+}
+
+void writeGpsToTag(char *sz) {
+//  Serial.printf("[TO TAG] %s%c%02X\n",sz,endNmeaString,nmeaCS);
+  Serial2.printf("%s\n",sz);
+  tagResponseIn = false;
+  tMsgSent = millis();
+  while (millis() - tMsgSent < ackWaitT) {while(!tagResponseIn && (millis() - tMsgSent < ackWaitT)) {readFromTag();}}
+  getTagAckGps();
+}
+
+void detachTag() {
+  tMsgSent = millis();
+  while(millis() - tMsgSent < ackWaitT) {
+    Serial2.println('D');
+    while (!tagResponseIn && (millis() - tMsgSent < ackWaitT)) {readFromTag();}
+    if (getDetachAck()) break;
+  }
+}
+
+void reqTagState() {
+  tMsgSent = millis();
+  Serial2.println('T');
+  while (millis() - tMsgSent < ackWaitT) {while(!tagResponseIn && (millis() - tMsgSent < ackWaitT)) {readFromTag();}}
+  parseTagStatus();
+}
+// TAG FUNCTIONS [END] --------------------------------------------------
 bool ledState = false;
 bool ledQ = false;
 uint64_t prevLedTime = 0;
@@ -704,7 +761,7 @@ void setup() {
   initializeDra818v();
   configureDra818v();
   setPttState(false);
-  setVhfState(true);
+  setVhfState(false);
   Serial.println("DRA818V configured");
 
   // Initialize DAC
@@ -724,6 +781,9 @@ void loop() {
   ledState = !ledQ;
   // Transmit APRS
   if ((millis() - prevAprsTx >= aprsInterval) && aprsRunning) {
+    setVhfState(true);
+    delay(100);
     txAprs();
+    setVhfState(false);
   }
 }
