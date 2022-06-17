@@ -1,7 +1,7 @@
-#include "pico/stdlib.h"
 #include <stdio.h>
 #include <math.h>
 #include <time.h>
+#include "TagRecoveryBoardv1_0_0.h"
 
 // APRS DEFS [START] ----------------------------------------------------
 #define _FLAG 0x7e
@@ -18,28 +18,10 @@
 #define _STATUS 4
 #define _BEACON 5
 
-// LED Pin
-#define ledPin 29
-
-// VHF control pins
-#define vhfPowerLevelPin 15
-#define vhfPttPin 16
-#define vhfSleepPin 14
-#define vhfTxPin 13
-#define vhfRxPin 12
 // VHF control params
 #define vhfTimeout 500
 #define vhfEnableDelay 1000
 
-// VHF Output pins
-#define out0Pin 18
-#define out1Pin 19
-#define out2Pin 20
-#define out3Pin 21
-#define out4Pin 22
-#define out5Pin 23
-#define out6Pin 24
-#define out7Pin 25
 #define bitPeriod 832
 #define delay1200 19  // 23
 #define delay2200 9   // 11
@@ -132,26 +114,26 @@ bool gpsFloatQ = false;
 
 // APRS FUNCTIONS [START] -----------------------------------------------
 void initializeOutput() {
-  pinMode(out0Pin, OUTPUT);
-  pinMode(out1Pin, OUTPUT);
-  pinMode(out2Pin, OUTPUT);
-  pinMode(out3Pin, OUTPUT);
-  pinMode(out4Pin, OUTPUT);
-  pinMode(out5Pin, OUTPUT);
-  pinMode(out6Pin, OUTPUT);
-  pinMode(out7Pin, OUTPUT);
+  pinMode(dacPin0, OUTPUT);
+  pinMode(dacPin1, OUTPUT);
+  pinMode(dacPin2, OUTPUT);
+  pinMode(dacPin3, OUTPUT);
+  pinMode(dacPin4, OUTPUT);
+  pinMode(dacPin5, OUTPUT);
+  pinMode(dacPin6, OUTPUT);
+  pinMode(dacPin7, OUTPUT);
 
 }
 
 void setOutput(uint8_t state) {
-  digitalWrite(out0Pin, state & 0b00000001);
-  digitalWrite(out1Pin, state & 0b00000010);
-  digitalWrite(out2Pin, state & 0b00000100);
-  digitalWrite(out3Pin, state & 0b00001000);
-  digitalWrite(out4Pin, state & 0b00010000);
-  digitalWrite(out5Pin, state & 0b00100000);
-  digitalWrite(out6Pin, state & 0b01000000);
-  digitalWrite(out7Pin, state & 0b10000000);
+  digitalWrite(dacPin0, state & 0b00000001);
+  digitalWrite(dacPin1, state & 0b00000010);
+  digitalWrite(dacPin2, state & 0b00000100);
+  digitalWrite(dacPin3, state & 0b00001000);
+  digitalWrite(dacPin4, state & 0b00010000);
+  digitalWrite(dacPin5, state & 0b00100000);
+  digitalWrite(dacPin6, state & 0b01000000);
+  digitalWrite(dacPin7, state & 0b10000000);
 }
 
 void setNextSin() {
