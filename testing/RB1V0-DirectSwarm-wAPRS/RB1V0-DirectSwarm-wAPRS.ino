@@ -9,8 +9,7 @@
 #define _PID 0xf0
 #define _DT_EXP ','
 #define _DT_STATUS '>'
-//#define _DT_POS '!'
-#define _DT_POS '>'
+#define _DT_POS '!'
 #define tagSerial 2
 #define _GPRMC 1
 #define _FIXPOS 2
@@ -55,7 +54,7 @@
 // APRS communication config
 char mycall[8] = "KC1QXQ";
 char myssid = 5;
-char dest[8] = "APRS";
+char dest[8] = "APLIGA";
 char dest_beacon[8] = "BEACON";
 char digi[8] = "WIDE2";
 char digissid = 1;
@@ -67,7 +66,7 @@ char testsequence[20] = "Hello World";
 // APRS protocol config
 bool nada = 0;
 const char sym_ovl = '/'; // Symbol Table ID, either \ or /
-const char sym_tab = '>'; // Symbol Code
+const char sym_tab = '-'; // Symbol Code
 unsigned int str_len = 400;
 char bitStuff = 0;
 unsigned short crc = 0xffff;
@@ -79,10 +78,10 @@ char rmc_stat;
 // APRS payload arrays
 char lati[9];
 char lon[10];
-char cogSpeed[7];
+char cogSpeed[8];
 
 //intervals
-uint32_t aprsInterval = 10000;
+uint32_t aprsInterval = 30000;
 
 void setNada1200(void);
 void setNada2400(void);
@@ -114,6 +113,7 @@ int modem_rd_buf_pos = 0;
 int buf_len = 0;
 char endNmeaString = '*';
 uint8_t nmeaCS;
+bool swarmInteractive = false;
 
 // Parse SWARM
 bool bootConfirmed = false;
@@ -236,7 +236,7 @@ void sendHeader() {
   if (temp < 6) {
     for (int j = temp; j < 6; j++) sendCharNRZI(' ' << 1, true);
   }
-  sendCharNRZI('0' << 1, true);
+  sendCharNRZI('1' << 1, true);
 
   /********* SOURCE *********/
   temp = strlen(mycall);
@@ -246,13 +246,13 @@ void sendHeader() {
   }
   sendCharNRZI((myssid + '0') << 1, true);
 
-  /********* DIGI ***********/
-  temp = strlen(digi);
-  for (int j = 0; j < temp; j++) sendCharNRZI(digi[j] << 1, true);
-  if (temp < 6) {
-    for (int j = temp; j < 6; j++) sendCharNRZI(' ' << 1, true);
-  }
-  sendCharNRZI(((digissid + '0') << 1) + 1, true);
+//  /********* DIGI ***********/
+//  temp = strlen(digi);
+//  for (int j = 0; j < temp; j++) sendCharNRZI(digi[j] << 1, true);
+//  if (temp < 6) {
+//    for (int j = temp; j < 6; j++) sendCharNRZI(' ' << 1, true);
+//  }
+//  sendCharNRZI(((digissid + '0') << 1) + 1, true);
 
   /***** CTRL FLD & PID *****/
   sendCharNRZI(_CTRL_ID, true);
@@ -278,13 +278,14 @@ void setPayload() {
     snprintf(lati, 9, "%02d%02d.%02dN\0", latDeg, latMinInt, latMinDec);
   }
   float lonFloat = latlon[1];
-  bool west = true;
+  bool west = false;
   if (lonFloat < 0) {
     west = true;
     lonFloat = fabs(lonFloat);
   }
   int lonDeg = (int) lonFloat;
   float lonMin = lonFloat - lonDeg; // get decimal degress from float
+  lonMin = lonMin * 60;
   uint8_t lonMinInt = (int)lonMin;
   uint8_t lonMinDec = round((lonMin - lonMinInt) * 100);
   if (west) {
@@ -300,7 +301,11 @@ void setPayload() {
     course = 360;
   }
   int sog = (int) acs[2];
+  Serial.print("speed: ");
+  Serial.print(sog);
   snprintf(cogSpeed, 7, "%03d/%03d\0", course, sog);
+  Serial.print(" and yet this thinks: ");
+  Serial.println(cogSpeed);
 }
 
 /*
@@ -350,7 +355,7 @@ void sendFlag(unsigned char flag_len) {
 
 void printPacket() {
   // initial flag
-  Serial.print(_FLAG, DEC);
+  Serial.print(_FLAG, HEX);
   /******** DEST ********/
   Serial.print(dest);
   Serial.print('0');
@@ -371,8 +376,8 @@ void printPacket() {
   Serial.print(sym_tab);
   Serial.print(cogSpeed);
   Serial.print(comment);
-  Serial.print(crc);
-  Serial.println(_FLAG, DEC);
+  Serial.print(crc, HEX);
+  Serial.println(_FLAG, HEX);
 }
 
 /*
@@ -412,13 +417,13 @@ void sendPacket() {
   crc = 0xffff;
   sendHeader();
 //  send payload
-  sendCharNRZI('>', true);
+  sendCharNRZI(_DT_POS, true);
   sendStrLen(lati, strlen(lati));
   sendCharNRZI(sym_ovl, true);
   sendStrLen(lon, strlen(lon));
   sendCharNRZI(sym_tab, true);
-  sendStrLen(cogSpeed, strlen(cogSpeed));
-//  sendStrLen(comment, strlen(comment));
+//  sendStrLen(cogSpeed, strlen(cogSpeed));
+  sendStrLen(comment, strlen(comment));
 
 //  sendStrLen(testsequence,strlen(testsequence));
   sendCrc();
@@ -564,7 +569,7 @@ void readFromModem() {
       modem_rd_buf[modem_rd_buf_pos] = '\0';
       buf_len = modem_rd_buf_pos;
       modem_rd_buf_pos = 0;
-      Serial.println(modem_rd_buf);
+      if (swarmInteractive) Serial.println(modem_rd_buf);
       parseModemOutput();
     }
   }
@@ -608,17 +613,19 @@ void swarmBootSequence(bool waitForAcks) {
 }
 
 void serialCopyToModem() {
-  if (Serial.available()) {
-    modem_wr_buf[modem_wr_buf_pos] = Serial.read();
-    
-    if (modem_wr_buf[modem_wr_buf_pos] != '\n') {
-      modem_wr_buf_pos++;
-    }
-    else {
-      modem_wr_buf[modem_wr_buf_pos] = '\0';
-      modem_wr_buf_pos = 0;
-      if (modem_wr_buf[0] == '$') {
-        writeToModem(modem_wr_buf);
+  if (swarmInteractive) {
+    if (Serial.available() ) {
+      modem_wr_buf[modem_wr_buf_pos] = Serial.read();
+      
+      if (modem_wr_buf[modem_wr_buf_pos] != '\n') {
+        modem_wr_buf_pos++;
+      }
+      else {
+        modem_wr_buf[modem_wr_buf_pos] = '\0';
+        modem_wr_buf_pos = 0;
+        if (modem_wr_buf[0] == '$') {
+          writeToModem(modem_wr_buf);
+        }
       }
     }
   }
@@ -626,7 +633,7 @@ void serialCopyToModem() {
 
 void writeToModem(char *sz) {
   nmeaCS = nmeaChecksum(sz, strlen(sz));
-  Serial.printf("[SENT] %s%c%02X\n",sz,endNmeaString,nmeaCS);
+  if (swarmInteractive) Serial.printf("[SENT] %s%c%02X\n",sz,endNmeaString,nmeaCS);
   Serial1.printf("%s%c%02X\n",sz,endNmeaString,nmeaCS);
 }
 
@@ -687,6 +694,7 @@ void setup() {
 //  swarmRunning = true;
   aprsRunning = true;
 //  waitForAcks = true;
+//  swarmInteractive = true;
   initLed();
   setLed(true);
 
