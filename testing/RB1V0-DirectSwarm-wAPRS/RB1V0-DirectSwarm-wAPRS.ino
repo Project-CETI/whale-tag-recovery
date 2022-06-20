@@ -55,6 +55,7 @@
 // TAG DEFS [END] -----------------------------------------------------
 
 // APRS VARS [START] ----------------------------------------------------
+bool aprsRunning = false;
 // APRS communication config
 char mycall[8] = "KC1QXQ";
 char myssid = 5;
@@ -109,6 +110,8 @@ const uint8_t sinValues[numSinValues] = {
 // APRS VARS [END] ------------------------------------------------------
 
 // SWARM VARS [START] ---------------------------------------------------
+bool swarmRunning = false;
+bool waitForAcks = false;
 // swarm-communication processes
 char modem_wr_buf[MAX_SWARM_MSG_LEN];
 int modem_wr_buf_pos = 0;
@@ -563,7 +566,7 @@ int parseModemOutput() {
 }
 
 void readFromModem() {
-  if (Serial1.available()) {
+  if (Serial1.available() && swarmRunning) {
     modem_rd_buf[modem_rd_buf_pos] = Serial1.read();
     
     if (modem_rd_buf[modem_rd_buf_pos] != '\n') {
@@ -604,8 +607,8 @@ int checkInitAck() {
   return 0;
 }
 
-void swarmBootSequence(bool waitForAcks) {
-  while(!bootConfirmed) {
+void swarmBootSequence() {
+  while(!bootConfirmed && swarmRunning) {
     readFromModem();
     checkSwarmBooted();
   }
@@ -721,10 +724,6 @@ uint32_t ledOn = 0;
 void setLed(bool state) {digitalWrite(ledPin, state);}
 void initLed() {pinMode(ledPin, OUTPUT);}
 
-bool swarmRunning = false;
-bool waitForAcks = false;
-bool aprsRunning = false;
-
 void txSwarm() {
   if (initDTAck) {
     writeToModem("$TD \"Transmit Queue\"");
@@ -749,9 +748,11 @@ void txAprs() {
 
 void setup() {
 //  swarmRunning = true;
+  waitForAcks = swarmRunning;
+  swarmInteractive = swarmRunning;
+
   aprsRunning = true;
-//  waitForAcks = true;
-//  swarmInteractive = true;
+
   initLed();
   setLed(true);
 
@@ -760,10 +761,11 @@ void setup() {
   Serial1.setTX(0);
   Serial1.setRX(1);
   Serial1.begin(115200);
-  swarmBootSequence(waitForAcks && swarmRunning);
+  swarmBootSequence();
   Serial.println("Swarm booted.");
 
   // DRA818V initialization
+  if (!swarmRunning) delay(5000); // if no delay due to swarm's boot sequence
   Serial.println("Configuring DRA818V...");
   // Initialize DRA818V
   initializeDra818v();
@@ -777,7 +779,7 @@ void setup() {
   initializeOutput();
   Serial.println("DAC configured");
 
-  if(swarmRunning) swarmInit(swarmRunning && waitForAcks);
+  if(swarmRunning) swarmInit(waitForAcks);
 }
 
 void loop() {
