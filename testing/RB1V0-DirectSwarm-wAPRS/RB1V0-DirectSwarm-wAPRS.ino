@@ -368,13 +368,13 @@ void printPacket() {
   Serial.print('0');
   /****** MYCALL ********/
   Serial.print(mycall);
-  Serial.print(myssid, DEC);
+  Serial.print(myssid, HEX);
   /******** DIGI ********/
   Serial.print(digi);
-  Serial.print(digissid, DEC);
+  Serial.print(digissid, HEX);
   // addn. stuff
-  Serial.print(_CTRL_ID,DEC);
-  Serial.print(_PID,DEC);
+  Serial.print(_CTRL_ID,HEX);
+  Serial.print(_PID,HEX);
   // payload
   Serial.print(_DT_POS);
   Serial.print(lati);
@@ -747,8 +747,8 @@ void txAprs() {
 }
 
 void setup() {
-//  swarmRunning = true;
-  waitForAcks = swarmRunning;
+  swarmRunning = true;
+//  waitForAcks = swarmRunning;
   swarmInteractive = swarmRunning;
 
   aprsRunning = true;
@@ -791,9 +791,9 @@ void loop() {
   ledState = !ledQ;
   // Transmit APRS
   if ((millis() - prevAprsTx >= aprsInterval) && aprsRunning) {
-    setVhfState(true);
+//    setVhfState(true);
     delay(100);
     txAprs();
-    setVhfState(false);
+//    setVhfState(false);
   }
 }
