@@ -86,7 +86,7 @@ char lon[10];
 char cogSpeed[8];
 
 //intervals
-uint32_t aprsInterval = 30000;
+uint32_t aprsInterval = 120000;
 
 void setNada1200(void);
 void setNada2400(void);
@@ -243,7 +243,7 @@ void sendHeader() {
   if (temp < 6) {
     for (int j = temp; j < 6; j++) sendCharNRZI(' ' << 1, true);
   }
-  sendCharNRZI('1' << 1, true);
+  sendCharNRZI('0' << 1, true);
 
   /********* SOURCE *********/
   temp = strlen(mycall);
@@ -254,12 +254,12 @@ void sendHeader() {
   sendCharNRZI((myssid + '0') << 1, true);
 
 //  /********* DIGI ***********/
-//  temp = strlen(digi);
-//  for (int j = 0; j < temp; j++) sendCharNRZI(digi[j] << 1, true);
-//  if (temp < 6) {
-//    for (int j = temp; j < 6; j++) sendCharNRZI(' ' << 1, true);
-//  }
-//  sendCharNRZI(((digissid + '0') << 1) + 1, true);
+  temp = strlen(digi);
+  for (int j = 0; j < temp; j++) sendCharNRZI(digi[j] << 1, true);
+  if (temp < 6) {
+    for (int j = temp; j < 6; j++) sendCharNRZI(' ' << 1, true);
+  }
+  sendCharNRZI(((digissid + '0') << 1) + 1, true);
 
   /***** CTRL FLD & PID *****/
   sendCharNRZI(_CTRL_ID, true);
@@ -280,9 +280,9 @@ void setPayload() {
   uint8_t latMinDec = round((latMin - latMinInt) * 100);
 
   if (south) {
-    snprintf(lati, 9, "%02d%02d.%02dS\0", latDeg, latMinInt, latMinDec);
+    snprintf(lati, 9, "%02d%02d.%02dS", latDeg, latMinInt, latMinDec);
   } else {
-    snprintf(lati, 9, "%02d%02d.%02dN\0", latDeg, latMinInt, latMinDec);
+    snprintf(lati, 9, "%02d%02d.%02dN", latDeg, latMinInt, latMinDec);
   }
   float lonFloat = latlon[1];
   bool west = false;
@@ -296,9 +296,9 @@ void setPayload() {
   uint8_t lonMinInt = (int)lonMin;
   uint8_t lonMinDec = round((lonMin - lonMinInt) * 100);
   if (west) {
-    snprintf(lon, 10, "%03d%02d.%02dW\0", lonDeg, lonMinInt, lonMinDec);
+    snprintf(lon, 10, "%03d%02d.%02dW", lonDeg, lonMinInt, lonMinDec);
   } else {
-    snprintf(lon, 10, "%03d%02d.%02dE\0", lonDeg, lonMinInt, lonMinDec);
+    snprintf(lon, 10, "%03d%02d.%02dE", lonDeg, lonMinInt, lonMinDec);
   }
 
   double speed = acs[2] / 1.852;  // convert speed from km/h to knots
@@ -310,7 +310,7 @@ void setPayload() {
   int sog = (int) acs[2];
   Serial.print("speed: ");
   Serial.print(sog);
-  snprintf(cogSpeed, 7, "%03d/%03d\0", course, sog);
+  snprintf(cogSpeed, 7, "%03d/%03d", course, sog);
   Serial.print(" and yet this thinks: ");
   Serial.println(cogSpeed);
 }
@@ -726,7 +726,7 @@ void initLed() {pinMode(ledPin, OUTPUT);}
 
 void txSwarm() {
   if (initDTAck) {
-    writeToModem("$TD \"Transmit Queue\"");
+    writeToModem("$TD \"Adding Q...\"");
   }
 }
 
@@ -748,8 +748,8 @@ void txAprs() {
 
 void setup() {
   swarmRunning = true;
-//  waitForAcks = swarmRunning;
-  swarmInteractive = swarmRunning;
+  waitForAcks = swarmRunning;
+//  swarmInteractive = swarmRunning;
 
   aprsRunning = true;
 
@@ -771,7 +771,7 @@ void setup() {
   initializeDra818v();
   configureDra818v();
   setPttState(false);
-  setVhfState(false);
+  setVhfState(true);
   Serial.println("DRA818V configured");
 
   // Initialize DAC
@@ -783,8 +783,8 @@ void setup() {
 }
 
 void loop() {
-  serialCopyToModem();
-  readFromModem();
+//  serialCopyToModem();/
+//  readFromModem();/
   // Update LED state
   ledQ = (millis() - prevLedTime >= ledOn);
   setLed(!ledQ);
@@ -792,7 +792,7 @@ void loop() {
   // Transmit APRS
   if ((millis() - prevAprsTx >= aprsInterval) && aprsRunning) {
 //    setVhfState(true);
-    delay(100);
+//    delay(100);/
     txAprs();
 //    setVhfState(false);
   }
