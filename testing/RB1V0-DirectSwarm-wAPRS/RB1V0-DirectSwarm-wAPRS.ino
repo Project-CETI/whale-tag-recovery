@@ -66,7 +66,10 @@ char digissid = 1;
 char comment[128] = "Ceti v0.9 5";
 char mystatus[128] = "Status";
 
-char testsequence[20] = "Hello World";
+char ts1[100] = "APLIGA0KC1QXQ5WIDE213F0!0000.00N/00000.00E-Ceti v0.9 5";
+int ts1_len = strlen(ts1);
+char ts2[100] = "APLIGA0KC1QXQ5WIDE213F0!4221.78N/07107.54W-Ceti v0.9 5";
+int ts2_len = strlen(ts2);
 
 // APRS protocol config
 bool nada = 0;
@@ -75,6 +78,7 @@ const char sym_tab = '-'; // Symbol Code
 unsigned int str_len = 400;
 char bitStuff = 0;
 unsigned short crc = 0xffff;
+unsigned short crcDbg = crc;
 uint64_t prevAprsTx = 0;
 uint8_t currOutput = 0;
 char rmc[100];
@@ -86,7 +90,7 @@ char lon[10];
 char cogSpeed[8];
 
 //intervals
-uint32_t aprsInterval = 120000;
+uint32_t aprsInterval = 10000;
 
 void setNada1200(void);
 void setNada2400(void);
@@ -212,6 +216,8 @@ void sendCrc(void) {
 
   sendCharNRZI(crcLo, true);
   sendCharNRZI(crcHi, true);
+  crcDbg = crc;
+  Serial.println(crcDbg,HEX);
 }
 
 void sendHeader() {
@@ -362,7 +368,6 @@ void sendFlag(unsigned char flag_len) {
 
 void printPacket() {
   // initial flag
-  Serial.print(_FLAG, HEX);
   /******** DEST ********/
   Serial.print(dest);
   Serial.print('0');
@@ -383,8 +388,8 @@ void printPacket() {
   Serial.print(sym_tab);
   Serial.print(cogSpeed);
   Serial.print(comment);
-  Serial.print(crc, HEX);
-  Serial.println(_FLAG, HEX);
+  Serial.print("  crc: ");
+  Serial.println(crcDbg,HEX);
 }
 
 /*
@@ -396,7 +401,7 @@ void printPacket() {
 void sendPacket() {
   setLed(true);
   setPttState(true);
-  setPayload();
+//  setPayload();
 
   // TODO TEST IF THIS IMPROVES RECEPTION
   // Send initialize sequence for receiver
@@ -422,17 +427,28 @@ void sendPacket() {
 
   sendFlag(150);
   crc = 0xffff;
-  sendHeader();
+//  sendHeader();
 //  send payload
-  sendCharNRZI(_DT_POS, true);
-  sendStrLen(lati, strlen(lati));
-  sendCharNRZI(sym_ovl, true);
-  sendStrLen(lon, strlen(lon));
-  sendCharNRZI(sym_tab, true);
-//  sendStrLen(cogSpeed, strlen(cogSpeed));
-  sendStrLen(comment, strlen(comment));
+//  sendCharNRZI(_DT_POS, true);
+//  sendStrLen(lati, strlen(lati));
+//  sendCharNRZI(sym_ovl, true);
+//  sendStrLen(lon, strlen(lon));
+//  sendCharNRZI(sym_tab, true);
+////  sendStrLen(cogSpeed, strlen(cogSpeed));
+//  sendStrLen(comment, strlen(comment));
+
 
 //  sendStrLen(testsequence,strlen(testsequence));
+  sendStrLen(ts1,ts1_len);
+  sendCrc();
+  sendFlag(3);
+  setLed(false);
+
+  delay(1000);
+  setLed(true);
+  sendFlag(150);
+  crc = 0xffff;
+  sendStrLen(ts2,ts2_len);
   sendCrc();
   sendFlag(3);
   setLed(false);
@@ -660,7 +676,7 @@ void swarmInit(bool swarmDebug) {
     writeToModem("$TD \"Test 2\"");
     writeToModem("$TD \"Test 3\"");
   }
-  writeToModem("$GN 5");
+  writeToModem("$GN 60");
 }
 // SWARM FUNCTIONS [END] ------------------------------------------------
 
@@ -743,12 +759,12 @@ void txAprs() {
   sendPacket();
   uint32_t packetDuration = millis() - startPacket;
   Serial.println("Packet sent in: " + String(packetDuration) + " ms");
-  printPacket();
+//  printPacket();
 }
 
 void setup() {
-  swarmRunning = true;
-  waitForAcks = swarmRunning;
+//  swarmRunning = true;
+//  waitForAcks = swarmRunning;
 //  swarmInteractive = swarmRunning;
 
   aprsRunning = true;
@@ -783,8 +799,8 @@ void setup() {
 }
 
 void loop() {
-//  serialCopyToModem();/
-//  readFromModem();/
+//  serialCopyToModem();
+  readFromModem();
   // Update LED state
   ledQ = (millis() - prevLedTime >= ledOn);
   setLed(!ledQ);
