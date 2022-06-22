@@ -66,14 +66,14 @@ char digissid = 1;
 char comment[128] = "Ceti v0.9 5";
 char mystatus[128] = "Status";
 
-char ts1[100] = "APLIGA0KC1QXQ5WIDE213F0!0000.00N/00000.00E-Ceti v0.9 5";
+char ts1[100] = "APLIGA0KC1QXQ5WIDE213F0!0000.00N\00000.00E-Ceti v0.9 5";
 int ts1_len = strlen(ts1);
-char ts2[100] = "APLIGA0KC1QXQ5WIDE213F0!4221.78N/07107.54W-Ceti v0.9 5";
+char ts2[100] = "APLIGA0KC1QXQ5WIDE213F0!4221.78N\07107.54W-Ceti v0.9 5";
 int ts2_len = strlen(ts2);
 
 // APRS protocol config
 bool nada = 0;
-const char sym_ovl = '/'; // Symbol Table ID, either \ or /
+const char sym_ovl = '\\'; // Symbol Table ID, either \ or /
 const char sym_tab = '-'; // Symbol Code
 unsigned int str_len = 400;
 char bitStuff = 0;
@@ -90,7 +90,7 @@ char lon[10];
 char cogSpeed[8];
 
 //intervals
-uint32_t aprsInterval = 10000;
+uint32_t aprsInterval = 300000;
 
 void setNada1200(void);
 void setNada2400(void);
@@ -130,6 +130,8 @@ bool swarmInteractive = false;
 bool bootConfirmed = false;
 bool initDTAck = false;
 bool initPosAck = false;
+uint32_t maxWaitForSwarmBoot = 30000;
+uint32_t maxWaitForDTPAcks = 60000;
 // GPS data hacks
 float latlon[2] = {0,0};
 int acs[3] = {0,0,0};
@@ -427,32 +429,49 @@ void sendPacket() {
 
   sendFlag(150);
   crc = 0xffff;
-//  sendHeader();
-//  send payload
-//  sendCharNRZI(_DT_POS, true);
-//  sendStrLen(lati, strlen(lati));
-//  sendCharNRZI(sym_ovl, true);
-//  sendStrLen(lon, strlen(lon));
-//  sendCharNRZI(sym_tab, true);
-////  sendStrLen(cogSpeed, strlen(cogSpeed));
-//  sendStrLen(comment, strlen(comment));
+  sendHeader();
+  // send payload
+  sendCharNRZI(_DT_POS, true);
+  sendStrLen(lati, strlen(lati));
+  sendCharNRZI(sym_ovl, true);
+  sendStrLen(lon, strlen(lon));
+  sendCharNRZI(sym_tab, true);
+//  sendStrLen(cogSpeed, strlen(cogSpeed));
+  sendStrLen(comment, strlen(comment));
 
-
-//  sendStrLen(testsequence,strlen(testsequence));
-  sendStrLen(ts1,ts1_len);
   sendCrc();
   sendFlag(3);
   setLed(false);
+}
 
-  delay(1000);
-  setLed(true);
-  sendFlag(150);
-  crc = 0xffff;
-  sendStrLen(ts2,ts2_len);
-  sendCrc();
-  sendFlag(3);
-  setLed(false);
-  setPttState(false);
+void sendTestPackets(int style) {
+  switch(style) {
+    case 1:
+      setLed(true);
+      setPttState(true);
+      sendFlag(150);
+      crc = 0xffff;
+      sendStrLen(ts1,ts1_len);
+      sendCrc();
+      sendFlag(3);
+      setLed(false);
+      break;
+    case 2:
+      setLed(true);
+      sendFlag(150);
+      crc = 0xffff;
+      sendStrLen(ts2,ts2_len);
+      sendCrc();
+      sendFlag(3);
+      setLed(false);
+      setPttState(false);
+      break;
+    default:
+      sendTestPackets(1);
+      delay(1000);
+      sendTestPackets(2);
+      break;
+  }
 }
 
 // Initializes DRA818V pins
@@ -568,6 +587,8 @@ void storeGpsData() {
     (gpsFloatQ && gpsInsertPos==1) ? gpsInsertPos-- : gpsInsertPos++;
     gpsFloatQ = false;
     gpsMult = 1;
+    initDTAck = true;
+    bootConfirmed = true;
   }
 }
 
@@ -624,14 +645,20 @@ int checkInitAck() {
 }
 
 void swarmBootSequence() {
-  while(!bootConfirmed && swarmRunning) {
+  uint32_t waitStart = millis();
+  uint32_t waitTime = millis();
+  while(!bootConfirmed && swarmRunning && (waitTime <= maxWaitForSwarmBoot)) {
     readFromModem();
     checkSwarmBooted();
+    waitTime = millis() - waitStart;
   }
-  while((!initDTAck || !initPosAck) && waitForAcks) {
+  waitStart = millis();
+  waitTime = waitStart;
+  while((!initDTAck || !initPosAck) && waitForAcks && (waitTime <= maxWaitForDTPAcks)) {
     serialCopyToModem();
     readFromModem();
     checkInitAck();
+    waitTime = millis() - waitStart;
   }
 }
 
@@ -669,7 +696,7 @@ void getQCount() {
 }
 
 void swarmInit(bool swarmDebug) {
-  getRxTestOutput(false);
+  getRxTestOutput(true);
   getQCount();
   if (swarmDebug) {
     writeToModem("$TD \"Test 1\"");
@@ -746,7 +773,7 @@ void txSwarm() {
   }
 }
 
-void txAprs() {
+void txAprs(bool aprsDebug) {
   prevAprsTx = millis();
   // What are we sending, hopefully?
 //  Serial.print("GPS Data|| lat: ");
@@ -756,18 +783,20 @@ void txAprs() {
 //  Serial.printf(" | A: %d | C: %d | S: %d\n", acs[0], acs[1], acs[2]);
   // End Debug
   uint32_t startPacket = millis();
-  sendPacket();
+//  sendPacket();
+  aprsDebug ? sendTestPackets(3) : sendPacket();
+  sendTestPackets(3);
   uint32_t packetDuration = millis() - startPacket;
   Serial.println("Packet sent in: " + String(packetDuration) + " ms");
 //  printPacket();
 }
 
 void setup() {
-//  swarmRunning = true;
-//  waitForAcks = swarmRunning;
-//  swarmInteractive = swarmRunning;
+  swarmRunning = true;
+  waitForAcks = swarmRunning;
+  swarmInteractive = swarmRunning;
 
-  aprsRunning = true;
+//  aprsRunning = true;
 
   initLed();
   setLed(true);
@@ -781,25 +810,27 @@ void setup() {
   Serial.println("Swarm booted.");
 
   // DRA818V initialization
-  if (!swarmRunning) delay(5000); // if no delay due to swarm's boot sequence
-  Serial.println("Configuring DRA818V...");
-  // Initialize DRA818V
-  initializeDra818v();
-  configureDra818v();
-  setPttState(false);
-  setVhfState(true);
-  Serial.println("DRA818V configured");
-
-  // Initialize DAC
-  Serial.println("Configuring DAC...");
-  initializeOutput();
-  Serial.println("DAC configured");
+  if (aprsRunning) {
+    if (!swarmRunning) delay(5000); // if no delay due to swarm's boot sequence
+    Serial.println("Configuring DRA818V...");
+    // Initialize DRA818V
+    initializeDra818v();
+    configureDra818v();
+    setPttState(false);
+    setVhfState(true);
+    Serial.println("DRA818V configured");
+  
+    // Initialize DAC
+    Serial.println("Configuring DAC...");
+    initializeOutput();
+    Serial.println("DAC configured");
+  }
 
   if(swarmRunning) swarmInit(waitForAcks);
 }
 
 void loop() {
-//  serialCopyToModem();
+  serialCopyToModem();
   readFromModem();
   // Update LED state
   ledQ = (millis() - prevLedTime >= ledOn);
@@ -809,7 +840,7 @@ void loop() {
   if ((millis() - prevAprsTx >= aprsInterval) && aprsRunning) {
 //    setVhfState(true);
 //    delay(100);/
-    txAprs();
+    txAprs(true);
 //    setVhfState(false);
   }
 }
