@@ -141,7 +141,27 @@ char gpsParseBuf[MAX_SWARM_MSG_LEN];
 int gpsInsertPos = 0;
 int gpsMult = 1;
 bool gpsFloatQ = false;
+// DT data hacks
+uint8_t datetime[5] = {70,1,1};
+uint8_t dtReadPos = 6;
+uint8_t dtLength = 2;
+char dtParseBuf[MAX_SWARM_MSG_LEN];
 // SWARM VARS [END] -----------------------------------------------------
+
+// TAG VARS [START] -----------------------------------------------------
+// do any of these operations?
+bool tagConnected = false;
+uint32_t tagInterval = 120000;
+uint64_t prevTagTx = 0;
+// reading/writing from/to tag
+bool tagResponseIn = false;
+char tag_rd_buf[MAX_TAG_MSG_LEN];
+int tag_rd_buf_pos = 0;
+int tag_buf_len = 0;
+uint32_t tMsgSent = 0;
+uint32_t ackWaitT= 1000;
+bool writeDataToTag = false;
+// TAG VARS [END] -------------------------------------------------------
 
 // APRS FUNCTIONS [START] -----------------------------------------------
 void initializeOutput() {
@@ -589,12 +609,29 @@ void storeGpsData() {
     gpsMult = 1;
     initDTAck = true;
     bootConfirmed = true;
+    writeDataToTag = true;
   }
+}
+
+void storeDTData() {
+  int i, j;
+  for (j = 0; j < 5; j++) {
+    for (i = 0; i < dtLength; i++)
+      dtParseBuf[i] = modem_rd_buf[dtReadPos + i];
+    dtParseBuf[i] = '\0';
+    datetime[j] = (uint8_t) atoi(dtParseBuf);
+    dtReadPos += dtLength;
+  }
+  dtReadPos = 6;
+  writeDataToTag = true;
 }
 
 int parseModemOutput() {
   if (modem_rd_buf[2] == 'N' && modem_rd_buf[4] != 'E' && modem_rd_buf[4] != 'O') {
     storeGpsData();
+  }
+  else if (modem_rd_buf[1] == 'D' && modem_rd_buf[modem_buf_len - 4] == 'V') {
+    storeDTData();
   }
   else if (modem_rd_buf[1] == 'T' && modem_rd_buf[4] == 'S') {
     txSwarm();
@@ -707,12 +744,6 @@ void swarmInit(bool swarmDebug) {
 }
 // SWARM FUNCTIONS [END] ------------------------------------------------
 
-bool tagResponseIn = false;
-char tag_rd_buf[MAX_TAG_MSG_LEN];
-int tag_rd_buf_pos = 0;
-int tag_buf_len = 0;
-uint32_t tMsgSent = 0;
-uint32_t ackWaitT= 2000;
 // TAG FUNCTIONS [START] ------------------------------------------------
 int resetTagReading() {tag_rd_buf_pos = 0; tagResponseIn = true; return 1;}
 void readFromTag() {
@@ -735,9 +766,15 @@ bool getDetachAck() {
   if (tag_rd_buf[0] != 'd') return false; return true;
 }
 
-void writeGpsToTag(char *sz) {
+void writeGpsToTag() {
 //  Serial.printf("[TO TAG] %s%c%02X\n",sz,endNmeaString,nmeaCS);
-  Serial2.printf("%s\n",sz);
+  Serial2.print(latlon[0]);
+  Serial2.print(latlon[1]);
+  Serial2.write((acs[2] & 0xff));
+  Serial2.write((acs[1] >> 8));
+  Serial2.write((acs[1] & 0xff));
+  Serial2.write(datetime,5);
+  Serial2.write('\n');
   tagResponseIn = false;
   tMsgSent = millis();
   while (millis() - tMsgSent < ackWaitT) {while(!tagResponseIn && (millis() - tMsgSent < ackWaitT)) {readFromTag();}}
@@ -748,6 +785,7 @@ void detachTag() {
   tMsgSent = millis();
   while(millis() - tMsgSent < ackWaitT) {
     Serial2.println('D');
+    tagResponseIn = false;
     while (!tagResponseIn && (millis() - tMsgSent < ackWaitT)) {readFromTag();}
     if (getDetachAck()) break;
   }
@@ -755,7 +793,8 @@ void detachTag() {
 
 void reqTagState() {
   tMsgSent = millis();
-  Serial2.println('T');
+  Serial2.write('T');
+  Serial2.write('\n');
   while (millis() - tMsgSent < ackWaitT) {while(!tagResponseIn && (millis() - tMsgSent < ackWaitT)) {readFromTag();}}
   parseTagStatus();
 }
@@ -791,12 +830,22 @@ void txAprs(bool aprsDebug) {
 //  printPacket();
 }
 
+void txTag () {
+  prevTagTx = millis();
+  if (writeDataToTag) {
+    writeGpsToTag();
+    writeDataToTag = false;
+  }
+}
+
 void setup() {
   swarmRunning = true;
   waitForAcks = swarmRunning;
   swarmInteractive = swarmRunning;
 
 //  aprsRunning = true;
+
+  tagConnected = true;
 
   initLed();
   setLed(true);
@@ -842,5 +891,10 @@ void loop() {
 //    delay(100);/
     txAprs(true);
 //    setVhfState(false);
+  }
+
+  // Transmit to Tag
+  if ((millis() - prevTagTx >= tagInterval) && tagConnected) {
+    txTag();
   }
 }

@@ -13,7 +13,7 @@ union {
   uint8_t coordByte[4];
 } lon;
 
-lat.coord = 42.364887f;
+lat.coord = 42.364887;
 lon.coord = -71.1246948;
 uint16_t sog = 13;
 uint16_t course = 359;
