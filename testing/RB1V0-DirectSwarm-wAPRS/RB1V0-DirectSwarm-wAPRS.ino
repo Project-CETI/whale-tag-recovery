@@ -66,10 +66,14 @@ char digissid = 1;
 char comment[128] = "Ceti v0.9 5";
 char mystatus[128] = "Status";
 
-char ts1[100] = "APLIGA0KC1QXQ5WIDE213F0!0000.00N\00000.00E-Ceti v0.9 5";
-int ts1_len = strlen(ts1);
-char ts2[100] = "APLIGA0KC1QXQ5WIDE213F0!4221.78N\07107.54W-Ceti v0.9 5";
-int ts2_len = strlen(ts2);
+char ts1_1[100] = "APLIGA0KC1QXQ5WIDE21";
+char ts1_2[100] = "0000.00N\00000.00E-Ceti v0.9 5";
+int ts1_1_len = strlen(ts1_1);
+int ts1_2_len = strlen(ts1_2);
+char ts2_1[100] = "APLIGA0KC1QXQ5WIDE21";
+char ts2_2[100] = "4221.78N\07107.54W-Ceti v0.9 5";
+int ts2_1_len = strlen(ts2_1);
+int ts2_2_len = strlen(ts2_2);
 
 // APRS protocol config
 bool nada = 0;
@@ -90,7 +94,7 @@ char lon[10];
 char cogSpeed[8];
 
 //intervals
-uint32_t aprsInterval = 300000;
+uint32_t aprsInterval = 15000;
 
 void setNada1200(void);
 void setNada2400(void);
@@ -142,10 +146,12 @@ int gpsInsertPos = 0;
 int gpsMult = 1;
 bool gpsFloatQ = false;
 // DT data hacks
-uint8_t datetime[5] = {70,1,1};
+uint8_t datetime[6] = {70,1,1};
 uint8_t dtReadPos = 6;
 uint8_t dtLength = 2;
 char dtParseBuf[MAX_SWARM_MSG_LEN];
+struct tm dt;
+
 // SWARM VARS [END] -----------------------------------------------------
 
 // TAG VARS [START] -----------------------------------------------------
@@ -233,13 +239,17 @@ void calc_crc(bool inBit) {
 }
 
 void sendCrc(void) {
-  unsigned char crcLo = crc ^ 0xff;
-  unsigned char crcHi = (crc >> 8) ^ 0xff;
+//  Serial.print(crc, HEX);
+//  Serial.print(" | ");
+  uint8_t crcLo = crc ^ 0xff;
+  uint8_t crcHi = (crc >> 8) ^ 0xff;
+//  Serial.print(crcLo, HEX);
+//  Serial.print(" | ");
+//  Serial.print(crcHi, HEX);
 
   sendCharNRZI(crcLo, true);
   sendCharNRZI(crcHi, true);
-  crcDbg = crc;
-  Serial.println(crcDbg,HEX);
+//  Serial.print(" | ");
 }
 
 void sendHeader() {
@@ -336,11 +346,11 @@ void setPayload() {
     course = 360;
   }
   int sog = (int) acs[2];
-  Serial.print("speed: ");
-  Serial.print(sog);
+//  Serial.print("speed: ");
+//  Serial.print(sog);
   snprintf(cogSpeed, 7, "%03d/%03d", course, sog);
-  Serial.print(" and yet this thinks: ");
-  Serial.println(cogSpeed);
+//  Serial.print(" and yet this thinks: ");
+//  Serial.println(cogSpeed);
 }
 
 /*
@@ -423,7 +433,7 @@ void printPacket() {
 void sendPacket() {
   setLed(true);
   setPttState(true);
-//  setPayload();
+  setPayload();
 
   // TODO TEST IF THIS IMPROVES RECEPTION
   // Send initialize sequence for receiver
@@ -467,29 +477,34 @@ void sendPacket() {
 void sendTestPackets(int style) {
   switch(style) {
     case 1:
-      setLed(true);
-      setPttState(true);
-      sendFlag(150);
-      crc = 0xffff;
-      sendStrLen(ts1,ts1_len);
-      sendCrc();
-      sendFlag(3);
-      setLed(false);
+      latlon[0] = 0.0;
+      latlon[1] = 0.0;
+      sendPacket();
       break;
     case 2:
-      setLed(true);
-      sendFlag(150);
+      latlon[0] = 42.3648;
+      latlon[1] = -71.1247;
+      sendPacket();
+      break;
+    case 3:
+      latlon[0] = 0.0;
+      latlon[1] = 0.0;
+      sendPacket();
+      delay(1000);
+      latlon[0] = 42.3648;
+      latlon[1] = -71.1247;
+      sendPacket();
+      break;
+    case 4:
       crc = 0xffff;
-      sendStrLen(ts2,ts2_len);
+      sendStrLen("123456789",9);
       sendCrc();
-      sendFlag(3);
-      setLed(false);
-      setPttState(false);
+      crc = 0xffff;
+      sendStrLen("A",1);
+      sendCrc();
       break;
     default:
-      sendTestPackets(1);
-      delay(1000);
-      sendTestPackets(2);
+      sendPacket();
       break;
   }
 }
@@ -615,7 +630,7 @@ void storeGpsData() {
 
 void storeDTData() {
   int i, j;
-  for (j = 0; j < 5; j++) {
+  for (j = 0; j < 6; j++) {
     for (i = 0; i < dtLength; i++)
       dtParseBuf[i] = modem_rd_buf[dtReadPos + i];
     dtParseBuf[i] = '\0';
@@ -624,6 +639,12 @@ void storeDTData() {
   }
   dtReadPos = 6;
   writeDataToTag = true;
+  dt.tm_year = 2000 + datetime[0];
+  dt.tm_mon = datetime[1] - 1;
+  dt.tm_mday = datetime[2];
+  dt.tm_hour = datetime[3];
+  dt.tm_min = datetime[4];
+  dt.tm_sec = datetime[5];
 }
 
 int parseModemOutput() {
@@ -733,7 +754,7 @@ void getQCount() {
 }
 
 void swarmInit(bool swarmDebug) {
-  getRxTestOutput(true);
+  getRxTestOutput(false);
   getQCount();
   if (swarmDebug) {
     writeToModem("$TD \"Test 1\"");
@@ -741,6 +762,7 @@ void swarmInit(bool swarmDebug) {
     writeToModem("$TD \"Test 3\"");
   }
   writeToModem("$GN 60");
+  writeToModem("$DT 61");
 }
 // SWARM FUNCTIONS [END] ------------------------------------------------
 
@@ -773,8 +795,7 @@ void writeGpsToTag() {
   Serial2.write((acs[2] & 0xff));
   Serial2.write((acs[1] >> 8));
   Serial2.write((acs[1] & 0xff));
-  Serial2.write(datetime,5);
-  Serial2.write('\n');
+  Serial2.println(mktime(&dt));
   tagResponseIn = false;
   tMsgSent = millis();
   while (millis() - tMsgSent < ackWaitT) {while(!tagResponseIn && (millis() - tMsgSent < ackWaitT)) {readFromTag();}}
@@ -812,7 +833,7 @@ void txSwarm() {
   }
 }
 
-void txAprs(bool aprsDebug) {
+void txAprs(bool aprsDebug, int style) {
   prevAprsTx = millis();
   // What are we sending, hopefully?
 //  Serial.print("GPS Data|| lat: ");
@@ -822,9 +843,7 @@ void txAprs(bool aprsDebug) {
 //  Serial.printf(" | A: %d | C: %d | S: %d\n", acs[0], acs[1], acs[2]);
   // End Debug
   uint32_t startPacket = millis();
-//  sendPacket();
-  aprsDebug ? sendTestPackets(3) : sendPacket();
-  sendTestPackets(3);
+  aprsDebug ? sendTestPackets(style) : sendPacket();
   uint32_t packetDuration = millis() - startPacket;
   Serial.println("Packet sent in: " + String(packetDuration) + " ms");
 //  printPacket();
@@ -839,13 +858,13 @@ void txTag () {
 }
 
 void setup() {
-  swarmRunning = true;
+//  swarmRunning = true;
   waitForAcks = swarmRunning;
   swarmInteractive = swarmRunning;
 
-//  aprsRunning = true;
+  aprsRunning = true;
 
-  tagConnected = true;
+//  tagConnected = true;
 
   initLed();
   setLed(true);
@@ -860,7 +879,7 @@ void setup() {
 
   // DRA818V initialization
   if (aprsRunning) {
-    if (!swarmRunning) delay(5000); // if no delay due to swarm's boot sequence
+    delay(5000); // just in case swarm boots super fast
     Serial.println("Configuring DRA818V...");
     // Initialize DRA818V
     initializeDra818v();
@@ -875,7 +894,7 @@ void setup() {
     Serial.println("DAC configured");
   }
 
-  if(swarmRunning) swarmInit(waitForAcks);
+  if(swarmRunning) swarmInit(initDTAck);
 }
 
 void loop() {
@@ -887,10 +906,10 @@ void loop() {
   ledState = !ledQ;
   // Transmit APRS
   if ((millis() - prevAprsTx >= aprsInterval) && aprsRunning) {
-//    setVhfState(true);
-//    delay(100);/
-    txAprs(true);
-//    setVhfState(false);
+    setVhfState(true);
+//    delay(5000);
+    txAprs(true,2);
+    setVhfState(false);
   }
 
   // Transmit to Tag
