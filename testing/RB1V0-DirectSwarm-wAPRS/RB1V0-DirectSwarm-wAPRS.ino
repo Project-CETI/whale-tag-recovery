@@ -859,9 +859,9 @@ void txTag () {
 }
 
 void setup() {
-//  swarmRunning = true;
+  swarmRunning = true;
   waitForAcks = swarmRunning;
-  swarmInteractive = swarmRunning;
+//  swarmInteractive = swarmRunning;
 
   aprsRunning = true;
 
