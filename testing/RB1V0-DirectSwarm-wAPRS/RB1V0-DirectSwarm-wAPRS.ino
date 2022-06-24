@@ -58,13 +58,12 @@
 bool aprsRunning = false;
 // APRS communication config
 char mycall[8] = "KC1QXQ";
-char myssid = 5;
+char myssid = 15;
 char dest[8] = "APLIGA";
 char dest_beacon[8] = "BEACON";
 char digi[8] = "WIDE2";
 char digissid = 1;
-char comment[128] = "Ceti v0.9 5";
-char mystatus[128] = "Status";
+char comment[128] = "Ceti v1.0 3-1";
 
 char ts1_1[100] = "APLIGA0KC1QXQ5WIDE21";
 char ts1_2[100] = "0000.00N\00000.00E-Ceti v0.9 5";
@@ -94,7 +93,10 @@ char lon[10];
 char cogSpeed[8];
 
 //intervals
-uint32_t aprsInterval = 15000;
+//uint32_t aprsInterval = 5000;
+//uint32_t aprsInterval = 15000;
+uint32_t aprsInterval = 60000;
+//uint32_t aprsInterval = 120000;
 
 void setNada1200(void);
 void setNada2400(void);
@@ -346,11 +348,7 @@ void setPayload() {
     course = 360;
   }
   int sog = (int) acs[2];
-//  Serial.print("speed: ");
-//  Serial.print(sog);
-  snprintf(cogSpeed, 7, "%03d/%03d", course, sog);
-//  Serial.print(" and yet this thinks: ");
-//  Serial.println(cogSpeed);
+  snprintf(cogSpeed, 8, "%03d/%03d", course, sog);
 }
 
 /*
@@ -466,7 +464,7 @@ void sendPacket() {
   sendCharNRZI(sym_ovl, true);
   sendStrLen(lon, strlen(lon));
   sendCharNRZI(sym_tab, true);
-//  sendStrLen(cogSpeed, strlen(cogSpeed));
+  sendStrLen(cogSpeed, strlen(cogSpeed));
   sendStrLen(comment, strlen(comment));
 
   sendCrc();
@@ -550,7 +548,7 @@ bool configureDra818v(float txFrequency = 144.39, float rxFrequency = 144.39, bo
   serial.print(',');
   serial.print(rxFrequency, 4);
   serial.println(",0000,0,0000");
-  if (!Serial1.find("+DMOSETGROUP:0")) return false;
+  if (!serial.find("+DMOSETGROUP:0")) return false;
   delay(serial);
 
   // Set filter settings
@@ -880,7 +878,7 @@ void setup() {
 
   // DRA818V initialization
   if (aprsRunning) {
-    delay(5000); // just in case swarm boots super fast
+    delay(10000); // just in case swarm boots super fast
     Serial.println("Configuring DRA818V...");
     // Initialize DRA818V
     initializeDra818v();
@@ -909,7 +907,7 @@ void loop() {
   if ((millis() - prevAprsTx >= aprsInterval) && aprsRunning) {
     setVhfState(true);
 //    delay(5000);
-    txAprs(true,2);
+    txAprs(false,2);
     setVhfState(false);
   }
 
