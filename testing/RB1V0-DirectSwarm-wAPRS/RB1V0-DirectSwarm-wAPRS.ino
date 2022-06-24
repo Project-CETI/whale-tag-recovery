@@ -93,7 +93,10 @@ char lon[10];
 char cogSpeed[8];
 
 //intervals
-uint32_t aprsInterval = 15000;
+//uint32_t aprsInterval = 5000;
+//uint32_t aprsInterval = 15000;
+uint32_t aprsInterval = 60000;
+//uint32_t aprsInterval = 120000;
 
 void setNada1200(void);
 void setNada2400(void);
@@ -345,11 +348,7 @@ void setPayload() {
     course = 360;
   }
   int sog = (int) acs[2];
-  Serial.print("speed: ");
-  Serial.print(sog);
-  snprintf(cogSpeed, 7, "%03d/%03d", course, sog);
-  Serial.print(" and yet this thinks: ");
-  Serial.println(cogSpeed);
+  snprintf(cogSpeed, 8, "%03d/%03d", course, sog);
 }
 
 /*
@@ -858,7 +857,7 @@ void txTag () {
 }
 
 void setup() {
-//  swarmRunning = true;
+  swarmRunning = true;
   waitForAcks = swarmRunning;
 //  swarmInteractive = swarmRunning;
 
@@ -908,7 +907,7 @@ void loop() {
   if ((millis() - prevAprsTx >= aprsInterval) && aprsRunning) {
     setVhfState(true);
 //    delay(5000);
-    txAprs(true,2);
+    txAprs(false,2);
     setVhfState(false);
   }
 
