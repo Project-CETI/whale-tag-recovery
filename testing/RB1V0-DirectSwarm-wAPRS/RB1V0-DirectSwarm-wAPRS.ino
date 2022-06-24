@@ -472,6 +472,7 @@ void sendPacket() {
   sendCrc();
   sendFlag(3);
   setLed(false);
+  setPttState(false);
 }
 
 void sendTestPackets(int style) {
