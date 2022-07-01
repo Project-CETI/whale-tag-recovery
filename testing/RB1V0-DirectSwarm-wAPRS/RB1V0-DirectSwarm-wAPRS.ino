@@ -93,9 +93,9 @@ char lon[10];
 char cogSpeed[8];
 
 //intervals
-//uint32_t aprsInterval = 5000;
+uint32_t aprsInterval = 5000;
 //uint32_t aprsInterval = 15000;
-uint32_t aprsInterval = 60000;
+//uint32_t aprsInterval = 60000;
 //uint32_t aprsInterval = 120000;
 
 void setNada1200(void);
@@ -549,7 +549,7 @@ bool configureDra818v(float txFrequency = 144.39, float rxFrequency = 144.39, bo
   serial.print(rxFrequency, 4);
   serial.println(",0000,0,0000");
   if (!serial.find("+DMOSETGROUP:0")) return false;
-  delay(serial);
+  delay(vhfEnableDelay);
 
   // Set filter settings
   serial.print("AT+SETFILTER=");
