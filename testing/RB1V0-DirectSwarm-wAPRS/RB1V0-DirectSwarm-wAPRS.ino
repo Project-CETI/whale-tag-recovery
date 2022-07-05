@@ -63,7 +63,7 @@ char dest[8] = "APLIGA";
 char dest_beacon[8] = "BEACON";
 char digi[8] = "WIDE2";
 char digissid = 1;
-char comment[128] = "Ceti v1.0 3-1";
+char comment[128] = "Ceti v1.0 2-M";
 
 char ts1_1[100] = "APLIGA0KC1QXQ5WIDE21";
 char ts1_2[100] = "0000.00N\00000.00E-Ceti v0.9 5";
@@ -93,9 +93,9 @@ char lon[10];
 char cogSpeed[8];
 
 //intervals
-uint32_t aprsInterval = 5000;
+//uint32_t aprsInterval = 5000;
 //uint32_t aprsInterval = 15000;
-//uint32_t aprsInterval = 60000;
+uint32_t aprsInterval = 60000;
 //uint32_t aprsInterval = 120000;
 
 void setNada1200(void);
