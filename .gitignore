@@ -114,4 +114,4 @@ $RECYCLE.BIN/
 *.lnk
 
 # End of https://www.toptal.com/developers/gitignore/api/macos,linux,windows,c++,platformio
-pico/build/
+**/build/
