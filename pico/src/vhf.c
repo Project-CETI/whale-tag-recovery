@@ -17,17 +17,7 @@ const uint vhfRxPin = 12;
 const uint vhfTimeout = 500;
 const uint vhfEnableDelay = 1000;
 
-// VHF Output Pins
-const uint out0Pin = 18;
-const uint out1Pin = 19;
-const uint out2Pin = 20;
-const uint out3Pin = 21;
-const uint out4Pin = 22;
-const uint out5Pin = 23;
-const uint out6Pin = 24;
-const uint out7Pin = 25;
-
-const uint32_t vhfPinMask = 0x3FC0000; // bits 18-25 are 1, everything else 0
+const uint32_t vhfPinMask = 0x3fc0000; // bits 18-25 are 1, everything else 0
 const uint vhfPinShift = 18; // left shift values 18 bits to align properly
 // VHF VARS [END] -------------------------------------------------------
 
@@ -54,7 +44,7 @@ void initializeDra818v(bool highPower) {
   }
   else {
     gpio_set_dir(vhfPowerLevelPin, GPIO_OUT);
-    gpio_put(vhfPowerLevelPin, 0);
+    gpio_put(vhfPowerLevelPin, false);
   }
 
   sleep_ms(vhfEnableDelay);
@@ -65,13 +55,16 @@ bool configureDra818v(float txFrequency, float rxFrequency, bool emphasis, bool 
   uint sm = pio_claim_unused_sm(pio, true);
   uint offset = pio_add_program(pio, &uart_tx_program);
   uart_tx_program_init(pio, sm, offset, vhfTxPin, 9600);
-  uart_tx_program_puts(pio, sm, "AT+DMOCONNECT");
-  sleep_ms(vhfEnableDelay);
-  uart_tx_program_puts(pio, sm, "AT+DMOSETGROUP=0,144.39,144.39,0000,0,0000\n");
-  sleep_ms(vhfEnableDelay);
+  uart_tx_program_puts(pio, sm, "AT+DMOCONNECT\n");
+  busy_wait_ms(vhfEnableDelay);
+  uart_tx_program_puts(pio, sm, "AT+DMOSETGROUP=0,144.3900,144.3900,0000,0,0000\n");
+  busy_wait_ms(vhfEnableDelay);
   // sprintf(temp, "AT+SETFILTER=%d,%d,%d\n",emphasis,hpf,lpf);
   uart_tx_program_puts(pio, sm, "AT+SETFILTER=0,0,0\n");
-  sleep_ms(vhfEnableDelay);
+  busy_wait_ms(vhfEnableDelay);
+  pio_remove_program(pio, &uart_tx_program, offset);
+  pio_sm_unclaim(pio, sm);
+  pio_clear_instruction_memory(pio);
   return true;
 }
 
@@ -99,12 +92,5 @@ void pinDescribe(void) {
   bi_decl(bi_1pin_with_name(vhfSleepPin, "VHF Module Sleep Pin"));
   bi_decl(bi_1pin_with_name(vhfTxPin, "VHF Module TX Pin for sPIO"));
   bi_decl(bi_1pin_with_name(vhfRxPin, "VHF Module RX Pin for sPIO"));
-  bi_decl(bi_1pin_with_name(out0Pin, "DAC Pin 0"));
-  bi_decl(bi_1pin_with_name(out1Pin, "DAC Pin 1"));
-  bi_decl(bi_1pin_with_name(out2Pin, "DAC Pin 2"));
-  bi_decl(bi_1pin_with_name(out3Pin, "DAC Pin 3"));
-  bi_decl(bi_1pin_with_name(out4Pin, "DAC Pin 4"));
-  bi_decl(bi_1pin_with_name(out5Pin, "DAC Pin 5"));
-  bi_decl(bi_1pin_with_name(out6Pin, "DAC Pin 6"));
-  bi_decl(bi_1pin_with_name(out7Pin, "DAC Pin 7"));
+  bi_decl(bi_pin_mask_with_name(vhfPinMask, "DAC Pins"));
 }

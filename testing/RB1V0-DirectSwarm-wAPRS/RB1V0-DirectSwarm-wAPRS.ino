@@ -94,8 +94,9 @@ char cogSpeed[8];
 
 //intervals
 //uint32_t aprsInterval = 5000;
+uint32_t aprsInterval = 10000;
 //uint32_t aprsInterval = 15000;
-uint32_t aprsInterval = 60000;
+//uint32_t aprsInterval = 60000;
 //uint32_t aprsInterval = 120000;
 
 void setNada1200(void);
@@ -383,7 +384,6 @@ void sendCharNRZI(unsigned char in_byte, bool enBitStuff) {
 
       bitStuff = 0;
     }
-
     in_byte >>= 1;
   }
 }
@@ -845,7 +845,7 @@ void txAprs(bool aprsDebug, int style) {
   aprsDebug ? sendTestPackets(style) : sendPacket();
   uint32_t packetDuration = millis() - startPacket;
   Serial.println("Packet sent in: " + String(packetDuration) + " ms");
-//  printPacket();
+  printPacket();
 }
 
 void txTag () {
@@ -857,9 +857,9 @@ void txTag () {
 }
 
 void setup() {
-  swarmRunning = true;
+//  swarmRunning = true;
   waitForAcks = swarmRunning;
-//  swarmInteractive = swarmRunning;
+  swarmInteractive = swarmRunning;
 
   aprsRunning = true;
 
@@ -907,7 +907,7 @@ void loop() {
   if ((millis() - prevAprsTx >= aprsInterval) && aprsRunning) {
     setVhfState(true);
 //    delay(5000);
-    txAprs(false,2);
+    txAprs(true,2);
     setVhfState(false);
   }
 

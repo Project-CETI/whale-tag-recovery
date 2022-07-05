@@ -6,6 +6,8 @@
 #include "aprs.h"
 #include "vhf.h"
 
+#define PICO_TIME_DEFAULT_ALARM_POOL_DISABLED   0
+
 // APRS VARS [START] ----------------------------------------------------
 // APRS protocol config (don't change)
 const uint16_t _FLAG = 0x7e;
@@ -19,8 +21,6 @@ unsigned int str_len = 400;
 char bitStuff = 0;
 unsigned short crc = 0xffff;
 uint8_t currOutput = 0;
-char rmc[100];
-char rmc_stat;
 
 // APRS payload arrays
 char lati[9];
@@ -30,8 +30,8 @@ char cogSpeed[8];
 // APRS signal TX config
 uint64_t endTimeAPRS = 0;
 const uint64_t bitPeriod = 832;
-const uint64_t delay1200 = 19;
-const uint64_t delay2200 = 9;
+const uint64_t delay1200 = 20;
+const uint64_t delay2200 = 10;
 const uint8_t sinValues[32] = {
   152, 176, 198, 217, 233, 245, 252, 255, 252, 245, 233,
   217, 198, 176, 152, 127, 103, 79,  57,  38,  22,  10,
@@ -52,7 +52,7 @@ void setNada1200(void) {
   endTimeAPRS = to_us_since_boot(get_absolute_time()) + bitPeriod;
   while (to_us_since_boot(get_absolute_time()) < endTimeAPRS) {
     setNextSin();
-    sleep_us(delay1200);
+    busy_wait_us(delay1200);
   }
 }
 
@@ -60,7 +60,7 @@ void setNada2400(void) {
   endTimeAPRS = to_us_since_boot(get_absolute_time()) + bitPeriod;
   while (to_us_since_boot(get_absolute_time()) < endTimeAPRS) {
     setNextSin();
-    sleep_us(delay2200);
+    busy_wait_us(delay2200);
   }
 }
 
@@ -121,7 +121,6 @@ void sendCharNRZI(unsigned char in_byte, bool enBitStuff) {
 
       bitStuff = 0;
     }
-
     in_byte >>= 1;
   }
 }
@@ -181,27 +180,7 @@ void setPayload(float *latlon, uint16_t *acs) {
 }
 
 void sendHeader(char *mycall, int myssid, char *dest, char *digi, int digissid) {
-  char temp;
-
-  /*
-     APRS AX.25 Header
-     ........................................................
-     |   DEST   |  SOURCE  |   DIGI   | CTRL FLD |    PID   |
-     --------------------------------------------------------
-     |  7 bytes |  7 bytes |  7 bytes |   0x03   |   0xf0   |
-     --------------------------------------------------------
-
-     DEST   : 6 byte "callsign" + 1 byte ssid
-     SOURCE : 6 byte your callsign + 1 byte ssid
-     DIGI   : 6 byte "digi callsign" + 1 byte ssid
-
-     ALL DEST, SOURCE, & DIGI are left shifted 1 bit, ASCII format.
-     DIGI ssid is left shifted 1 bit + 1
-
-     CTRL FLD is 0x03 and not shifted.
-     PID is 0xf0 and not shifted.
-  */
-
+  int temp;
   /********* DEST ***********/
 
   temp = strlen(dest);
@@ -242,22 +221,6 @@ void sendPacket(float *latlon, uint16_t *acs, char *mycall, int myssid, char *de
   //sendCharNRZI(0x99, true);
   //sendCharNRZI(0x99, true);
 
-
-  /*
-     AX25 FRAME
-
-     ........................................................
-     |  FLAG(s) |  HEADER  | PAYLOAD  | FCS(CRC) |  FLAG(s) |
-     --------------------------------------------------------
-     |  N bytes | 22 bytes |  N bytes | 2 bytes  |  N bytes |
-     --------------------------------------------------------
-
-     FLAG(s)  : 0x7e
-     HEADER   : see header
-     PAYLOAD  : 1 byte data type + N byte info
-     FCS      : 2 bytes calculated from HEADER + PAYLOAD
-  */
-
   sendFlag(150);
   crc = 0xffff;
   sendHeader(mycall, myssid, dest, digi, digissid);
@@ -277,28 +240,26 @@ void sendPacket(float *latlon, uint16_t *acs, char *mycall, int myssid, char *de
 
 // Debug TX functions
 void printPacket(char *mycall, int myssid, char *dest, char *digi, int digissid, char *comment) {
-  printf("%s0%s%d%s%d%c%s%c%s%c%s%s\n", dest, mycall, myssid, digi, digissid, _DT_POS, lati, sym_ovl, lon, sym_tab, cogSpeed, comment);
+  printf("%s0%s%d%s%d%x%x%c%s%c%s%c%s%s\n", dest, mycall, myssid, digi, digissid, _CTRL_ID, _PID, _DT_POS, lati, sym_ovl, lon, sym_tab, cogSpeed, comment);
 }
 void sendTestPackets(char *mycall, int myssid, char *dest, char *digi, int digissid, char *comment, int style) {
   float latlon[2] = {0,0};
   uint16_t acs[3] = {0,0,0};
   switch(style) {
     case 1:
+      printf("Style 1: My latlon is: %f %f\n",latlon[0],latlon[1]);
       sendPacket(latlon, acs, mycall, myssid, dest, digi, digissid, comment);
       break;
     case 2:
       latlon[0] = 42.3648;
       latlon[1] = -71.1247;
+      printf("Style 2: My latlon is: %f %f\n",latlon[0],latlon[1]);
       sendPacket(latlon, acs, mycall, myssid, dest, digi, digissid, comment);
       break;
     case 3:
-      latlon[0] = 0.0;
-      latlon[1] = 0.0;
-      sendPacket(latlon, acs, mycall, myssid, dest, digi, digissid, comment);
-      sleep_ms(1000);
-      latlon[0] = 42.3648;
-      latlon[1] = -71.1247;
-      sendPacket(latlon, acs, mycall, myssid, dest, digi, digissid, comment);
+      sendHeader(mycall, myssid, dest, digi, digissid);
+      sendStrLen(">...",strlen(">..."));
+      
       break;
     case 4:
       crc = 0xffff;
@@ -309,6 +270,7 @@ void sendTestPackets(char *mycall, int myssid, char *dest, char *digi, int digis
       sendCrc();
       break;
     default:
+      printf("Style D: My latlon is: %f %f\n",latlon[0],latlon[1]);
       sendPacket(latlon, acs, mycall, myssid, dest, digi, digissid, comment);
       break;
   }
