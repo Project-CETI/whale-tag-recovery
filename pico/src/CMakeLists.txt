@@ -7,8 +7,7 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 
 set(PROJECT_NAME sdk_conn)
-set(HEADER_FILES ${PROJECT_SOURCE_DIR}/ceti_aprs.h)
-set(SOURCES ${PROJECT_SOURCE_DIR}/sdk_conn.c ${PROJECT_SOURCE_DIR}/ceti_aprs.c)
+set(SOURCES ${PROJECT_SOURCE_DIR}/sdk_conn.c ${PROJECT_SOURCE_DIR}/aprs.c ${PROJECT_SOURCE_DIR}/vhf.c)
 pico_sdk_init()
 
 add_executable(${PROJECT_NAME})

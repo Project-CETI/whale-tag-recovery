@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include "pico/binary_info.h"
-#include "ceti_aprs.h"
+#include "aprs.h"
 
 const uint LED_PIN = 29;
 
