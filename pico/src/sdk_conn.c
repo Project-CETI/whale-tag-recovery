@@ -15,7 +15,7 @@ int myssid = 15;
 char dest[8] = "APLIGA";
 char digi[8] = "WIDE2";
 int digissid = 1;
-char comment[128] = "Ceti v1.0 2-SDK";
+char comment[128] = "Ceti v1.0 8-8";
 
 // Which system are running
 bool aprsRunning = false;
@@ -46,15 +46,15 @@ void initLed() {gpio_init(LED_PIN); gpio_set_dir(LED_PIN, GPIO_OUT);}
 
 void txAprs(bool aprsDebug, int style) {
   prevAprsTx = to_ms_since_boot(get_absolute_time());
-  printf("%d",prevAprsTx);
+  // printf("%d",prevAprsTx);
   setLed(true);
   if (aprsDebug)
     sendTestPackets(mycall, myssid, dest, digi, digissid, comment, style);
   else
     sendPacket(coords, aCS, mycall, myssid, dest, digi, digissid, comment);
   setLed(false);
-  printf("Packet sent in %d ms\n", to_ms_since_boot(get_absolute_time()) - prevAprsTx);
-  printPacket(mycall, myssid, dest, digi, digissid, comment);
+  // printf("Packet sent in %d ms\n", to_ms_since_boot(get_absolute_time()) - prevAprsTx);
+  // printPacket(mycall, myssid, dest, digi, digissid, comment);
 }
 
 void setup() {

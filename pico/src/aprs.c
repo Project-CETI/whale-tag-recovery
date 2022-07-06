@@ -30,8 +30,8 @@ char cogSpeed[8];
 // APRS signal TX config
 uint64_t endTimeAPRS = 0;
 const uint64_t bitPeriod = 832;
-const uint64_t delay1200 = 20;
-const uint64_t delay2200 = 10;
+const uint64_t delay1200 = 18;
+const uint64_t delay2200 = 8;
 const uint8_t sinValues[32] = {
   152, 176, 198, 217, 233, 245, 252, 255, 252, 245, 233,
   217, 198, 176, 152, 127, 103, 79,  57,  38,  22,  10,
@@ -247,13 +247,13 @@ void sendTestPackets(char *mycall, int myssid, char *dest, char *digi, int digis
   uint16_t acs[3] = {0,0,0};
   switch(style) {
     case 1:
-      printf("Style 1: My latlon is: %f %f\n",latlon[0],latlon[1]);
+      // printf("Style 1: My latlon is: %f %f\n",latlon[0],latlon[1]);
       sendPacket(latlon, acs, mycall, myssid, dest, digi, digissid, comment);
       break;
     case 2:
       latlon[0] = 42.3648;
       latlon[1] = -71.1247;
-      printf("Style 2: My latlon is: %f %f\n",latlon[0],latlon[1]);
+      // printf("Style 2: My latlon is: %f %f\n",latlon[0],latlon[1]);
       sendPacket(latlon, acs, mycall, myssid, dest, digi, digissid, comment);
       break;
     case 3:
@@ -270,7 +270,7 @@ void sendTestPackets(char *mycall, int myssid, char *dest, char *digi, int digis
       sendCrc();
       break;
     default:
-      printf("Style D: My latlon is: %f %f\n",latlon[0],latlon[1]);
+      // printf("Style D: My latlon is: %f %f\n",latlon[0],latlon[1]);
       sendPacket(latlon, acs, mycall, myssid, dest, digi, digissid, comment);
       break;
   }

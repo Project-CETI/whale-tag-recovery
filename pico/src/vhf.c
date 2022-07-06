@@ -73,16 +73,16 @@ void setVhfState(bool state) {gpio_put(vhfSleepPin, state);}
 
 void configureVHF(void) {
     sleep_ms(10000);
-    printf("Configuring DRA818V...\n");
+    // printf("Configuring DRA818V...\n");
     initializeDra818v(true);
     configureDra818v(144.39,144.39,false,false,false);
     setPttState(false);
     setVhfState(true);
-    printf("DRA818V configured.\n");
+    // printf("DRA818V configured.\n");
 
-    printf("Configuring DAC...\n");
+    // printf("Configuring DAC...\n");
     initializeOutput();
-    printf("DAC configured.\n");
+    // printf("DAC configured.\n");
 }
 // VHF HEADERS [END] ----------------------------------------------------
 
