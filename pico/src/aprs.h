@@ -1,5 +1,6 @@
+#ifndef APRS_H
+#define APRS_H
 #include "stdint.h"
-// APRS HEADERS [START] -------------------------------------------------
 // Low-level TX functions
 void setNextSin(void);
 void setNada1200(void);
@@ -21,4 +22,4 @@ void sendPacket(float *latlon, uint16_t *acs, char *mycall, int myssid, char *de
 // Debug TX functions
 void printPacket(char *mycall, int myssid, char *dest, char *digi, int digissid, char *comment);
 void sendTestPackets(char *mycall, int myssid, char *dest, char *digi, int digissid, char *comment, int style);
-// APRS HEADERS [END] ---------------------------------------------------
+#endif

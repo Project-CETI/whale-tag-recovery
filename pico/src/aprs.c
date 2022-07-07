@@ -30,8 +30,8 @@ char cogSpeed[8];
 // APRS signal TX config
 uint64_t endTimeAPRS = 0;
 const uint64_t bitPeriod = 832;
-const uint64_t delay1200 = 18;
-const uint64_t delay2200 = 8;
+const uint64_t delay1200 = 23;
+const uint64_t delay2200 = 15;
 const uint8_t sinValues[32] = {
   152, 176, 198, 217, 233, 245, 252, 255, 252, 245, 233,
   217, 198, 176, 152, 127, 103, 79,  57,  38,  22,  10,
