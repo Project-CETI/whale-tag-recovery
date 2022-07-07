@@ -1,6 +1,6 @@
 #!/bin/bash
 
-basedir="/home/ceti/CETI/whale-tag-recovery/pico"
+basedir="/home/ceti/CETI/whale-tag-recovery"
 builddir="${basedir}/build"
 
 cd $builddir
