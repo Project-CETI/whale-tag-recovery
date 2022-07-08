@@ -531,7 +531,7 @@ void initializeDra818v(bool highPower = true) {
 }
 
 // Configures DRA818V settings
-bool configureDra818v(float txFrequency = 144.39, float rxFrequency = 144.39, bool emphasis = false, bool hpf = false, bool lpf = false) {
+bool configureDra818v(float txFrequency = 145.05, float rxFrequency = 145.05, bool emphasis = false, bool hpf = false, bool lpf = false) {
   // Open serial connection
   SerialPIO serial = SerialPIO(vhfRxPin, vhfTxPin);
   serial.begin(9600);

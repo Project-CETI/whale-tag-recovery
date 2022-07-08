@@ -57,7 +57,7 @@ bool configureDra818v(float txFrequency, float rxFrequency, bool emphasis, bool 
   uart_tx_program_init(pio, sm, offset, vhfTxPin, 9600);
   uart_tx_program_puts(pio, sm, "AT+DMOCONNECT\n");
   busy_wait_ms(vhfEnableDelay);
-  uart_tx_program_puts(pio, sm, "AT+DMOSETGROUP=0,144.3900,144.3900,0000,0,0000\n");
+  uart_tx_program_puts(pio, sm, "AT+DMOSETGROUP=0,145.0500,145.0500,0000,0,0000\n");
   busy_wait_ms(vhfEnableDelay);
   // sprintf(temp, "AT+SETFILTER=%d,%d,%d\n",emphasis,hpf,lpf);
   uart_tx_program_puts(pio, sm, "AT+SETFILTER=0,0,0\n");
