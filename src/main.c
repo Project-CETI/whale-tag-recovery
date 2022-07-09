@@ -13,12 +13,12 @@ uint16_t aCS[3] = {0,0,0};
 
 // APRS communication config (change per tag)
 char mycall[8] = "KC1QXQ";
-int myssid = 2;
+int myssid = 10;
 char dest[8] = "APLIGA";
 char digi[8] = "WIDE2";
 int digissid = 1;
-char comment[128] = "Ceti tag2 3-2";
-uint32_t aprsInterval = 10000; // APRS TX interval
+char comment[128] = "Ceti v1.0 2-#";
+uint32_t aprsInterval = 120000; // APRS TX interval
 
 // SWARM communication config (change ONLY when necessary)
 const uint TX_SWARM = 0;
@@ -41,7 +41,7 @@ void initLed(void);
 void setup(void);
 
 void set_bin_desc() {
-  bi_decl(bi_program_description("Recovery process binary for Tag 2, recovery board 3-2."));
+  bi_decl(bi_program_description("Recovery process binary for standalone recovery board 2-# in Dominica."));
   bi_decl(bi_1pin_with_name(LED_PIN, "On-board LED"));
   bi_decl(bi_1pin_with_name(TX_SWARM, "TX UART to SWARM modem"));
   bi_decl(bi_1pin_with_name(RX_SWARM, "RX UART to SWARM modem"));
