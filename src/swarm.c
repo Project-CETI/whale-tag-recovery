@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include "pico/stdlib.h"
 #include "pico/time.h"
 #include "swarm.h"
 
@@ -39,11 +38,15 @@ char gpsParseBuf[MAX_SWARM_MSG_LEN];
 int gpsInsertPos = 0;
 int gpsMult = 1;
 bool gpsFloatQ = false;
+char lastGpsBuffer[MAX_SWARM_MSG_LEN] = "$GN 42.3648,-71.1247,0,360,0*38";
+int lastGpsBufSize = 31;
 // DT data hacks
 uint8_t datetimeBuf[6] = {70,1,1};
 uint8_t dtReadPos = 6;
 uint8_t dtLength = 2;
 char dtParseBuf[MAX_SWARM_MSG_LEN];
+char lastDtBuffer[MAX_SWARM_MSG_LEN] = "$DT 20190408195123,V*41";
+int lastDtBufSize = 23;
 struct tm dt;
 
 // SWARM VARS [END] -----------------------------------------------------
@@ -124,6 +127,8 @@ void serialCopyToModem(void) {
 
 // Unsolicited response callbacks
 void storeGpsData(void) {
+  memcpy(lastGpsBuffer, modem_rd_buf, modem_buf_len);
+  lastGpsBufSize = modem_buf_len;
   while(modem_rd_buf[gpsReadPos] != '*') {
     while (modem_rd_buf[gpsReadPos] != ',' && modem_rd_buf[gpsReadPos] != '*') {
       if (modem_rd_buf[gpsReadPos] == '-') {
@@ -163,6 +168,8 @@ void storeGpsData(void) {
 }
 
 void storeDTData(void) {
+  memcpy(lastDtBuffer, modem_rd_buf, modem_buf_len);
+  lastDtBufSize = modem_buf_len;
   int i, j;
   for (j = 0; j < 6; j++) {
     for (i = 0; i < dtLength; i++)
@@ -245,7 +252,7 @@ void swarmBootSequence(bool running, bool wAcks) {
 }
 
 void swarmResponseInit(bool debug) {
-  getRxTestOutput(false);
+  getRxTestOutput(true);
   getQCount();
   if (debug) {
     writeToModem("$TD \"Test 1\"");
@@ -263,7 +270,7 @@ void getQCount(void) {
 
 // Modem management functions
 void getRxTestOutput(bool onQ) {
-  onQ ? writeToModem("$RT 1") : writeToModem("$RT 0");
+  onQ ? writeToModem("$RT 10") : writeToModem("$RT 0");
 }
 
 // Parameter setting functions
@@ -279,6 +286,11 @@ void getPos(float *dstPosBuf) {
 
 void getACS(uint16_t *dstACSBuf) {
   memcpy(dstACSBuf, acsBuf, sizeof(acsBuf));
+}
+
+void getLastPDtBufs(char *dstGpsBuf, char *dstDtBuf) {
+  memcpy(dstGpsBuf, lastGpsBuffer, lastGpsBufSize);
+  memcpy(dstDtBuf, lastDtBuffer, lastDtBufSize);
 }
 
 // SWARM FUNCTIONS [END] ------------------------------------------------
