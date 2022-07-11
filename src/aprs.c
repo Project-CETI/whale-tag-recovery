@@ -259,7 +259,6 @@ void sendTestPackets(char *mycall, int myssid, char *dest, char *digi, int digis
     case 3:
       sendHeader(mycall, myssid, dest, digi, digissid);
       sendStrLen(">...",strlen(">..."));
-      
       break;
     case 4:
       crc = 0xffff;
