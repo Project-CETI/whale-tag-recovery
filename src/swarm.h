@@ -1,6 +1,7 @@
 #ifndef SWARM_H
 #define SWARM_H
 #include "stdint.h"
+#include "pico/stdlib.h"
 // RX functions from SWARM
 int parseModemOutput(void);
 void readFromModem(void);
@@ -34,4 +35,5 @@ void swarmSetInteractive(bool interact);
 // Data retrieval functions
 void getPos(float *dstPosBuf);
 void getACS(uint16_t *dstACSBuf);
+void getLastPDtBufs(char *dstGpsBuf, char *dstDtBuf);
 #endif
