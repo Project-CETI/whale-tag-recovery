@@ -70,8 +70,8 @@ void setup() {
   aprsRunning = true;
   swarmRunning = true;
   waitForAcks = swarmRunning;
-  // swarmInteractive = swarmRunning;
-  // swarmDebug = true;
+  swarmInteractive = swarmRunning;
+  swarmDebug = true;
 
   initLed();
   setLed(true);
