@@ -857,9 +857,9 @@ void txTag () {
 }
 
 void setup() {
-//  swarmRunning = true;
-  waitForAcks = swarmRunning;
-  swarmInteractive = swarmRunning;
+  swarmRunning = true;
+  // waitForAcks = swarmRunning;
+  // swarmInteractive = swarmRunning;
 
   aprsRunning = true;
 
@@ -886,7 +886,6 @@ void setup() {
     setPttState(false);
     setVhfState(true);
     Serial.println("DRA818V configured");
-  
     // Initialize DAC
     Serial.println("Configuring DAC...");
     initializeOutput();
@@ -907,7 +906,7 @@ void loop() {
   if ((millis() - prevAprsTx >= aprsInterval) && aprsRunning) {
     setVhfState(true);
 //    delay(5000);
-    txAprs(true,2);
+    txAprs(false,2);
     setVhfState(false);
   }
 
