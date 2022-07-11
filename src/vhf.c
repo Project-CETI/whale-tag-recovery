@@ -11,8 +11,8 @@
 const uint vhfPowerLevelPin = 15;
 const uint vhfPttPin = 16;
 const uint vhfSleepPin = 14;
-const uint vhfTxPin = 13;
-const uint vhfRxPin = 12;
+const uint vhfTxPin = 12;
+const uint vhfRxPin = 13;
 // VHF control params
 const uint vhfTimeout = 500;
 const uint vhfEnableDelay = 1000;
