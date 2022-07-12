@@ -80,20 +80,20 @@ void txTag () {
   prevTagTx = to_ms_since_boot(get_absolute_time());
   getLastPDtBufs(lastGpsUpdate, lastDtUpdate);
   writeGpsToTag(lastGpsUpdate, lastDtUpdate);
-  detachTag();
-  reqTagState();
+  // detachTag();
+  // reqTagState();
 }
 
 void setup() {
   set_bin_desc();
   stdio_init_all();
 
-  // aprsRunning = true;
+  aprsRunning = true;
 
-  // swarmRunning = true;
+  swarmRunning = true;
   waitForAcks = swarmRunning;
-  swarmInteractive = swarmRunning;
-  // swarmDebug = true;
+  // swarmInteractive = swarmRunning;
+  swarmDebug = true;
 
   tagConnected = true;
 

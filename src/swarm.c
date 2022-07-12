@@ -162,7 +162,10 @@ void storeGpsData(void) {
     (gpsFloatQ && gpsInsertPos==1) ? gpsInsertPos-- : gpsInsertPos++;
     gpsFloatQ = false;
     gpsMult = 1;
-    initDTAck = true;
+		if (initDTAck == true && initPosAck == false) {
+				writeToModem("$TD \"hallelujah\"");
+				initPosAck = true;
+		}
     bootConfirmed = true;
   }
 }
@@ -185,6 +188,7 @@ void storeDTData(void) {
   dt.tm_hour = datetimeBuf[3];
   dt.tm_min = datetimeBuf[4];
   dt.tm_sec = datetimeBuf[5];
+	initDTAck = true;
 }
 
 void txSwarm(void) {
@@ -252,7 +256,7 @@ void swarmBootSequence(bool running, bool wAcks) {
 }
 
 void swarmResponseInit(bool debug) {
-  getRxTestOutput(true);
+  getRxTestOutput(false);
   getQCount();
   if (debug) {
     writeToModem("$TD \"Test 1\"");
