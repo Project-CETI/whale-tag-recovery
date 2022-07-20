@@ -3,7 +3,7 @@
 #include "pico/binary_info.h"
 #include "aprs.h"
 #include "vhf.h"
-#include "swarm.h"
+#include "gps.h"
 #include "tag.h"
 
 const uint LED_PIN = 29;
@@ -16,17 +16,17 @@ char lastDtUpdate[100] = "$CMD_ERROR";
 
 // APRS communication config (change per tag)
 char mycall[8] = "KC1QXQ";
-int myssid = 10;
+int myssid = 15;
 char dest[8] = "APLIGA";
 char digi[8] = "WIDE2";
 int digissid = 1;
-char comment[128] = "Ceti b1.0 2-#";
-const uint32_t aprsInterval = 120000; // APRS TX interval
+char comment[128] = "Ceti b1.0 2-S";
+const uint32_t aprsInterval = 30000; // APRS TX interval
 
 // SWARM communication config (change ONLY when necessary)
-const uint TX_SWARM = 0;
-const uint RX_SWARM = 1;
-const uint BAUD_SWARM = 115200;
+const uint TX_GPS = 0;
+const uint RX_GPS = 1;
+const uint BAUD_GPS = 9600;
 
 // TAG communication config (change ONLY when necessary)
 const uint TX_TAG = 4;
@@ -36,14 +36,11 @@ const uint32_t tagInterval = 10000;
 
 // Which system are running
 bool aprsRunning = false;
-bool swarmRunning = false;
 bool tagConnected = false;
 
 // runtime vars
 uint32_t prevAprsTx = 0;
-bool waitForAcks = false;
-bool swarmInteractive = false;
-bool swarmDebug = false;
+bool gpsInteractive = false;
 uint32_t prevTagTx = 0;
 
 void set_bin_desc(void);
@@ -54,8 +51,8 @@ void setup(void);
 void set_bin_desc() {
   bi_decl(bi_program_description("Recovery process binary for standalone recovery board 2-#"));
   bi_decl(bi_1pin_with_name(LED_PIN, "On-board LED"));
-  bi_decl(bi_1pin_with_name(TX_SWARM, "TX UART to SWARM modem"));
-  bi_decl(bi_1pin_with_name(RX_SWARM, "RX UART to SWARM modem"));
+  bi_decl(bi_1pin_with_name(TX_GPS, "TX UART to GPS"));
+  bi_decl(bi_1pin_with_name(RX_GPS, "RX UART to GPS"));
   bi_decl(bi_1pin_with_name(TX_TAG, "TX UART to TAG modem"));
   bi_decl(bi_1pin_with_name(RX_TAG, "RX UART to TAG modem"));
   pinDescribe();
@@ -89,18 +86,14 @@ void setup() {
   stdio_init_all();
 
   aprsRunning = true;
-
-  swarmRunning = true;
-  waitForAcks = swarmRunning;
-  // swarmInteractive = swarmRunning;
-  swarmDebug = true;
+  gpsInteractive = true;
 
   tagConnected = true;
 
   initLed();
   setLed(true);
 
-  swarmInit(TX_SWARM, RX_SWARM, BAUD_SWARM, uart0, swarmRunning, waitForAcks, swarmInteractive, swarmDebug);
+  gpsInit(TX_GPS, RX_GPS, BAUD_GPS, uart0, gpsInteractive);
 
   if (aprsRunning) configureVHF();
 
@@ -114,7 +107,7 @@ int main() {
 
   // Loop
   while (true) {
-    readFromModem();
+    readFromGps();
     if (((to_ms_since_boot(get_absolute_time()) - prevAprsTx) >= aprsInterval) && aprsRunning) {
       setVhfState(true);
       txAprs(false, 2);

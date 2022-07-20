@@ -3,7 +3,7 @@
 #include "pico/binary_info.h"
 #include "aprs.h"
 #include "vhf.h"
-#include "gps.h"
+#include "swarm.h"
 #include "tag.h"
 
 const uint LED_PIN = 29;
@@ -26,7 +26,7 @@ const uint32_t aprsInterval = 120000; // APRS TX interval
 // SWARM communication config (change ONLY when necessary)
 const uint TX_SWARM = 0;
 const uint RX_SWARM = 1;
-const uint BAUD_SWARM = 9600;
+const uint BAUD_SWARM = 115200;
 
 // TAG communication config (change ONLY when necessary)
 const uint TX_TAG = 4;
@@ -36,10 +36,14 @@ const uint32_t tagInterval = 10000;
 
 // Which system are running
 bool aprsRunning = false;
+bool swarmRunning = false;
+bool tagConnected = false;
 
 // runtime vars
 uint32_t prevAprsTx = 0;
-bool gpsInteractive = false;
+bool waitForAcks = false;
+bool swarmInteractive = false;
+bool swarmDebug = false;
 uint32_t prevTagTx = 0;
 
 void set_bin_desc(void);
@@ -50,8 +54,8 @@ void setup(void);
 void set_bin_desc() {
   bi_decl(bi_program_description("Recovery process binary for standalone recovery board 2-#"));
   bi_decl(bi_1pin_with_name(LED_PIN, "On-board LED"));
-  bi_decl(bi_1pin_with_name(TX_SWARM, "TX UART to GPS"));
-  bi_decl(bi_1pin_with_name(RX_SWARM, "RX UART to GPS"));
+  bi_decl(bi_1pin_with_name(TX_SWARM, "TX UART to SWARM modem"));
+  bi_decl(bi_1pin_with_name(RX_SWARM, "RX UART to SWARM modem"));
   bi_decl(bi_1pin_with_name(TX_TAG, "TX UART to TAG modem"));
   bi_decl(bi_1pin_with_name(RX_TAG, "RX UART to TAG modem"));
   pinDescribe();
@@ -85,12 +89,22 @@ void setup() {
   stdio_init_all();
 
   aprsRunning = true;
-  gpsInteractive = true;
+
+  swarmRunning = true;
+  waitForAcks = swarmRunning;
+  // swarmInteractive = swarmRunning;
+  swarmDebug = true;
+
+  tagConnected = true;
 
   initLed();
   setLed(true);
 
-  gpsInit(TX_SWARM, RX_SWARM, BAUD_SWARM, uart0, gpsInteractive);
+  swarmInit(TX_SWARM, RX_SWARM, BAUD_SWARM, uart0, swarmRunning, waitForAcks, swarmInteractive, swarmDebug);
+
+  if (aprsRunning) configureVHF();
+
+  initTagComm(TX_TAG, RX_TAG, BAUD_TAG, uart1);
   setLed(false);
 }
 
@@ -100,6 +114,15 @@ int main() {
 
   // Loop
   while (true) {
-    readFromGps();
+    readFromModem();
+    if (((to_ms_since_boot(get_absolute_time()) - prevAprsTx) >= aprsInterval) && aprsRunning) {
+      setVhfState(true);
+      txAprs(false, 2);
+      setVhfState(false);
+    }
+
+    if (((to_ms_since_boot(get_absolute_time()) - prevTagTx) >= tagInterval) && tagConnected) {
+      txTag();
+    }
   }
 }

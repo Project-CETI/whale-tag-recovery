@@ -8,7 +8,6 @@
 
 // GPS DEFS [START] ---------------------------------------------------
 #define MAX_GPS_MSG_LEN 500
-#define timegm  mktime
 // GPS DEFS [END] -----------------------------------------------------
 
 // GPS VARS [START] ---------------------------------------------------
@@ -22,18 +21,10 @@ uint8_t nmeaCS;
 bool sInteractive = false;
 
 // GPS data hacks
-// char gnrmc[5]="$GNRMC";
 float latlonBuf[2] = {0,0};
 uint16_t acsBuf[3] = {0,0,0};
-int gpsReadPos = 4;
-int gpsCopyPos = 0;
-char gpsParseBuf[MAX_GPS_MSG_LEN];
-int gpsInsertPos = 0;
-int gpsMult = 1;
-bool gpsFloatQ = false;
 char lastGpsBuffer[MAX_GPS_MSG_LEN] = "$GN 42.3648,-71.1247,0,360,0*38";
 int lastGpsBufSize = 31;
-// DT data hacks
 char lastDtBuffer[MAX_GPS_MSG_LEN] = "$DT 20190408195123,V*41";
 int lastDtBufSize = 23;
 
@@ -54,14 +45,16 @@ void parseGpsOutput(char *line) {
       if (isnan(latlonBuf[1])) latlonBuf[1] = 0.0;
       acsBuf[1] = minmea_rescale(&frame.course, 3);
       acsBuf[2] = minmea_rescale(&frame.speed, 1);
-      printf("[PARSED]: %f, %f, %d, %d\n", latlonBuf[0], latlonBuf[1], acsBuf[1], acsBuf[2]);
+      lastGpsBufSize = gps_buf_len;
+      // printf("[PARSED]: %f, %f, %d, %d\n", latlonBuf[0], latlonBuf[1], acsBuf[1], acsBuf[2]);
     }
     break;
   }
   case MINMEA_SENTENCE_ZDA: {
     struct minmea_sentence_zda frame;
     if (minmea_parse_zda(&frame, line)) memcpy(lastDtBuffer, gps_rd_buf, gps_buf_len);
-    printf("[DT]: %s", lastDtBuffer);
+    lastDtBufSize = gps_buf_len;
+    // printf("[DT]: %s", lastDtBuffer);
     break;
   }
   case MINMEA_INVALID:
