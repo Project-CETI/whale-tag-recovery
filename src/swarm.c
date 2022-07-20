@@ -21,6 +21,7 @@ int modem_buf_len = 0;
 char endNmeaString = '*';
 uint8_t nmeaCS;
 char swarmTxBuffer[MAX_SWARM_MSG_LEN];
+char swarmTxMsg[MAX_SWARM_MSG_LEN];
 bool sInteractive = false;
 
 // Parse SWARM
@@ -29,6 +30,9 @@ bool initDTAck = false;
 bool initPosAck = false;
 uint32_t maxWaitForSwarmBoot = 30000;
 uint32_t maxWaitForDTPAcks = 60000;
+// Queue management
+char qParseBuf[3];
+int qCount = 0;
 // GPS data hacks
 float latlonBuf[2] = {0,0};
 uint16_t acsBuf[3] = {0,0,0};
@@ -47,6 +51,7 @@ uint8_t dtLength = 2;
 char dtParseBuf[MAX_SWARM_MSG_LEN];
 char lastDtBuffer[MAX_SWARM_MSG_LEN] = "$DT 20190408195123,V*41";
 int lastDtBufSize = 23;
+char currTimeStr[MAX_SWARM_MSG_LEN];
 struct tm dt;
 
 // SWARM VARS [END] -----------------------------------------------------
@@ -60,8 +65,11 @@ int parseModemOutput(void) {
   else if (modem_rd_buf[1] == 'D' && modem_rd_buf[modem_buf_len - 4] == 'V') {
     storeDTData();
   }
+  else if (modem_rd_buf[1] == 'M' && modem_rd_buf[2] == 'T') {
+    storeQCount();
+  }
   else if (modem_rd_buf[1] == 'T' && modem_rd_buf[4] == 'S') {
-    txSwarm();
+    txSwarm(false);
   }
   return 0;
 }
@@ -94,6 +102,10 @@ uint8_t nmeaChecksum(const char *sz, size_t len) {
   for (cs = 0; (i < len) && sz [i]; i++)
     cs ^= ((uint8_t) sz[i]);
   return cs;
+}
+
+void formatSwarmMsg(void) {
+  sprintf(swarmTxMsg, "$TD AI=1,HD=3600,\"{\"LLACS\":\"{%f,%f,%d,%d,%d}\",\"tm\":\"%s\"}\"",latlonBuf[0],latlonBuf[1],acsBuf[0],acsBuf[1],acsBuf[2],currTimeStr);
 }
 
 void writeToModem(char *sz) {
@@ -188,12 +200,27 @@ void storeDTData(void) {
   dt.tm_hour = datetimeBuf[3];
   dt.tm_min = datetimeBuf[4];
   dt.tm_sec = datetimeBuf[5];
-	initDTAck = true;
+  strftime(currTimeStr, sizeof(currTimeStr), "%d-%m-%Y %H:%M", mktime(&dt));
+  initDTAck = true;
 }
 
-void txSwarm(void) {
+void storeQCount(void) {
+  int i=4;
+  int j=0;
+  while(modem_rd_buf[i]!='*') {
+    if (modem_rd_buf[i++]=='$') goto EVALQ;
+    j++;
+  }
+  memcpy(qParseBuf, modem_rd_buf+4,sizeof(char)*j);
+  qCount=atoi(qParseBuf);
+ EVALQ: if (qCount==0) txSwarm(true);
+}
+
+void txSwarm(bool addQ) {
+  formatSwarmMsg();
   if (initDTAck) {
-    writeToModem("$TD \"Adding Q...\"");
+    writeToModem(swarmTxMsg);
+    if (addQ) qCount++;
   }
 }
 
