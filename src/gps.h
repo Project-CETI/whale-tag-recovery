@@ -2,16 +2,12 @@
 #define SWARM_H
 #include "stdint.h"
 #include "pico/stdlib.h"
-// RX functions from SWARM
-// int parseGpsOutput(void);
+// RX functions from NEO-M8N
+void parseGpsOutput(char *line);
 void readFromGps(void);
 void echoGpsOutput(void);
 
-// Unsolicited response callbacks
-void storeGpsData(void);
-void storeDTData(void);
-
-// Init SWARM functions
+// Init NEO-M8N functions
 void gpsInit(int txPin, int rxPin, int baudrate, uart_inst_t *uartNum, bool interact);
 
 // Data retrieval functions
