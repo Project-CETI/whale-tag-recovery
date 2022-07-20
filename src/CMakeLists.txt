@@ -6,8 +6,8 @@ project(ceti_recovery_board_sdk C CXX ASM)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 
-set(PROJECT_NAME recovery_gps)
-set(SOURCES ${PROJECT_SOURCE_DIR}/main_gps.c ${PROJECT_SOURCE_DIR}/aprs.c ${PROJECT_SOURCE_DIR}/vhf.c ${PROJECT_SOURCE_DIR}/gps.c ${PROJECT_SOURCE_DIR}/tag.c ${PROJECT_SOURCE_DIR}/minmea.c)
+set(PROJECT_NAME recovery)
+set(SOURCES ${PROJECT_SOURCE_DIR}/main.c ${PROJECT_SOURCE_DIR}/aprs.c ${PROJECT_SOURCE_DIR}/vhf.c ${PROJECT_SOURCE_DIR}/gps.c ${PROJECT_SOURCE_DIR}/tag.c ${PROJECT_SOURCE_DIR}/minmea.c)
 pico_sdk_init()
 
 add_executable(${PROJECT_NAME})
