@@ -14,7 +14,8 @@ void serialCopyToModem(void);
 // Unsolicited response callbacks
 void storeGpsData(void);
 void storeDTData(void);
-void txSwarm(void);
+void storeQCount(void);
+void txSwarm(bool addQ);
 
 // Init SWARM functions
 void swarmInit(int txPin, int rxPin, int baudrate, uart_inst_t *uartNum, bool running, bool wAcks, bool interact, bool debug);
