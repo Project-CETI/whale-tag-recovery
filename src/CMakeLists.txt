@@ -7,10 +7,18 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 
 set(PROJECT_NAME recovery_gps)
-set(SOURCES ${PROJECT_SOURCE_DIR}/main_gps.c ${PROJECT_SOURCE_DIR}/aprs.c ${PROJECT_SOURCE_DIR}/vhf.c ${PROJECT_SOURCE_DIR}/gps.c ${PROJECT_SOURCE_DIR}/tag.c)
+set(SOURCES ${PROJECT_SOURCE_DIR}/main_gps.c ${PROJECT_SOURCE_DIR}/aprs.c ${PROJECT_SOURCE_DIR}/vhf.c ${PROJECT_SOURCE_DIR}/gps.c ${PROJECT_SOURCE_DIR}/tag.c ${PROJECT_SOURCE_DIR}/minmea.c)
 pico_sdk_init()
 
 add_executable(${PROJECT_NAME})
+
+add_definitions("-Dtimegm=mktime")
+
+# add_library(minmea SHARED IMPORTED) # or STATIC instead of SHARED
+# set_target_properties(minmea PROPERTIES
+#   IMPORTED_LOCATION "${CMAKE_SOURCE_DIR}/../minmea/minmea.so"
+#   INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}/../include/minmea"
+# )
 
 target_sources(${PROJECT_NAME} PRIVATE ${SOURCES})
 

@@ -2,14 +2,17 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <math.h>
 #include "gps.h"
+#include "minmea.h"
 
-// SWARM DEFS [START] ---------------------------------------------------
+// GPS DEFS [START] ---------------------------------------------------
 #define MAX_GPS_MSG_LEN 500
-// SWARM DEFS [END] -----------------------------------------------------
+#define timegm  mktime
+// GPS DEFS [END] -----------------------------------------------------
 
-// SWARM VARS [START] ---------------------------------------------------
-// swarm-communication processes
+// GPS VARS [START] ---------------------------------------------------
+// GPS communication processes
 uart_inst_t *uart;
 char gps_rd_buf[MAX_GPS_MSG_LEN];
 int gps_rd_buf_pos = 0;
@@ -19,7 +22,7 @@ uint8_t nmeaCS;
 bool sInteractive = false;
 
 // GPS data hacks
-char gnrmc[5]="$GNRMC";
+// char gnrmc[5]="$GNRMC";
 float latlonBuf[2] = {0,0};
 uint16_t acsBuf[3] = {0,0,0};
 int gpsReadPos = 4;
@@ -34,26 +37,38 @@ int lastGpsBufSize = 31;
 char lastDtBuffer[MAX_GPS_MSG_LEN] = "$DT 20190408195123,V*41";
 int lastDtBufSize = 23;
 
-// SWARM VARS [END] -----------------------------------------------------
+// GPS VARS [END] -----------------------------------------------------
 
-// SWARM FUNCTIONS [START] ----------------------------------------------
-// RX functions from SWARM
+// GPS FUNCTIONS [START] ----------------------------------------------
+// RX functions from NEO-M8N
 
-int parseGpsOutput(void) {
-  if (strcmp(gps_rd_buf, gnrmc
-  if (modem_rd_buf[2] == 'N' && modem_rd_buf[4] != 'E' && modem_rd_buf[4] != 'O') {
-    storeGpsData();
+void parseGpsOutput(char *line) {
+  switch (minmea_sentence_id(line, false)) {
+  case MINMEA_SENTENCE_RMC: {
+    struct minmea_sentence_rmc frame;
+    if (minmea_parse_rmc(&frame, line)) {
+      memcpy(lastGpsBuffer, gps_rd_buf, gps_buf_len);
+      latlonBuf[0] = minmea_tocoord(&frame.latitude);
+      latlonBuf[1] = minmea_tocoord(&frame.longitude);
+      if (isnan(latlonBuf[0])) latlonBuf[0] = 0.0;
+      if (isnan(latlonBuf[1])) latlonBuf[1] = 0.0;
+      acsBuf[1] = minmea_rescale(&frame.course, 3);
+      acsBuf[2] = minmea_rescale(&frame.speed, 1);
+      printf("[PARSED]: %f, %f, %d, %d\n", latlonBuf[0], latlonBuf[1], acsBuf[1], acsBuf[2]);
+    }
+    break;
   }
-  else if (modem_rd_buf[1] == 'D' && modem_rd_buf[modem_buf_len - 4] == 'V') {
-    storeDTData();
+  case MINMEA_SENTENCE_ZDA: {
+    struct minmea_sentence_zda frame;
+    if (minmea_parse_zda(&frame, line)) memcpy(lastDtBuffer, gps_rd_buf, gps_buf_len);
+    printf("[DT]: %s", lastDtBuffer);
+    break;
   }
-  else if (modem_rd_buf[1] == 'M' && modem_rd_buf[2] == 'T') {
-    storeQCount();
+  case MINMEA_INVALID:
+    break;
+  default:
+    break;
   }
-  else if (modem_rd_buf[1] == 'T' && modem_rd_buf[4] == 'S') {
-    txSwarm(false);
-  }
-  return 0;
 }
 
 void readFromGps(void) {
@@ -69,8 +84,8 @@ void readFromGps(void) {
       }
       gps_rd_buf[i-1] = '\0';
       gps_buf_len = i-1;
-      parseGpsOutput();
-      printf("%s\n",gps_rd_buf);
+      parseGpsOutput(gps_rd_buf);
+      // printf("%s\n",gps_rd_buf);
     }
   }
 }
@@ -83,52 +98,7 @@ void echoGpsOutput(void) {
   }
 }
 
-// Unsolicited response callbacks
-void storeGpsData(void) {
-  memcpy(lastGpsBuffer, gps_rd_buf, gps_buf_len);
-  lastGpsBufSize = gps_buf_len;
-  while(gps_rd_buf[gpsReadPos] != '*') {
-    while (gps_rd_buf[gpsReadPos] != ',' && gps_rd_buf[gpsReadPos] != '*') {
-      if (gps_rd_buf[gpsReadPos] == '-') {
-        gpsMult = -1;
-      }
-      else {
-        if (gps_rd_buf[gpsReadPos] == '.') {
-          gpsFloatQ = true;
-        }
-        gpsParseBuf[gpsCopyPos] = gps_rd_buf[gpsReadPos];
-        gpsCopyPos++;
-      }
-      gpsReadPos++;
-    }
-    gpsParseBuf[gpsCopyPos] = '\0';
-    if (gpsFloatQ) {
-      latlonBuf[gpsInsertPos] = ((float)gpsMult) * atof(gpsParseBuf);
-    }
-    else {
-      acsBuf[gpsInsertPos] = gpsMult * atoi(gpsParseBuf);
-    }
-    if (gps_rd_buf[gpsReadPos] == '*') {
-      gpsReadPos = 4;
-      gpsCopyPos = 0;
-      gpsInsertPos = 0;
-      gpsMult = 1;
-      break;
-    }
-    gpsReadPos++;
-    gpsCopyPos = 0;
-    (gpsFloatQ && gpsInsertPos==1) ? gpsInsertPos-- : gpsInsertPos++;
-    gpsFloatQ = false;
-    gpsMult = 1;
-  }
-}
-
-void storeDTData(void) {
-  memcpy(lastDtBuffer, gps_rd_buf, gps_buf_len);
-  lastDtBufSize = gps_buf_len;
-}
-
-// Init SWARM functions
+// Init NEO-M8N functions
 void gpsInit(int txPin, int rxPin, int baudrate, uart_inst_t *uartNum, bool interact) {
   // store vars
   uart = uartNum;
@@ -154,4 +124,4 @@ void getLastPDtBufs(char *dstGpsBuf, char *dstDtBuf) {
   memcpy(dstDtBuf, lastDtBuffer, lastDtBufSize);
 }
 
-// SWARM FUNCTIONS [END] ------------------------------------------------
+// GPS FUNCTIONS [END] ------------------------------------------------
