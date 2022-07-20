@@ -1,0 +1,3 @@
+[submodule "include/minmea"]
+	path = include/minmea
+	url = git@github.com:SSModelGit/minmea.git
