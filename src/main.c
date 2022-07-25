@@ -90,12 +90,12 @@ void setup() {
 
   if (aprsRunning) {
     // APRS communication config (change per tag)
-    char mycall[8] = "KC1QXQ";
-    int myssid = 15;
+    char mycall[8] = "J75Y";
+    int myssid = 1;
     char dest[8] = "APLIGA";
     char digi[8] = "WIDE2";
     int digissid = 1;
-    char mycomment[128] = "Ceti b1.0 2-S";
+    char mycomment[128] = "New Sign Testing";
     configureAPRS(mycall, myssid, dest, digi, digissid, mycomment);
   }
 

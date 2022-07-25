@@ -221,7 +221,6 @@ void sendHeader(void) {
 }
 
 void sendPacket(float *latlon, uint16_t *acs) {
-  setVhfState(true);
   if (latlon[0] < 17.71468 && !q145) {
     configureDra818v14505(145.05,145.05,false,false,false);
     q145 = true;
@@ -230,6 +229,7 @@ void sendPacket(float *latlon, uint16_t *acs) {
     configureDra818v14439(144.39,144.39,false,false,false);
     q145 = false;
   }
+  setVhfState(true);
   setPttState(true);
   setPayload(latlon, acs);
 
@@ -298,10 +298,10 @@ void sendTestPackets(int style) {
 void configureAPRS(char *mcall, int mssid, char *dst, char *dgi, int dgssid, char *cmt) {
   configureVHF();
   q145 = false;
-  memcpy(callsign, mcall, sizeof(mcall));
-  memcpy(destsign, dst, sizeof(dst));
-  memcpy(digisign, dgi, sizeof(dgi));
-  memcpy(comment, cmt, sizeof(cmt));
+  memcpy(callsign, mcall, 8 * sizeof(*mcall));
+  memcpy(destsign, dst, 8 * sizeof(*dst));
+  memcpy(digisign, dgi, 8 * sizeof(*dgi));
+  memcpy(comment, cmt, 128 * sizeof(*cmt));
   ssid = mssid;
   dssid = dgssid;
 }
