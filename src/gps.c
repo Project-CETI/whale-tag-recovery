@@ -47,6 +47,7 @@ void parseGpsOutput(char *line) {
       acsBuf[2] = minmea_rescale(&frame.speed, 1);
       lastGpsBufSize = gps_buf_len;
       // printf("[PARSED]: %f, %f, %d, %d\n", latlonBuf[0], latlonBuf[1], acsBuf[1], acsBuf[2]);
+      printf("[C/S]: %d, %d, %d, %d, %d, %d\n", &frame.course.value, &frame.course.scale, acsBuf[0], &frame.speed.value, &frame.speed.scale, acsBuf[1]);
     }
     break;
   }
