@@ -2,7 +2,6 @@
 #include "pico/stdlib.h"
 #include "pico/binary_info.h"
 #include "aprs.h"
-#include "vhf.h"
 #include "gps.h"
 #include "tag.h"
 
@@ -15,12 +14,6 @@ char lastGpsUpdate[100] = "$CMD_ERROR";
 char lastDtUpdate[100] = "$CMD_ERROR";
 
 // APRS communication config (change per tag)
-char mycall[8] = "KC1QXQ";
-int myssid = 15;
-char dest[8] = "APLIGA";
-char digi[8] = "WIDE2";
-int digissid = 1;
-char comment[128] = "Ceti b1.0 2-S";
 const uint32_t aprsInterval = 30000; // APRS TX interval
 
 // SWARM communication config (change ONLY when necessary)
@@ -55,7 +48,7 @@ void set_bin_desc() {
   bi_decl(bi_1pin_with_name(RX_GPS, "RX UART to GPS"));
   bi_decl(bi_1pin_with_name(TX_TAG, "TX UART to TAG modem"));
   bi_decl(bi_1pin_with_name(RX_TAG, "RX UART to TAG modem"));
-  pinDescribe();
+  describeConfig();
 }
 
 void setLed(bool state) {gpio_put(LED_PIN, state);}
@@ -67,9 +60,9 @@ void txAprs(bool aprsDebug, int style) {
   prevAprsTx = to_ms_since_boot(get_absolute_time());
   setLed(true);
   if (aprsDebug)
-    sendTestPackets(mycall, myssid, dest, digi, digissid, comment, style);
+    sendTestPackets(style);
   else
-    sendPacket(coords, aCS, mycall, myssid, dest, digi, digissid, comment);
+    sendPacket(coords, aCS);
   setLed(false);
 }
 
@@ -95,7 +88,16 @@ void setup() {
 
   gpsInit(TX_GPS, RX_GPS, BAUD_GPS, uart0, gpsInteractive);
 
-  if (aprsRunning) configureVHF();
+  if (aprsRunning) {
+    // APRS communication config (change per tag)
+    char mycall[8] = "KC1QXQ";
+    int myssid = 15;
+    char dest[8] = "APLIGA";
+    char digi[8] = "WIDE2";
+    int digissid = 1;
+    char mycomment[128] = "Ceti b1.0 2-S";
+    configureAPRS(mycall, myssid, dest, digi, digissid, mycomment);
+  }
 
   initTagComm(TX_TAG, RX_TAG, BAUD_TAG, uart1);
   setLed(false);
@@ -109,9 +111,7 @@ int main() {
   while (true) {
     readFromGps();
     if (((to_ms_since_boot(get_absolute_time()) - prevAprsTx) >= aprsInterval) && aprsRunning) {
-      setVhfState(true);
       txAprs(false, 2);
-      setVhfState(false);
     }
 
     if (((to_ms_since_boot(get_absolute_time()) - prevTagTx) >= tagInterval) && tagConnected) {

@@ -16,10 +16,14 @@ void sendFlag(int flag_len);
 
 // High-level TX functions
 void setPayload(float *latlon, uint16_t *acs);
-void sendHeader(char *mycall, int myssid, char *dest, char *digi, int digissid);
-void sendPacket(float *latlon, uint16_t *acs, char *mycall, int myssid, char *dest, char *digi, int digissid, char *comment);
+void sendHeader(void);
+void sendPacket(float *latlon, uint16_t *acs);
 
 // Debug TX functions
-void printPacket(char *mycall, int myssid, char *dest, char *digi, int digissid, char *comment);
-void sendTestPackets(char *mycall, int myssid, char *dest, char *digi, int digissid, char *comment, int style);
+void printPacket(void);
+void sendTestPackets(int style);
+
+// Configuration functions
+void configureAPRS(char *mcall, int mssid, char *dst, char *dgi, int dgssid, char *cmt);
+void describeConfig(void);
 #endif

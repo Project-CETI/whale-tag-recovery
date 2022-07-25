@@ -22,6 +22,15 @@ char bitStuff = 0;
 unsigned short crc = 0xffff;
 uint8_t currOutput = 0;
 
+bool q145 = false; // are we in 144.3MHz territory or 145.05MHz territory?
+
+char callsign[8]="J73MAB";
+int ssid = 15;
+char destsign[8] = "APLIGA";
+char digisign[8] = "WIDE2";
+int dssid = 1; // digi ssid
+char comment[128] = "Ceti b1.0 2-S"; // Ceti b#.# tag# OR Ceti b#.# #-#
+
 // APRS payload arrays
 char lati[9];
 char lon[10];
@@ -179,39 +188,48 @@ void setPayload(float *latlon, uint16_t *acs) {
   snprintf(cogSpeed, 8, "%03d/%03d", course, sog);
 }
 
-void sendHeader(char *mycall, int myssid, char *dest, char *digi, int digissid) {
+void sendHeader(void) {
   int temp;
   /********* DEST ***********/
 
-  temp = strlen(dest);
-  for (int j = 0; j < temp; j++) sendCharNRZI(dest[j] << 1, true);
+  temp = strlen(destsign);
+  for (int j = 0; j < temp; j++) sendCharNRZI(destsign[j] << 1, true);
   if (temp < 6) {
     for (int j = temp; j < 6; j++) sendCharNRZI(' ' << 1, true);
   }
   sendCharNRZI('0' << 1, true);
 
   /********* SOURCE *********/
-  temp = strlen(mycall);
-  for (int j = 0; j < temp; j++) sendCharNRZI(mycall[j] << 1, true);
+  temp = strlen(callsign);
+  for (int j = 0; j < temp; j++) sendCharNRZI(callsign[j] << 1, true);
   if (temp < 6) {
     for (int j = temp; j < 6; j++) sendCharNRZI(' ' << 1, true);
   }
-  sendCharNRZI((myssid + '0') << 1, true);
+  sendCharNRZI((ssid + '0') << 1, true);
 
 //  /********* DIGI ***********/
-  temp = strlen(digi);
-  for (int j = 0; j < temp; j++) sendCharNRZI(digi[j] << 1, true);
+  temp = strlen(digisign);
+  for (int j = 0; j < temp; j++) sendCharNRZI(digisign[j] << 1, true);
   if (temp < 6) {
     for (int j = temp; j < 6; j++) sendCharNRZI(' ' << 1, true);
   }
-  sendCharNRZI(((digissid + '0') << 1) + 1, true);
+  sendCharNRZI(((dssid + '0') << 1) + 1, true);
 
   /***** CTRL FLD & PID *****/
   sendCharNRZI(_CTRL_ID, true);
   sendCharNRZI(_PID, true);
 }
 
-void sendPacket(float *latlon, uint16_t *acs, char *mycall, int myssid, char *dest, char *digi, int digissid, char *comment) {
+void sendPacket(float *latlon, uint16_t *acs) {
+  setVhfState(true);
+  if (latlon[0] < 17.71468 && !q145) {
+    configureDra818v14505(145.05,145.05,false,false,false);
+    q145 = true;
+  }
+  else if (latlon[0] >= 17.71468 && q145) {
+    configureDra818v14439(144.39,144.39,false,false,false);
+    q145 = false;
+  }
   setPttState(true);
   setPayload(latlon, acs);
 
@@ -223,7 +241,7 @@ void sendPacket(float *latlon, uint16_t *acs, char *mycall, int myssid, char *de
 
   sendFlag(150);
   crc = 0xffff;
-  sendHeader(mycall, myssid, dest, digi, digissid);
+  sendHeader();
   // send payload
   sendCharNRZI(_DT_POS, true);
   sendStrLen(lati, strlen(lati));
@@ -236,28 +254,29 @@ void sendPacket(float *latlon, uint16_t *acs, char *mycall, int myssid, char *de
   sendCrc();
   sendFlag(3);
   setPttState(false);
+  setVhfState(false);
 }
 
 // Debug TX functions
-void printPacket(char *mycall, int myssid, char *dest, char *digi, int digissid, char *comment) {
-  printf("%s0%s%d%s%d%x%x%c%s%c%s%c%s%s\n", dest, mycall, myssid, digi, digissid, _CTRL_ID, _PID, _DT_POS, lati, sym_ovl, lon, sym_tab, cogSpeed, comment);
+void printPacket(void) {
+  printf("%s0%s%d%s%d%x%x%c%s%c%s%c%s%s\n", destsign, callsign, ssid, digisign, dssid, _CTRL_ID, _PID, _DT_POS, lati, sym_ovl, lon, sym_tab, cogSpeed, comment);
 }
-void sendTestPackets(char *mycall, int myssid, char *dest, char *digi, int digissid, char *comment, int style) {
+void sendTestPackets(int style) {
   float latlon[2] = {0,0};
   uint16_t acs[3] = {0,0,0};
   switch(style) {
     case 1:
       // printf("Style 1: My latlon is: %f %f\n",latlon[0],latlon[1]);
-      sendPacket(latlon, acs, mycall, myssid, dest, digi, digissid, comment);
+      sendPacket(latlon, acs);
       break;
     case 2:
       latlon[0] = 42.3648;
       latlon[1] = -71.1247;
       // printf("Style 2: My latlon is: %f %f\n",latlon[0],latlon[1]);
-      sendPacket(latlon, acs, mycall, myssid, dest, digi, digissid, comment);
+      sendPacket(latlon, acs);
       break;
     case 3:
-      sendHeader(mycall, myssid, dest, digi, digissid);
+      sendHeader();
       sendStrLen(">...",strlen(">..."));
       break;
     case 4:
@@ -270,8 +289,46 @@ void sendTestPackets(char *mycall, int myssid, char *dest, char *digi, int digis
       break;
     default:
       // printf("Style D: My latlon is: %f %f\n",latlon[0],latlon[1]);
-      sendPacket(latlon, acs, mycall, myssid, dest, digi, digissid, comment);
+      sendPacket(latlon, acs);
       break;
   }
 }
+
+// Configuration functions
+void configureAPRS(char *mcall, int mssid, char *dst, char *dgi, int dgssid, char *cmt) {
+  configureVHF();
+  q145 = false;
+  memcpy(callsign, mcall, sizeof(mcall));
+  memcpy(destsign, dst, sizeof(dst));
+  memcpy(digisign, dgi, sizeof(dgi));
+  memcpy(comment, cmt, sizeof(cmt));
+  ssid = mssid;
+  dssid = dgssid;
+}
+
+void describeConfig(void) {
+  pinDescribe();
+}
 // APRS HEADERS [END] ---------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
