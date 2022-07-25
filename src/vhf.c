@@ -49,7 +49,13 @@ void initializeDra818v(bool highPower) {
 
   sleep_ms(vhfEnableDelay);
 }
-bool configureDra818v(float txFrequency, float rxFrequency, bool emphasis, bool hpf, bool lpf) {
+
+/*
+At some point this setup needs to be better.
+
+Splitting into two separate functions because I don't want to deal with sprintf
+*/
+bool configureDra818v14505(float txFrequency, float rxFrequency, bool emphasis, bool hpf, bool lpf) {
   // char temp[100];
   PIO pio = pio0;
   uint sm = pio_claim_unused_sm(pio, true);
@@ -68,6 +74,25 @@ bool configureDra818v(float txFrequency, float rxFrequency, bool emphasis, bool 
   return true;
 }
 
+bool configureDra818v14439(float txFrequency, float rxFrequency, bool emphasis, bool hpf, bool lpf) {
+  // char temp[100];
+  PIO pio = pio0;
+  uint sm = pio_claim_unused_sm(pio, true);
+  uint offset = pio_add_program(pio, &uart_tx_program);
+  uart_tx_program_init(pio, sm, offset, vhfTxPin, 9600);
+  uart_tx_program_puts(pio, sm, "AT+DMOCONNECT\n");
+  busy_wait_ms(vhfEnableDelay);
+  uart_tx_program_puts(pio, sm, "AT+DMOSETGROUP=0,144.3900,144.3900,0000,0,0000\n");
+  busy_wait_ms(vhfEnableDelay);
+  // sprintf(temp, "AT+SETFILTER=%d,%d,%d\n",emphasis,hpf,lpf);
+  uart_tx_program_puts(pio, sm, "AT+SETFILTER=0,0,0\n");
+  busy_wait_ms(vhfEnableDelay);
+  pio_remove_program(pio, &uart_tx_program, offset);
+  pio_sm_unclaim(pio, sm);
+  pio_clear_instruction_memory(pio);
+  return true;
+}
+
 void setPttState(bool state) {gpio_put(vhfPttPin, state);}
 void setVhfState(bool state) {gpio_put(vhfSleepPin, state);}
 
@@ -75,7 +100,7 @@ void configureVHF(void) {
     sleep_ms(10000);
     // printf("Configuring DRA818V...\n");
     initializeDra818v(true);
-    configureDra818v(145.05,145.05,false,false,false);
+    configureDra818v14439(144.39,144.39,false,false,false);
     setPttState(false);
     setVhfState(true);
     // printf("DRA818V configured.\n");
