@@ -88,7 +88,7 @@ int main() {
       adc_fifo_drain();
       // Print samples to stdout so you can display them in pyplot, excel, matlab
       for (int i = 0; i < CAPTURE_DEPTH; ++i) {
-	printf("%-3d %-3d/n", capture_buf[i], capture_buf[i]);
+	printf("%-3d %-3d\n", capture_buf[i], capture_buf[i]);
 	// if (i % 10000 == 9) printf("\n");
       }
     }

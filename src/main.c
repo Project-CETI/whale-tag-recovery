@@ -95,7 +95,7 @@ void setup() {
     char dest[8] = "APLIGA";
     char digi[8] = "WIDE2";
     int digissid = 1;
-    char mycomment[128] = "New Sign Testing";
+    char mycomment[128] = "Ceti b1.1 GPS Standalone";
     configureAPRS(mycall, myssid, dest, digi, digissid, mycomment);
   }
 
