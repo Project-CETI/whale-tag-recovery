@@ -21,7 +21,7 @@ uint8_t nmeaCS;
 bool sInteractive = false;
 
 // GPS data hacks
-float latlonBuf[2] = {0,0};
+float latlonBuf[2] = {42.3648,0};
 uint16_t acsBuf[3] = {0,0,0};
 char lastGpsBuffer[MAX_GPS_MSG_LEN] = "$GN 42.3648,-71.1247,0,360,0*38";
 int lastGpsBufSize = 31;
@@ -41,7 +41,7 @@ void parseGpsOutput(char *line) {
       memcpy(lastGpsBuffer, gps_rd_buf, gps_buf_len);
       latlonBuf[0] = minmea_tocoord(&frame.latitude);
       latlonBuf[1] = minmea_tocoord(&frame.longitude);
-      if (isnan(latlonBuf[0])) latlonBuf[0] = 0.0;
+      if (isnan(latlonBuf[0])) latlonBuf[0] = 42.3648;
       if (isnan(latlonBuf[1])) latlonBuf[1] = 0.0;
       acsBuf[1] = minmea_rescale(&frame.course, 3);
       acsBuf[2] = minmea_rescale(&frame.speed, 1);
