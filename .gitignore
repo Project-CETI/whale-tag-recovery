@@ -119,5 +119,5 @@ $RECYCLE.BIN/
 **/jambajuice.txt
 **/pico-*/
 **/picotool*/
-docs/html/
-docs/latex/
+docs/doxygen
+docs/sphinx/
