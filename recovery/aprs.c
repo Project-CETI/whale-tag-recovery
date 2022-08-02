@@ -1,7 +1,8 @@
 /** @file aprs.c
  * @brief Defines APRS functionality for the RP2040 on the Recovery Board v1.0
- *
- * Core APRS functions derived from https://github.com/handiko/Arduino-APRS/blob/master/Arduino-Sketches/Example/APRS_Mixed_Message/APRS_Mixed_Message.ino.
+ * @author Shashank Swaminathan
+ * @author Louis Adamian
+ * @details Core APRS functions derived from https://github.com/handiko/Arduino-APRS/blob/master/Arduino-Sketches/Example/APRS_Mixed_Message/APRS_Mixed_Message.ino.
  */
 #include <stdio.h>
 #include <math.h>
@@ -294,11 +295,11 @@ void sendHeader(void) {
  */
 void sendPacket(float *latlon, uint16_t *acs) {
   if (latlon[0] < 17.71468 && !q145) {
-    configureDra818v14505(145.05,145.05,false,false,false);
+			configureDra818v(145.05,145.05,8,false,false,false);
     q145 = true;
   }
   else if (latlon[0] >= 17.71468 && q145) {
-    configureDra818v14439(144.39,144.39,false,false,false);
+			configureDra818v(144.39,144.39,8,false,false,false);
     q145 = false;
   }
   setVhfState(true);
@@ -389,31 +390,10 @@ void configureAPRS(char *mcall, int mssid, char *dst, char *dgi, int dgssid, cha
   dssid = dgssid;
 }
 
-/** Adds VHF pinout information to the compiled binary.
+/** Adds any relevant information to the compiled binary.
+ * Currently, only adds the VHF module.
  */
 void describeConfig(void) {
   pinDescribe();
 }
 // APRS HEADERS [END] ---------------------------------------------------
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
