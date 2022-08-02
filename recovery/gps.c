@@ -74,7 +74,7 @@ void readFromGps(void) {
       gps_rd_buf[i++] = inChar;
       while (inChar != '\r') {
         inChar = uart_getc(uart);
-	gps_rd_buf[i++] = inChar;
+				gps_rd_buf[i++] = inChar;
       }
       gps_rd_buf[i-1] = '\0';
       gps_buf_len = i-1;
