@@ -379,7 +379,7 @@ void sendTestPackets(int style) {
  * @param cmt Comment to append to end of APRS packet (default: Ceti b1.0 2-S)
  * @see sendHeader
  */
-void configureAPRS(char *mcall, int mssid, char *dst, char *dgi, int dgssid, char *cmt) {
+void initAPRS(char *mcall, int mssid, char *dst, char *dgi, int dgssid, char *cmt) {
   configureVHF();
   q145 = false;
   memcpy(callsign, mcall, 8 * sizeof(*mcall));
@@ -388,6 +388,14 @@ void configureAPRS(char *mcall, int mssid, char *dst, char *dgi, int dgssid, cha
   memcpy(comment, cmt, 128 * sizeof(*cmt));
   ssid = mssid;
   dssid = dgssid;
+}
+
+void configureAPRS_TX(float txFrequency) {
+	configureDra818v(txFrequency,txFrequency,8,false,false,false);
+	if ((txFrequency - 145.05) <= 0.00001)
+		q145 = true;
+	else
+		q145 = false;
 }
 
 /** Adds any relevant information to the compiled binary.

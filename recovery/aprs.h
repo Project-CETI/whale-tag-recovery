@@ -24,6 +24,7 @@ void printPacket(void);
 void sendTestPackets(int style);
 
 // Configuration functions
-void configureAPRS(char *mcall, int mssid, char *dst, char *dgi, int dgssid, char *cmt);
+void initAPRS(char *mcall, int mssid, char *dst, char *dgi, int dgssid, char *cmt);
+void configureAPRS_TX(float txFrequency);
 void describeConfig(void);
 #endif

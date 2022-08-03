@@ -1,11 +1,23 @@
 #include <stdio.h>
 #include "pico/stdlib.h"
+#include "pico/time.h"
 #include "pico/binary_info.h"
 #include "aprs.h"
+#include "vhf.h"
 #include "gps.h"
 #include "tag.h"
 
-const uint LED_PIN = 29;
+#define VHF_TX_LEN 100
+#define LED_PIN 29
+
+void set_bin_desc(void);
+void setLed(bool state);
+void initLed(void);
+void initAll(void);
+bool txAprs(repeating_timer_t *rt);
+void startAPRS(repeating_timer_t *aprsTimer);
+void startTag(repeating_timer_t *tagTimer);
+bool txTag(repeating_timer_t *rt);
 
 // status arrays (updated in-place by functions)
 float coords[2] = {0,0};
@@ -15,8 +27,10 @@ char lastDtUpdate[100] = "$CMD_ERROR";
 
 // APRS communication config (change per tag)
 const uint32_t aprsInterval = 30000; // APRS TX interval
+bool aprsDebug = false;
+int aprsStyle = 2;
 
-// SWARM communication config (change ONLY when necessary)
+// GPS communication config (change ONLY when necessary)
 const uint TX_GPS = 0;
 const uint RX_GPS = 1;
 const uint BAUD_GPS = 9600;
@@ -27,19 +41,13 @@ const uint RX_TAG = 5;
 const uint BAUD_TAG = 115200;
 const uint32_t tagInterval = 10000;
 
-// Which system are running
-bool aprsRunning = false;
-bool tagConnected = false;
+// VHF config
+float vhfTxFreq = 148.056;
+const uint32_t yagiInterval = 600000;
 
 // runtime vars
-uint32_t prevAprsTx = 0;
 bool gpsInteractive = false;
-uint32_t prevTagTx = 0;
-
-void set_bin_desc(void);
-void setLed(bool state);
-void initLed(void);
-void setup(void);
+uint32_t prevYagiTx = 0;
 
 void set_bin_desc() {
   bi_decl(bi_program_description("Recovery process binary for standalone recovery board 2-#"));
@@ -52,52 +60,54 @@ void set_bin_desc() {
 }
 
 void setLed(bool state) {gpio_put(LED_PIN, state);}
-void initLed() {gpio_init(LED_PIN); gpio_set_dir(LED_PIN, GPIO_OUT);}
+void initLed(void) {gpio_init(LED_PIN); gpio_set_dir(LED_PIN, GPIO_OUT);}
 
-void txAprs(bool aprsDebug, int style) {
+bool txAprs(repeating_timer_t *rt) {
   getPos(coords);
   getACS(aCS);
-  prevAprsTx = to_ms_since_boot(get_absolute_time());
   setLed(true);
   if (aprsDebug)
-    sendTestPackets(style);
+    sendTestPackets(aprsStyle);
   else
     sendPacket(coords, aCS);
   setLed(false);
+	return true;
 }
 
-void txTag () {
-  prevTagTx = to_ms_since_boot(get_absolute_time());
+void startAPRS(repeating_timer_t *aprsTimer) {
+	configureAPRS_TX(145.05);
+	add_repeating_timer_ms(-aprsInterval, txAprs, NULL, aprsTimer);
+}
+
+bool txTag (repeating_timer_t *rt) {
   getLastPDtBufs(lastGpsUpdate, lastDtUpdate);
   writeGpsToTag(lastGpsUpdate, lastDtUpdate);
   // detachTag();
   // reqTagState();
 }
 
-void setup() {
+void startTag(repeating_timer_t *tagTimer) {
+	add_repeating_timer_ms(-tagInterval, txTag, NULL, tagTimer);
+}
+
+void initAll() {
   set_bin_desc();
   stdio_init_all();
-
-  aprsRunning = true;
   gpsInteractive = true;
-
-  tagConnected = true;
 
   initLed();
   setLed(true);
 
   gpsInit(TX_GPS, RX_GPS, BAUD_GPS, uart0, gpsInteractive);
 
-  if (aprsRunning) {
-    // APRS communication config (change per tag)
-    char mycall[8] = "J75Y";
-    int myssid = 1;
-    char dest[8] = "APLIGA";
-    char digi[8] = "WIDE2";
-    int digissid = 1;
-    char mycomment[128] = "Ceti b1.1 GPS Standalone";
-    configureAPRS(mycall, myssid, dest, digi, digissid, mycomment);
-  }
+  // APRS communication config (change per tag)
+	char mycall[8] = "J75Y";
+	int myssid = 1;
+	char dest[8] = "APLIGA";
+	char digi[8] = "WIDE2";
+	int digissid = 1;
+	char mycomment[128] = "Ceti b1.1 GPS Standalone";
+	initAPRS(mycall, myssid, dest, digi, digissid, mycomment);
 
   initTagComm(TX_TAG, RX_TAG, BAUD_TAG, uart1);
   setLed(false);
@@ -105,17 +115,34 @@ void setup() {
 
 int main() {
   // Setup
-  setup();
+  initAll();
 
+	repeating_timer_t aprsTimer;
+	startAPRS(&aprsTimer);
+	repeating_timer_t tagTimer;
+	startTag(&tagTimer);
+	repeating_timer_t yagiTimer;
+	printf("Timers created.\n");
   // Loop
   while (true) {
     readFromGps();
-    if (((to_ms_since_boot(get_absolute_time()) - prevAprsTx) >= aprsInterval) && aprsRunning) {
-      txAprs(false, 2);
-    }
-
-    if (((to_ms_since_boot(get_absolute_time()) - prevTagTx) >= tagInterval) && tagConnected) {
-      txTag();
-    }
+		if ((to_ms_since_boot(get_absolute_time()) - prevYagiTx) >= yagiInterval) {
+			printf("Clear other timers.\n");
+			cancel_repeating_timer(&aprsTimer);
+			cancel_repeating_timer(&tagTimer);
+			printf("Set VHF timer.\n");
+			prevYagiTx = to_ms_since_boot(get_absolute_time());
+			prepFishTx(vhfTxFreq);
+			setVhfState(true);
+			add_repeating_timer_ms(-1000, vhf_pulse_callback, NULL, &yagiTimer);
+			sleep_ms(60000);
+			setVhfState(false);
+			cancel_repeating_timer(&yagiTimer);
+			printf("Timer cleared.\n");
+			printf("Restart main operations.");
+			startAPRS(&aprsTimer);
+			startTag(&tagTimer);
+		}
   }
+	return 0;
 }

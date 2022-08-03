@@ -9,11 +9,10 @@ void setOutput(uint8_t state);
 
 void initializeDra818v(bool highPower);
 void configureDra818v(float txFrequency, float rxFrequency, uint8_t volume, bool emphasis, bool hpf, bool lpf);
-/*bool configureDra818v14505(float txFrequency, float rxFrequency, bool emphasis, bool hpf, bool lpf);
-	bool configureDra818v14439(float txFrequency, float rxFrequency, bool emphasis, bool hpf, bool lpf);*/
-
 void setPttState(bool state);
 void setVhfState(bool state);
+void prepFishTx(float txFreq);
+bool vhf_pulse_callback(repeating_timer_t *rt);
 void configureVHF(void);
 // VHF HEADERS [END] ----------------------------------------------------
 #endif
