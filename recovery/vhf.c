@@ -34,8 +34,6 @@ const uint vhfEnableDelay = 1000;
  * To match how the RP2040 SDK sets GPIO pins via pinmasks, this DAC mask needs to be left-shifted to match the pin positions. */
 #define VHF_DACSHIFT 18
 
-/// Length of transmission pulse
-#define VHF_TX_LEN 100
 // VHF VARS [END] -------------------------------------------------------
 
 // VHF HEADERS [START] --------------------------------------------------
@@ -129,27 +127,6 @@ void setPttState(bool state) {gpio_put(VHF_PTT, state);}
 /** Sets the VHF module's sleep state.
  * @param state Boolean value; if true, the module sleeps. */
 void setVhfState(bool state) {gpio_put(VHF_SLEEP, state);}
-
-/** @brief Re-configure the VHF module to tracker transmission frequency
- * @see configureDra818v */
-void prepFishTx(float txFreq) {
-		configureDra818v(txFreq,txFreq,8,false,false,false);
-}
-
-/** @brief Callback for a repeating timer dictating transmissions.
- * Transmits a pulse for length defined in #YAGI_TX_LEN
- * Callback for repeating_timer functions */
-bool vhf_pulse_callback(repeating_timer_t *rt) {
-		// setVhfState(true);
-		setPttState(true);
-		setOutput(0xff);
-		busy_wait_ms(VHF_TX_LEN);
-		setPttState(false);
-		setOutput(0x00);
-		// setVhfState(false);
-		/* printf("Pulsed.\n"); */
-		return true;
-}
 
 /** Completely configures the VHF for initialization.
  * Used for initial setup of the VHF module after power on.

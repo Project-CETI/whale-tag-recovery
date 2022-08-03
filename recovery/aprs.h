@@ -1,6 +1,9 @@
 #ifndef APRS_H
 #define APRS_H
 #include "stdint.h"
+/// Number of values in the sinValues DAC output array
+#define numSinValues 32
+
 // Low-level TX functions
 void setNextSin(void);
 void setNada1200(void);

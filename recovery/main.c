@@ -7,17 +7,19 @@
 #include "gps.h"
 #include "tag.h"
 
-#define VHF_TX_LEN 100
+#define VHF_TX_LEN 800
 #define LED_PIN 29
 
 void set_bin_desc(void);
 void setLed(bool state);
 void initLed(void);
-void initAll(void);
 bool txAprs(repeating_timer_t *rt);
 void startAPRS(repeating_timer_t *aprsTimer);
 void startTag(repeating_timer_t *tagTimer);
 bool txTag(repeating_timer_t *rt);
+void prepFishTx(float txFreq);
+bool vhf_pulse_callback(repeating_timer_t *rt);
+void initAll(void);
 
 // status arrays (updated in-place by functions)
 float coords[2] = {0,0};
@@ -29,6 +31,7 @@ char lastDtUpdate[100] = "$CMD_ERROR";
 const uint32_t aprsInterval = 30000; // APRS TX interval
 bool aprsDebug = false;
 int aprsStyle = 2;
+extern uint8_t* sinValues;
 
 // GPS communication config (change ONLY when necessary)
 const uint TX_GPS = 0;
@@ -90,6 +93,32 @@ void startTag(repeating_timer_t *tagTimer) {
 	add_repeating_timer_ms(-tagInterval, txTag, NULL, tagTimer);
 }
 
+/** @brief Re-configure the VHF module to tracker transmission frequency
+ * @see configureDra818v */
+void prepFishTx(float txFreq) {
+		configureDra818v(txFreq,txFreq,8,false,false,false);
+}
+
+/** @brief Callback for a repeating timer dictating transmissions.
+ * Transmits a pulse for length defined in #YAGI_TX_LEN
+ * Callback for repeating_timer functions */
+bool vhf_pulse_callback(repeating_timer_t *rt) {
+	setPttState(true);
+	uint32_t stepLen = VHF_HZ * 32;
+	printf("Calc: %ld %ld %ld", stepLen, VHF_TX_LEN, 1000);
+	int numSteps = stepLen * VHF_TX_LEN / 1000;
+	stepLen = (int) 1000000/stepLen;
+	for (int i = 0; i < numSteps; i++) {
+		setOutput(sinValues[i % numSinValues]);
+		busy_wait_us_32(stepLen);
+	}
+	setOutput(0x00);
+	setPttState(false);
+  // setVhfState(false);
+	printf("Pulsed at %d Hz ==> %d times, %d each.\n", VHF_HZ, numSteps, stepLen);
+	return true;
+}
+
 void initAll() {
   set_bin_desc();
   stdio_init_all();
@@ -118,31 +147,33 @@ int main() {
   initAll();
 
 	repeating_timer_t aprsTimer;
-	startAPRS(&aprsTimer);
+	// startAPRS(&aprsTimer);
 	repeating_timer_t tagTimer;
-	startTag(&tagTimer);
+	// startTag(&tagTimer);
 	repeating_timer_t yagiTimer;
 	printf("Timers created.\n");
   // Loop
   while (true) {
     readFromGps();
-		if ((to_ms_since_boot(get_absolute_time()) - prevYagiTx) >= yagiInterval) {
+		// if ((to_ms_since_boot(get_absolute_time()) - prevYagiTx) >= yagiInterval) {
 			printf("Clear other timers.\n");
-			cancel_repeating_timer(&aprsTimer);
-			cancel_repeating_timer(&tagTimer);
+			// cancel_repeating_timer(&aprsTimer);
+			// cancel_repeating_timer(&tagTimer);
 			printf("Set VHF timer.\n");
 			prevYagiTx = to_ms_since_boot(get_absolute_time());
 			prepFishTx(vhfTxFreq);
 			setVhfState(true);
+			setPttState(true);
 			add_repeating_timer_ms(-1000, vhf_pulse_callback, NULL, &yagiTimer);
 			sleep_ms(60000);
+			setPttState(false);
 			setVhfState(false);
 			cancel_repeating_timer(&yagiTimer);
 			printf("Timer cleared.\n");
 			printf("Restart main operations.");
-			startAPRS(&aprsTimer);
-			startTag(&tagTimer);
-		}
+			// startAPRS(&aprsTimer);
+			// startTag(&tagTimer);
+			// }
   }
 	return 0;
 }

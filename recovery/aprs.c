@@ -14,8 +14,6 @@
 
 /// Re-define default alarm pool to make every sleep a busy wait
 #define PICO_TIME_DEFAULT_ALARM_POOL_DISABLED   0
-/// Number of values in the sinValues DAC output array
-#define numSinValues 32
 // APRS VARS [START] ----------------------------------------------------
 // APRS protocol config (don't change)
 const uint16_t _FLAG = 0x7e; ///< Flag for APRS transmissions. Must be 0x7e.
