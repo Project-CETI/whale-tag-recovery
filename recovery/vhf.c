@@ -33,6 +33,9 @@ const uint vhfEnableDelay = 1000;
  * Using the DAC requires passing an 8-bit pinmask 0b00000000 matching pins 18-25, LSB=18.
  * To match how the RP2040 SDK sets GPIO pins via pinmasks, this DAC mask needs to be left-shifted to match the pin positions. */
 #define VHF_DACSHIFT 18
+
+/// Length of transmission pulse
+#define VHF_TX_LEN 100
 // VHF VARS [END] -------------------------------------------------------
 
 // VHF HEADERS [START] --------------------------------------------------
@@ -120,50 +123,6 @@ void configureDra818v(float txFrequency, float rxFrequency, uint8_t volume, bool
 	memset(temp, 0, sizeof(temp));
 }
 
-/*
-At some point this setup needs to be better.
-
-Splitting into two separate functions because I don't want to deal with sprintf
-
-bool configureDra818v14505(float txFrequency, float rxFrequency, bool emphasis, bool hpf, bool lpf) {
-  // char temp[100];
-  PIO pio = pio0;
-  uint sm = pio_claim_unused_sm(pio, true);
-  uint offset = pio_add_program(pio, &uart_tx_program);
-  uart_tx_program_init(pio, sm, offset, VHF_TX, 9600);
-  uart_tx_program_puts(pio, sm, "AT+DMOCONNECT\r\n");
-  busy_wait_ms(vhfEnableDelay);
-  uart_tx_program_puts(pio, sm, "AT+DMOSETGROUP=0,145.0500,145.0500,0000,0,0000\r\n");
-  busy_wait_ms(vhfEnableDelay);
-  // sprintf(temp, "AT+SETFILTER=%d,%d,%d\n",emphasis,hpf,lpf);
-  uart_tx_program_puts(pio, sm, "AT+SETFILTER=0,0,0\r\n");
-  busy_wait_ms(vhfEnableDelay);
-  pio_remove_program(pio, &uart_tx_program, offset);
-  pio_sm_unclaim(pio, sm);
-  pio_clear_instruction_memory(pio);
-  return true;
-}
-
-bool configureDra818v14439(float txFrequency, float rxFrequency, bool emphasis, bool hpf, bool lpf) {
-  // char temp[100];
-  PIO pio = pio0;
-  uint sm = pio_claim_unused_sm(pio, true);
-  uint offset = pio_add_program(pio, &uart_tx_program);
-  uart_tx_program_init(pio, sm, offset, VHF_TX, 9600);
-  uart_tx_program_puts(pio, sm, "AT+DMOCONNECT\r\n");
-  busy_wait_ms(vhfEnableDelay);
-  uart_tx_program_puts(pio, sm, "AT+DMOSETGROUP=0,144.3900,144.3900,0000,0,0000\r\n");
-  busy_wait_ms(vhfEnableDelay);
-  // sprintf(temp, "AT+SETFILTER=%d,%d,%d\n",emphasis,hpf,lpf);
-  uart_tx_program_puts(pio, sm, "AT+SETFILTER=0,0,0\r\n");
-  busy_wait_ms(vhfEnableDelay);
-  pio_remove_program(pio, &uart_tx_program, offset);
-  pio_sm_unclaim(pio, sm);
-  pio_clear_instruction_memory(pio);
-  return true;
-}
-*/
-
 /** Sets the VHF module's PTT state.
  * @param state Boolean value; if true, PTT is enabled. */
 void setPttState(bool state) {gpio_put(VHF_PTT, state);}
@@ -171,11 +130,32 @@ void setPttState(bool state) {gpio_put(VHF_PTT, state);}
  * @param state Boolean value; if true, the module sleeps. */
 void setVhfState(bool state) {gpio_put(VHF_SLEEP, state);}
 
+/** @brief Re-configure the VHF module to tracker transmission frequency
+ * @see configureDra818v */
+void prepFishTx(float txFreq) {
+		configureDra818v(txFreq,txFreq,8,false,false,false);
+}
+
+/** @brief Callback for a repeating timer dictating transmissions.
+ * Transmits a pulse for length defined in #YAGI_TX_LEN
+ * Callback for repeating_timer functions */
+bool vhf_pulse_callback(repeating_timer_t *rt) {
+		// setVhfState(true);
+		setPttState(true);
+		setOutput(0xff);
+		busy_wait_ms(VHF_TX_LEN);
+		setPttState(false);
+		setOutput(0x00);
+		// setVhfState(false);
+		/* printf("Pulsed.\n"); */
+		return true;
+}
+
 /** Completely configures the VHF for initialization.
  * Used for initial setup of the VHF module after power on.
  * Runs the following functions in order: initializeDra818v, configureDra818v, initializeOutput. */
 void configureVHF(void) {
-    sleep_ms(10000);
+    sleep_ms(600);
     // printf("Configuring DRA818V...\n");
     initializeDra818v(true);
     configureDra818v(144.39,144.39,8,false,false,false);
