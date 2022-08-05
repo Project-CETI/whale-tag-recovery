@@ -47,7 +47,6 @@ void reqTagState(void) {
   tMsgSent = to_ms_since_boot(get_absolute_time());
   uart_putc(uartTag, 'T');
   uart_putc(uartTag, '\n');
-  
   while (to_ms_since_boot(get_absolute_time()) - tMsgSent < ackWaitT_ms) {
     if (uart_is_readable_within_us(uartTag, ackWaitT_us)) {
       uart_read_blocking(uartTag, tag_rd_buf, 5);

@@ -48,10 +48,8 @@ const uint32_t tagInterval = 10000;
 float vhfTxFreq = 148.056;
 const uint32_t yagiInterval = 600000;
 
-// runtime vars
-bool gpsInteractive = false;
-uint32_t prevYagiTx = 0;
-
+bool dataCheck = false;
+bool posCheck = false;
 void set_bin_desc() {
   bi_decl(bi_program_description("Recovery process binary for standalone recovery board 2-#"));
   bi_decl(bi_1pin_with_name(LED_PIN, "On-board LED"));
@@ -66,15 +64,26 @@ void setLed(bool state) {gpio_put(LED_PIN, state);}
 void initLed(void) {gpio_init(LED_PIN); gpio_set_dir(LED_PIN, GPIO_OUT);}
 
 bool txAprs(repeating_timer_t *rt) {
-  getPos(coords);
-  getACS(aCS);
-  setLed(true);
-  if (aprsDebug)
-    sendTestPackets(aprsStyle);
-  else
-    sendPacket(coords, aCS);
-  setLed(false);
-	return true;
+	drainGpsFifo();
+	sleep_ms(100);
+	int i = 0;
+CHECK_POS: if (posCheck != true) {
+		getPos(coords);
+		getACS(aCS);
+		setLed(true);
+		if (aprsDebug)
+			sendTestPackets(aprsStyle);
+		else
+			sendPacket(coords, aCS);
+		setLed(false);
+		return true;
+	}
+	else {
+		i++;
+		sleep_ms(1000);
+		if (i < 1) goto CHECK_POS;
+	}
+	return false;
 }
 
 void startAPRS(repeating_timer_t *aprsTimer) {
@@ -122,12 +131,11 @@ bool vhf_pulse_callback(repeating_timer_t *rt) {
 void initAll() {
   set_bin_desc();
   stdio_init_all();
-  gpsInteractive = true;
 
   initLed();
   setLed(true);
 
-  gpsInit(TX_GPS, RX_GPS, BAUD_GPS, uart0, gpsInteractive);
+  gpsInit(TX_GPS, RX_GPS, BAUD_GPS, uart0, &dataCheck, &posCheck);
 
   // APRS communication config (change per tag)
 	char mycall[8] = "J75Y";
@@ -147,33 +155,32 @@ int main() {
   initAll();
 
 	repeating_timer_t aprsTimer;
-	// startAPRS(&aprsTimer);
 	repeating_timer_t tagTimer;
-	// startTag(&tagTimer);
 	repeating_timer_t yagiTimer;
-	printf("Timers created.\n");
+	prepFishTx(vhfTxFreq);
+	setVhfState(true);
+	add_repeating_timer_ms(-1000, vhf_pulse_callback, NULL, &yagiTimer);
+	bool yagiIsOn = true;
   // Loop
   while (true) {
     readFromGps();
-		// if ((to_ms_since_boot(get_absolute_time()) - prevYagiTx) >= yagiInterval) {
-			printf("Clear other timers.\n");
-			// cancel_repeating_timer(&aprsTimer);
-			// cancel_repeating_timer(&tagTimer);
-			printf("Set VHF timer.\n");
-			prevYagiTx = to_ms_since_boot(get_absolute_time());
-			prepFishTx(vhfTxFreq);
-			setVhfState(true);
-			setPttState(true);
-			add_repeating_timer_ms(-1000, vhf_pulse_callback, NULL, &yagiTimer);
-			sleep_ms(60000);
-			setPttState(false);
-			setVhfState(false);
+		if (dataCheck && yagiIsOn) {
 			cancel_repeating_timer(&yagiTimer);
-			printf("Timer cleared.\n");
-			printf("Restart main operations.");
-			// startAPRS(&aprsTimer);
-			// startTag(&tagTimer);
-			// }
+			setVhfState(false);
+			startAPRS(&aprsTimer);
+			startTag(&tagTimer);
+		}
+		else if (dataCheck) sleep_ms(1000);
+		else if (!dataCheck && !yagiIsOn) {
+			setVhfState(true);
+			cancel_repeating_timer(&aprsTimer);
+			// DO NOT CANCEL TAG TIMER, WE WILL REPORT THROUGH DATA LOSS
+			add_repeating_timer_ms(-1000, vhf_pulse_callback, NULL, &yagiTimer);
+			yagiIsOn = true;
+		}
+		else {
+			sleep_ms(1000);
+		}
   }
 	return 0;
 }

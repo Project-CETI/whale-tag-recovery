@@ -19,6 +19,7 @@ int gps_buf_len = 0;
 char endNmeaString = '*';
 uint8_t nmeaCS;
 bool sInteractive = false;
+bool datCheck, posiCheck;
 
 // GPS data hacks
 float latlonBuf[2] = {42.3648,0};
@@ -48,6 +49,7 @@ void parseGpsOutput(char *line) {
       lastGpsBufSize = gps_buf_len;
       // printf("[PARSED]: %f, %f, %d, %d\n", latlonBuf[0], latlonBuf[1], acsBuf[1], acsBuf[2]);
       printf("[C/S]: %d, %d, %d, %d, %d, %d\n", &frame.course.value, &frame.course.scale, acsBuf[0], &frame.speed.value, &frame.speed.scale, acsBuf[1]);
+			posiCheck = true;
     }
     break;
   }
@@ -70,6 +72,7 @@ void readFromGps(void) {
   if (uart_is_readable(uart)) {
     inChar = uart_getc(uart);
     if (inChar == '$') {
+			datCheck = true;
       int i = 0;
       gps_rd_buf[i++] = inChar;
       while (inChar != '\r') {
@@ -84,6 +87,12 @@ void readFromGps(void) {
   }
 }
 
+void drainGpsFifo(void) {
+	if (uart_is_readable(uart)) uart_read_blocking(uart, gps_rd_buf, uart_is_readable(uart));
+	datCheck = false;
+	posiCheck = false;
+}
+
 void echoGpsOutput(void) {
   for (int i = 0; i < gps_buf_len; i++) {
     if (gps_rd_buf[i]=='\r') puts_raw("\n[NEW]");
@@ -93,10 +102,11 @@ void echoGpsOutput(void) {
 }
 
 // Init NEO-M8N functions
-void gpsInit(int txPin, int rxPin, int baudrate, uart_inst_t *uartNum, bool interact) {
+void gpsInit(int txPin, int rxPin, int baudrate, uart_inst_t *uartNum, bool *dCheck, bool *pCheck) {
   // store vars
   uart = uartNum;
-  sInteractive = interact;
+	datCheck = dCheck;
+	posiCheck = pCheck;
   // init uart
   uart_init(uart, baudrate);
   gpio_set_function(txPin, GPIO_FUNC_UART);

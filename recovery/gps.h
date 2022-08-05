@@ -6,9 +6,10 @@
 void parseGpsOutput(char *line);
 void readFromGps(void);
 void echoGpsOutput(void);
+void drainGpsFifo(void);
 
 // Init NEO-M8N functions
-void gpsInit(int txPin, int rxPin, int baudrate, uart_inst_t *uartNum, bool interact);
+void gpsInit(int txPin, int rxPin, int baudrate, uart_inst_t *uartNum,  bool *dCheck, bool *pCheck);
 
 // Data retrieval functions
 void getPos(float *dstPosBuf);
