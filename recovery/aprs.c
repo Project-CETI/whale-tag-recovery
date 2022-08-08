@@ -12,43 +12,40 @@
 #include "aprs.h"
 #include "vhf.h"
 
-/// Re-define default alarm pool to make every sleep a busy wait
+/// Re-define as 1 to make every sleep a busy wait
 #define PICO_TIME_DEFAULT_ALARM_POOL_DISABLED   0
 // APRS VARS [START] ----------------------------------------------------
-// APRS protocol config (don't change)
-const uint16_t _FLAG = 0x7e; ///< Flag for APRS transmissions. Must be 0x7e.
-const uint16_t _CTRL_ID = 0x03; ///< CTRL ID for APRS transmission. Must be 0x03.
-const uint16_t _PID = 0xf0; ///< PID for APRS transmission. Must be 0xf0.
-const char _DT_POS = '!'; ///< APRS character, defines transmissions as real-time.
-bool nada = 0;
-const char sym_ovl = '\\'; ///< Symbol Table ID. \ for the Alternative symbols.
-const char sym_tab = '-'; ///< Symbol Code.
-char bitStuff = 0; ///< Tracks the bit position in byte being transmitted.
-unsigned short crc = 0xffff; ///< CRC-16 CCITT value. Initialize at 0xffff.
-uint8_t currOutput = 0; ///< Tracks location in FSK wave output. Range 0-31.
+
+/// APRS protocol config (don't change)
+struct aprs_pc_s {
+	const uint16_t _FLAG; ///< Flag for APRS transmissions. Must be 0x7e.
+	const uint16_t _CTRL_ID; ///< CTRL ID for APRS transmission. Must be 0x03.
+	const uint16_t _PID; ///< PID for APRS transmission. Must be 0xf0.
+	const char _DT_POS; ///< APRS character, defines transmissions as real-time.
+	const char sym_ovl; ///< Symbol Table ID. \ for the Alternative symbols.
+	const char sym_tab; ///< Symbol Code.
+	bool nada;
+	char bitStuff; ///< Tracks the bit position in byte being transmitted.
+	uint16_t crc; ///< CRC-16 CCITT value. Initialize at 0xffff.
+	uint8_t currOutput; ///< Tracks location in FSK wave output. Range 0-31.
+} aprs_pc = {0x7e, 0x03, 0xf0, '!', '\\', '-', 0, 0, 0xffff, 0};
+
+/// APRS signal TX config
+struct aprs_sig_s {
+	const uint64_t bitPeriod; ///< Total length of signal period per bit.
+	const uint32_t delay1200; ///< Delay for 1200Hz signal.
+	const uint32_t delay2200; ///< Delay for 2200Hz signal.
+	uint64_t endTimeAPRS; ///< us counter on how long to hold steps in DAC output.
+} aprs_sig = {832, 23, 15, 0};
+
+/// APRS payload arrays
+struct aprs_pyld_s {
+	char lati[9]; ///< Character array to hold the latitude coordinate.
+	char lon[10]; ///< Character array to hold the longitude coordinate.
+	char cogSpeed[8]; ///< Character array to hold the course/speed information.
+} aprs_pyld;
 
 bool q145 = false; ///< Boolean for selecting 144.39MHz or 145.05MHz transmission.
-
-char callsign[8]="J73MAB"; ///< Personal APRS callsign.
-int ssid = 15; ///< Personal APRS SSID. Range 0-15.
-char destsign[8] = "APLIGA"; ///< Destination APRS callsign.
-char digisign[8] = "WIDE2"; ///< Digipeater callsign. Use WIDE1 or WIDE2.
-int dssid = 1; ///< Digipeater SSID. Use 1 if digisign is WIDE2.
-/** ASCII comment to append to APRS transmission.
- * Ceti b#.# tag# OR Ceti b#.# #-#
- */
-char comment[128] = "Ceti b1.0 2-S";
-
-// APRS payload arrays
-char lati[9]; ///< Character array to hold the latitude coordinate.
-char lon[10]; ///< Character array to hold the longitude coordinate.
-char cogSpeed[8]; ///< Character array to hold the course/speed information.
-
-// APRS signal TX config
-uint64_t endTimeAPRS = 0; ///< us counter on how long to hold steps in DAC output.
-const uint64_t bitPeriod = 832; ///< Total length of signal period per bit.
-const uint64_t delay1200 = 23; ///< Delay for 1200Hz signal.
-const uint64_t delay2200 = 15; ///< Delay for 2200Hz signal.
 /** Array of sin values for the DAC output.
  * Corresponds to one whole 8-bit sine output.
  */
@@ -61,9 +58,9 @@ extern uint8_t* sinValues;
  * Loops through the DAC output array using currOutput.
  */
 void setNextSin(void) {
-  currOutput++;
-  if (currOutput == NUM_SINS) currOutput = 0;
-  setOutput(sinValues[currOutput]);
+  aprs_pc.currOutput++;
+  if (aprs_pc.currOutput == NUM_SINS) aprs_pc.currOutput = 0;
+  setOutput(sinValues[aprs_pc.currOutput]);
 }
 
 /** Sets a 1200Hz output wave via the DAC.
@@ -71,10 +68,10 @@ void setNextSin(void) {
  * @see setNextSin
  */
 void setNada1200(void) {
-  endTimeAPRS = to_us_since_boot(get_absolute_time()) + bitPeriod;
-  while (to_us_since_boot(get_absolute_time()) < endTimeAPRS) {
+  aprs_sig.endTimeAPRS = to_us_since_boot(get_absolute_time()) + aprs_sig.bitPeriod;
+  while (to_us_since_boot(get_absolute_time()) < aprs_sig.endTimeAPRS) {
     setNextSin();
-    busy_wait_us(delay1200);
+    busy_wait_us_32(aprs_sig.delay1200);
   }
 }
 
@@ -82,10 +79,10 @@ void setNada1200(void) {
  * @see setNextSin
  */
 void setNada2400(void) {
-  endTimeAPRS = to_us_since_boot(get_absolute_time()) + bitPeriod;
-  while (to_us_since_boot(get_absolute_time()) < endTimeAPRS) {
+  aprs_sig.endTimeAPRS = to_us_since_boot(get_absolute_time()) + aprs_sig.bitPeriod;
+  while (to_us_since_boot(get_absolute_time()) < aprs_sig.endTimeAPRS) {
     setNextSin();
-    busy_wait_us(delay2200);
+    busy_wait_us(aprs_sig.delay2200);
   }
 }
 
@@ -112,10 +109,10 @@ void set_nada(bool nada) {
 void calc_crc(bool inBit) {
   unsigned short xorIn;
 
-  xorIn = crc ^ inBit;
-  crc >>= 1;
+  xorIn = aprs_pc.crc ^ inBit;
+  aprs_pc.crc >>= 1;
 
-  if (xorIn & 0x01) crc ^= 0x8408;
+  if (xorIn & 0x01) aprs_pc.crc ^= 0x8408;
 }
 
 /** Sends the calculated CRC value via FSK transmission.
@@ -123,8 +120,8 @@ void calc_crc(bool inBit) {
  * @see calc_crc
  */
 void sendCrc(void) {
-  uint8_t crcLo = crc ^ 0xff;
-  uint8_t crcHi = (crc >> 8) ^ 0xff;
+  uint8_t crcLo = aprs_pc.crc ^ 0xff;
+  uint8_t crcHi = (aprs_pc.crc >> 8) ^ 0xff;
 
   sendCharNRZI(crcLo, true);
   sendCharNRZI(crcHi, true);
@@ -150,20 +147,20 @@ void sendCharNRZI(unsigned char in_byte, bool enBitStuff) {
     calc_crc(bits);
 
     if (bits) {
-      set_nada(nada);
-      bitStuff++;
+      set_nada(aprs_pc.nada);
+      aprs_pc.bitStuff++;
 
-      if ((enBitStuff) && (bitStuff == 5)) {
-        nada ^= 1;
-        set_nada(nada);
+      if ((enBitStuff) && (aprs_pc.bitStuff == 5)) {
+        aprs_pc.nada ^= 1;
+        set_nada(aprs_pc.nada);
 
-        bitStuff = 0;
+        aprs_pc.bitStuff = 0;
       }
     } else {
-      nada ^= 1;
-      set_nada(nada);
+      aprs_pc.nada ^= 1;
+      set_nada(aprs_pc.nada);
 
-      bitStuff = 0;
+      aprs_pc.bitStuff = 0;
     }
     in_byte >>= 1;
   }
@@ -185,7 +182,7 @@ void sendStrLen(const char *in_string, int len) {
  * @param flag_len Amount of times to send the flag character.
  */
 void sendFlag(int flag_len) {
-  for (int j = 0; j < flag_len; j++) sendCharNRZI(_FLAG, false);
+  for (int j = 0; j < flag_len; j++) sendCharNRZI(aprs_pc._FLAG, false);
 }
 
 // High-level TX functions
@@ -210,9 +207,9 @@ void setPayload(float *latlon, uint16_t *acs) {
   uint8_t latMinDec = round((latMin - latMinInt) * 100);
 
   if (south) {
-    snprintf(lati, 9, "%02d%02d.%02dS", latDeg, latMinInt, latMinDec);
+    snprintf(aprs_pyld.lati, 9, "%02d%02d.%02dS", latDeg, latMinInt, latMinDec);
   } else {
-    snprintf(lati, 9, "%02d%02d.%02dN", latDeg, latMinInt, latMinDec);
+    snprintf(aprs_pyld.lati, 9, "%02d%02d.%02dN", latDeg, latMinInt, latMinDec);
   }
   float lonFloat = latlon[1];
   bool west = false;
@@ -226,9 +223,9 @@ void setPayload(float *latlon, uint16_t *acs) {
   uint8_t lonMinInt = (int)lonMin;
   uint8_t lonMinDec = round((lonMin - lonMinInt) * 100);
   if (west) {
-    snprintf(lon, 10, "%03d%02d.%02dW", lonDeg, lonMinInt, lonMinDec);
+    snprintf(aprs_pyld.lon, 10, "%03d%02d.%02dW", lonDeg, lonMinInt, lonMinDec);
   } else {
-    snprintf(lon, 10, "%03d%02d.%02dE", lonDeg, lonMinInt, lonMinDec);
+    snprintf(aprs_pyld.lon, 10, "%03d%02d.%02dE", lonDeg, lonMinInt, lonMinDec);
   }
 
   double speed = acs[2] / 1.852;  // convert speed from km/h to knots
@@ -238,43 +235,43 @@ void setPayload(float *latlon, uint16_t *acs) {
     course = 360;
   }
   int sog = (int) acs[2];
-  snprintf(cogSpeed, 8, "%03d/%03d", course, sog);
+  snprintf(aprs_pyld.cogSpeed, 8, "%03d/%03d", course, sog);
 }
 
 /** Transmits the headers as defined in the AX.25 packet protocol.
  * Uses the callsigns and ssids defined as per APRS protocol.
  * @see sendPacket
  */
-void sendHeader(void) {
+void sendHeader(const aprs_config_s * aprs_cfg) {
   int temp;
   /********* DEST ***********/
 
-  temp = strlen(destsign);
-  for (int j = 0; j < temp; j++) sendCharNRZI(destsign[j] << 1, true);
+  temp = strlen(aprs_cfg->dest);
+  for (int j = 0; j < temp; j++) sendCharNRZI(aprs_cfg->dest[j] << 1, true);
   if (temp < 6) {
     for (int j = temp; j < 6; j++) sendCharNRZI(' ' << 1, true);
   }
   sendCharNRZI('0' << 1, true);
 
   /********* SOURCE *********/
-  temp = strlen(callsign);
-  for (int j = 0; j < temp; j++) sendCharNRZI(callsign[j] << 1, true);
+  temp = strlen(aprs_cfg->callsign);
+  for (int j = 0; j < temp; j++) sendCharNRZI(aprs_cfg->callsign[j] << 1, true);
   if (temp < 6) {
     for (int j = temp; j < 6; j++) sendCharNRZI(' ' << 1, true);
   }
-  sendCharNRZI((ssid + '0') << 1, true);
+  sendCharNRZI((aprs_cfg->ssid + '0') << 1, true);
 
 //  /********* DIGI ***********/
-  temp = strlen(digisign);
-  for (int j = 0; j < temp; j++) sendCharNRZI(digisign[j] << 1, true);
+  temp = strlen(aprs_cfg->digi);
+  for (int j = 0; j < temp; j++) sendCharNRZI(aprs_cfg->digi[j] << 1, true);
   if (temp < 6) {
     for (int j = temp; j < 6; j++) sendCharNRZI(' ' << 1, true);
   }
-  sendCharNRZI(((dssid + '0') << 1) + 1, true);
+  sendCharNRZI(((aprs_cfg->dssid + '0') << 1) + 1, true);
 
   /***** CTRL FLD & PID *****/
-  sendCharNRZI(_CTRL_ID, true);
-  sendCharNRZI(_PID, true);
+  sendCharNRZI(aprs_pc._CTRL_ID, true);
+  sendCharNRZI(aprs_pc._PID, true);
 }
 
 /** Sends the APRS packet via FSK transmission through the VHF module.
@@ -287,7 +284,7 @@ void sendHeader(void) {
  * @param latlon Two-value float array of lat-lon coordinates, from main loop.
  * @param acs Three-value 2-byte array of altitude, course, and speed, from main loop.
  */
-void sendPacket(float *latlon, uint16_t *acs) {
+void sendPacket(const aprs_config_s * aprs_cfg, float *latlon, uint16_t *acs) {
   if (latlon[0] < 17.71468 && !q145) {
 			configureDra818v(145.05,145.05,8,false,false,false);
     q145 = true;
@@ -307,16 +304,16 @@ void sendPacket(float *latlon, uint16_t *acs) {
   //sendCharNRZI(0x99, true);
 
   sendFlag(150);
-  crc = 0xffff;
-  sendHeader();
+  aprs_pc.crc = 0xffff;
+  sendHeader(aprs_cfg);
   // send payload
-  sendCharNRZI(_DT_POS, true);
-  sendStrLen(lati, strlen(lati));
-  sendCharNRZI(sym_ovl, true);
-  sendStrLen(lon, strlen(lon));
-  sendCharNRZI(sym_tab, true);
-  sendStrLen(cogSpeed, strlen(cogSpeed));
-  sendStrLen(comment, strlen(comment));
+  sendCharNRZI(aprs_pc._DT_POS, true);
+  sendStrLen(aprs_pyld.lati, strlen(aprs_pyld.lati));
+  sendCharNRZI(aprs_pc.sym_ovl, true);
+  sendStrLen(aprs_pyld.lon, strlen(aprs_pyld.lon));
+  sendCharNRZI(aprs_pc.sym_tab, true);
+  sendStrLen(aprs_pyld.cogSpeed, strlen(aprs_pyld.cogSpeed));
+  sendStrLen(aprs_cfg->comment, strlen(aprs_cfg->comment));
 
   sendCrc();
   sendFlag(3);
@@ -325,38 +322,38 @@ void sendPacket(float *latlon, uint16_t *acs) {
 }
 
 // Debug TX functions
-void printPacket(void) {
-  printf("%s0%s%d%s%d%x%x%c%s%c%s%c%s%s\n", destsign, callsign, ssid, digisign, dssid, _CTRL_ID, _PID, _DT_POS, lati, sym_ovl, lon, sym_tab, cogSpeed, comment);
+void printPacket(const aprs_config_s * aprs_cfg) {
+  printf("%s0%s%d%s%d%x%x%c%s%c%s%c%s%s\n", aprs_cfg->dest, aprs_cfg->callsign, aprs_cfg->ssid, aprs_cfg->digi, aprs_cfg->dssid, aprs_pc._CTRL_ID, aprs_pc._PID, aprs_pc._DT_POS, aprs_pyld.lati, aprs_pc.sym_ovl, aprs_pyld.lon, aprs_pc.sym_tab, aprs_pyld.cogSpeed, aprs_cfg->comment);
 }
-void sendTestPackets(int style) {
+void sendTestPackets(const aprs_config_s * aprs_cfg) {
   float latlon[2] = {0,0};
   uint16_t acs[3] = {0,0,0};
-  switch(style) {
+  switch(aprs_cfg->style) {
     case 1:
       // printf("Style 1: My latlon is: %f %f\n",latlon[0],latlon[1]);
-      sendPacket(latlon, acs);
+      sendPacket(aprs_cfg, latlon, acs);
       break;
     case 2:
       latlon[0] = 42.3648;
       latlon[1] = -71.1247;
       // printf("Style 2: My latlon is: %f %f\n",latlon[0],latlon[1]);
-      sendPacket(latlon, acs);
+      sendPacket(aprs_cfg, latlon, acs);
       break;
     case 3:
-      sendHeader();
+      sendHeader(aprs_cfg);
       sendStrLen(">...",strlen(">..."));
       break;
     case 4:
-      crc = 0xffff;
+      aprs_pc.crc = 0xffff;
       sendStrLen("123456789",9);
       sendCrc();
-      crc = 0xffff;
+      aprs_pc.crc = 0xffff;
       sendStrLen("A",1);
       sendCrc();
       break;
     default:
       // printf("Style D: My latlon is: %f %f\n",latlon[0],latlon[1]);
-      sendPacket(latlon, acs);
+      sendPacket(aprs_cfg, latlon, acs);
       break;
   }
 }
@@ -373,15 +370,9 @@ void sendTestPackets(int style) {
  * @param cmt Comment to append to end of APRS packet (default: Ceti b1.0 2-S)
  * @see sendHeader
  */
-void initAPRS(char *mcall, int mssid, char *dst, char *dgi, int dgssid, char *cmt) {
+void initAPRS(void) {
   configureVHF();
   q145 = false;
-  memcpy(callsign, mcall, 8 * sizeof(*mcall));
-  memcpy(destsign, dst, 8 * sizeof(*dst));
-  memcpy(digisign, dgi, 8 * sizeof(*dgi));
-  memcpy(comment, cmt, 128 * sizeof(*cmt));
-  ssid = mssid;
-  dssid = dgssid;
 }
 
 void configureAPRS_TX(float txFrequency) {
