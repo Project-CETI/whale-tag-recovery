@@ -52,11 +52,7 @@ const uint64_t delay2200 = 15; ///< Delay for 2200Hz signal.
 /** Array of sin values for the DAC output.
  * Corresponds to one whole 8-bit sine output.
  */
-const uint8_t sinValues[numSinValues] = {
-  152, 176, 198, 217, 233, 245, 252, 255, 252, 245, 233,
-  217, 198, 176, 152, 127, 103, 79,  57,  38,  22,  10,
-  3,   1,   3,   10,  22,  38,  57,  79,  103, 128
-};
+extern uint8_t* sinValues;
 // APRS VARS [END] ------------------------------------------------------
 
 
@@ -66,7 +62,7 @@ const uint8_t sinValues[numSinValues] = {
  */
 void setNextSin(void) {
   currOutput++;
-  if (currOutput == numSinValues) currOutput = 0;
+  if (currOutput == NUM_SINS) currOutput = 0;
   setOutput(sinValues[currOutput]);
 }
 
