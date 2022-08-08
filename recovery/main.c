@@ -29,7 +29,8 @@ void initAll(const gps_config_s * gps_cfg, const tag_config_s * tag_cfg);
  * callsign, ssid, dest, digi, digissid, comment
  */
 const aprs_config_s aprs_config = {
-	"J75Y", 1,"APLIGA", "WIDE2", 1, "Ceti b1.1 GPS Standalone",
+	"J75Y", 1,
+	"APLIGA", "WIDE2", 1, "Ceti b1.1 GPS Standalone",
 	30000, false, 2
 };
 
