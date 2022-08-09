@@ -60,8 +60,9 @@ void readFromGps(const gps_config_s * gps_cfg, gps_data_s * gps_dat) {
       gps_rd_buf[i-1] = '\0';
       gps_buf_len = i-1;
       parseGpsOutput(gps_rd_buf, gps_buf_len, gps_dat);
-      // printf("%s\n",gps_rd_buf);
     }
+    printf("%c",inChar);
+
   }
 }
 
