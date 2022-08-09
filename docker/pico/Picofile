@@ -7,7 +7,7 @@ FROM ubuntu:22.04
 RUN apt-get  update &&  DEBIAN_FRONTEND=noninteractive \
 		apt-get install -yq --no-install-recommends \
 		git ca-certificates cmake gcc-arm-none-eabi libstdc++-arm-none-eabi-newlib \
-		gcc g++ build-essential python3 libnewlib-arm-none-eabi doxygen \
+		gcc g++ build-essential python3 libnewlib-arm-none-eabi \
 		&& apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
 		&& mkdir -p /pico && cd pico && git clone -b master https://github.com/raspberrypi/pico-sdk.git \
 		&& git clone -b master https://github.com/raspberrypi/pico-extras.git \
