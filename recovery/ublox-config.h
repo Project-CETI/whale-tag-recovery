@@ -1,0 +1,6 @@
+#ifndef _RECOVERY_UBLOX_CONFIG_H_
+#define _RECOVERY_UBLOX_CONFIG_H_
+
+
+
+#endif // _RECOVERY_UBLOX_CONFIG_H_
