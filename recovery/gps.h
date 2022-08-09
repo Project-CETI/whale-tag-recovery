@@ -8,6 +8,7 @@
 // GPS DEFS [END] -----------------------------------------------------
 
 // Critical typedefs
+// the GPS configuration for UBLOX
 typedef struct gps_config_t {
 	int txPin;
 	int rxPin;
