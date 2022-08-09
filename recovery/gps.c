@@ -5,6 +5,7 @@
 #include <math.h>
 #include "gps.h"
 #include "minmea.h"
+#include "ublox-config.h"
 
 // GPS FUNCTIONS [START] ----------------------------------------------
 // RX functions from NEO-M8N
@@ -87,6 +88,49 @@ void gpsInit(const gps_config_s * gps_cfg) {
 	uart_init(gps_cfg->uart, gps_cfg->baudrate);
 	gpio_set_function(gps_cfg->txPin, GPIO_FUNC_UART);
 	gpio_set_function(gps_cfg->rxPin, GPIO_FUNC_UART);
+  writeAllConfigurationsToUblox(gps_cfg->uart);
+}
+
+/**
+ * Calculates the checksum for the current byte stream using the 8-bit Fletcher Algorithm.
+ * Requires that the given byte stream has the last two cells reserved to be filled by the 
+ * calculated checksum. Calculation for the checksum starts at the class field, but does not
+ * include the two sync bytes at the start (also known has header bytes). 
+ * Byte stream should contain both of these sync bytes, as well as space for the two 
+ * checksum bytes. 
+ * @param length the length of the byte stream, including the checksum at the end
+ * @param byte_stream the array for the byte stream, with the last two cells reserved 
+ * to be filled by the checksum
+ */
+void calculateUBXChecksum(uint8_t length, uint8_t* byte_stream) {
+    
+    uint8_t CK_A = 0;
+    uint8_t CK_B = 0;
+    
+    for(uint8_t i = 2; i < length - 2; i++) {
+        CK_A = CK_A + byte_stream[i];
+        CK_B = CK_B + CK_A;
+    }
+
+    byte_stream[length] = CK_A;
+    byte_stream[length+1] = CK_B;
+}
+
+bool writeAllConfigurationsToUblox(uart_inst_t* uart) {
+  for (uint8_t i = 0; i < NUM_UBLOX_CONFIGS; i++) {
+    // do bit magic for the length
+    uint16_t length = (((uint16_t)ubx_configurations[i][4] << 8) | ubx_configurations[i][5]) + 0x8;
+    calculateUBXChecksum(length, ubx_configurations[i]);
+    writeSingleConfiguration(uart, ubx_configurations[i]);
+  }
+
+  // TODO: fix this to have check for ACKs
+  return true;
+}
+
+void writeSingleConfiguration(uart_inst_t* uart, uint8_t* byte_stream) {
+  if (!uart_is_writable(uart)) uart_tx_wait_blocking(uart);
+  uart_puts(uart, byte_stream);
 }
 
 // GPS FUNCTIONS [END] ------------------------------------------------

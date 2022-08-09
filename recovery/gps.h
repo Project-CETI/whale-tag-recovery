@@ -1,6 +1,7 @@
 #ifndef SWARM_H
 #define SWARM_H
 #include "stdint.h"
+#include "stdbool.h"
 #include "pico/stdlib.h"
 
 // GPS DEFS [START] ---------------------------------------------------
@@ -24,13 +25,19 @@ typedef struct gps_data_t {
 	bool posCheck;
 } gps_data_s;
 
-// RX functions from NEO-M8N
+// RX functions from MAX-M8
 void parseGpsOutput(char *line, int buf_len, gps_data_s * gps_dat);
 void readFromGps(const gps_config_s * gps_cfg, gps_data_s * gps_dat);
 void drainGpsFifo(const gps_config_s * gps_cfg, gps_data_s * gps_dat);
 void echoGpsOutput(char *line, int buf_len);
 
-// Init NEO-M8N functions
+// Init MAX-M8 functions
 void gpsInit(const gps_config_s *);
+
+// Ublox configuration functions
+void calculateUBXChecksum(uint8_t length, uint8_t* byte_stream);
+bool writeAllConfigurationsToUblox(uart_inst_t* uart);
+void writeSingleConfiguration(uart_inst_t* uart, uint8_t* byte_stream);
+
 
 #endif

@@ -10,9 +10,10 @@
 #include "vhf.h"
 #include "gps.h"
 #include "tag.h"
+#include "ublox-config.h"
 
 /// Set how long the pure VHF pulse should be
-#define VHF_TX_LEN 800
+// #define VHF_TX_LEN 800
 /// Location of the LED pin
 #define LED_PIN 29
 
