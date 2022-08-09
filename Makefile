@@ -14,7 +14,8 @@ pico-dev:
 
 pico-dbg:
 	docker run --rm -itp 80\:80 -v $(shell pwd)\:/project --name dev-debug-pico ceti\:pico bash
-
+pico:
+	$(MAKE) pico-dev || $(MAKE) pico-image pico-dev
 clean-pico:
 	docker rmi ceti\:pico
 
@@ -51,3 +52,5 @@ clean: clean-dev clean-docker
 # All target glob
 #
 
+all:
+	pico docs
