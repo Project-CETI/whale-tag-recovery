@@ -39,22 +39,22 @@ cd build
 
 tagIDs=(1 2 3)
 
-sed -i "9s/NAME .*/NAME ${uf2name})/" ../src/CMakeLists.txt
+sed -i "9s/NAME .*/NAME ${uf2name})/" ../recovery/CMakeLists.txt
 
 for i in ${tagIDs[@]}; do
 		echo "************** TAG ${i} **************"
-		sed -i "16s/= .*/= ${i};/" ../src/main.c
-		sed -i "20s/b1.0 .*/b1.0 Tag${i}\";/" ../src/main.c
-		sed -i "44s/for .*/for Tag ${i}\"));/" ../src/main.c
+		sed -i "32s/\", .*/\", ${i},/" ../recovery/main.c
+		sed -i "33s/b1..*/b1.1 Tag${i}\",/" ../recovery/main.c
+		sed -i "52s/for .*/for Tag ${i}\"));/" ../recovery/main.c
 
 		make -j4
 		rm -f "../bin/tag${i}/${uf2name}.uf2"
-		cp "${uf2name}.uf2" "../bin/tag${i}"
+		cp "recovery/${uf2name}.uf2" "../bin/tag${i}"
 done
 
 echo "************** RESET TO STANDALONE BOARD **************"
-sed -i "16s/= .*/= 10;/" ../src/main.c
-sed -i "20s/b1.0 .*/b1.0 2-#\";/" ../src/main.c
-sed -i "44s/for .*/for standalone recovery board 2-#\"));/" ../src/main.c
+sed -i "32s/\", .*/\", 1,/" ../recovery/main.c
+sed -i "33s/b1..*/b1.1 2-S\",/" ../recovery/main.c
+sed -i "52s/for .*/for standalone recovery board 2-#\"));/" ../recovery/main.c
 
 make -j4

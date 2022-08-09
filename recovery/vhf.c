@@ -23,17 +23,14 @@
 // VHF control params
 /// Defines the delay between each VHF configuration step.
 const uint vhfEnableDelay = 1000;
-/** @brief GPIO pinmask used to drive input to the VHF module.
- * The dra818v module modulates an analog input with the carrier frequency defined during the latest configuration. The recovery board simulates that input using a resistor ladder DAC, and drives that ladder using a set of GPIO pins.
- *
- * The pinmask is the value 0b00000011111111000000000000000000, which represents which of the GPIO pins 0-31 are to be used.
- * We are using GPIO pins 18-25 for the DAC. */
-#define VHF_DACMASK 0x3fc0000
-/** Value to left-shift DAC masks to match GPIO pinmask.
- * Using the DAC requires passing an 8-bit pinmask 0b00000000 matching pins 18-25, LSB=18.
- * To match how the RP2040 SDK sets GPIO pins via pinmasks, this DAC mask needs to be left-shifted to match the pin positions. */
-#define VHF_DACSHIFT 18
-
+/** Array of sin values for the DAC output.
+ * Corresponds to one whole 8-bit sine output.
+ */
+const uint8_t sinValues[NUM_SINS] = {
+  152, 176, 198, 217, 233, 245, 252, 255, 252, 245, 233,
+  217, 198, 176, 152, 127, 103, 79,  57,  38,  22,  10,
+  3,   1,   3,   10,  22,  38,  57,  79,  103, 128
+};
 // VHF VARS [END] -------------------------------------------------------
 
 // VHF HEADERS [START] --------------------------------------------------
@@ -54,6 +51,29 @@ void initializeOutput(void) {
 void setOutput(uint8_t state) {
   // Use pin mask for added security on gpio
   gpio_put_masked(VHF_DACMASK, (state << VHF_DACSHIFT) & VHF_DACMASK);
+}
+
+/** @brief Re-configure the VHF module to tracker transmission frequency
+ * @see configureDra818v */
+void prepFishTx(float txFreq) {
+		configureDra818v(txFreq,txFreq,8,false,false,false);
+}
+
+/** @brief Callback for a repeating timer dictating transmissions.
+ * Transmits a pulse for length defined in #YAGI_TX_LEN
+ * Callback for repeating_timer functions */
+bool vhf_pulse_callback(repeating_timer_t *rt) {
+	setPttState(true);
+	uint32_t stepLen = VHF_HZ * 32;
+	int numSteps = stepLen * VHF_TX_LEN / 1000;
+	stepLen = (int) 1000000/stepLen;
+	for (int i = 0; i < numSteps; i++) {
+		setOutput(sinValues[i % NUM_SINS]);
+		busy_wait_us_32(stepLen);
+	}
+	setOutput(0x00);
+	setPttState(false);
+	return true;
 }
 
 /** Initializes the dra818v VHF module.
