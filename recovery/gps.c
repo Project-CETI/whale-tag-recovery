@@ -61,7 +61,7 @@ void readFromGps(const gps_config_s * gps_cfg, gps_data_s * gps_dat) {
       gps_buf_len = i-1;
       parseGpsOutput(gps_rd_buf, gps_buf_len, gps_dat);
     }
-    printf("%c",inChar);
+    printf("Reading from GPS: %c\n",inChar);
 
   }
 }
@@ -86,10 +86,11 @@ void echoGpsOutput(char *line, int buf_len) {
 
 // Init NEO-M8N functions
 void gpsInit(const gps_config_s * gps_cfg) {
+
 	uart_init(gps_cfg->uart, gps_cfg->baudrate);
 	gpio_set_function(gps_cfg->txPin, GPIO_FUNC_UART);
 	gpio_set_function(gps_cfg->rxPin, GPIO_FUNC_UART);
-  writeAllConfigurationsToUblox(gps_cfg->uart);
+  
 }
 
 /**
@@ -122,6 +123,7 @@ bool writeAllConfigurationsToUblox(uart_inst_t* uart) {
     // do bit magic for the length
     uint16_t length = (((uint16_t)ubx_configurations[i][4] << 8) | ubx_configurations[i][5]) + 0x8;
     calculateUBXChecksum(length, ubx_configurations[i]);
+    printf("Writing configuration: %x %x\n", ubx_configurations[i][2], ubx_configurations[i][3]);
     writeSingleConfiguration(uart, ubx_configurations[i]);
   }
 

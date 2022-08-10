@@ -111,7 +111,7 @@ void initAll(const gps_config_s * gps_cfg, const tag_config_s * tag_cfg) {
 
   gpsInit(gps_cfg);
 
-	initAPRS();
+  initAPRS();
 
   initTagComm(tag_cfg);
   setLed(false);
@@ -138,6 +138,9 @@ int main() {
 	add_repeating_timer_ms(-1000, vhf_pulse_callback, NULL, &yagiTimer);
 	bool yagiIsOn = true;
 
+	printf("Initialized the GPS\n");
+  	writeAllConfigurationsToUblox(gps_config.uart);
+
   // Loop
   while (true) {
     readFromGps(&gps_config, &gps_data);
@@ -157,6 +160,7 @@ int main() {
 			yagiIsOn = true;
 		}
 		else {
+			
 			sleep_ms(1000);
 		}
   }

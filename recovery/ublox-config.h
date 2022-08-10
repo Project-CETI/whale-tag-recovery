@@ -74,6 +74,9 @@ static ubx_cfg_t msg_zda[22] = { /* header */     0xB5, 0x62,
 //                                    /* payload */     0x00, 0x01,
 //                                    /* checksum */    0x00, 0x00};
 
+// Timepulse enable
+// static ubx_cfg_t tp[22] = {}
+
 // These should be in order of how they are going to be sent to the UBLOX GPS module
 static ubx_cfg_t* ubx_configurations[NUM_UBLOX_CONFIGS] = {
     msg_rmc, msg_zda, cfg_save, cfg_load
