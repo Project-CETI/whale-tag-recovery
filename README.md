@@ -22,17 +22,23 @@ Next, install Docker Desktop for Windows. This setup has been tested with the WS
 
 After that, build the Docker dev environment image:
 ```
-cd /path/to/whale-tag-repository
+cd /path/to/whale-tag-recovery
 cd docker/pico
 docker build -t ceti:pico -f Picofile .
 ```
 
 We name this `ceti:pico` to indicate that this is the dev environment for the RP2040 chip. The Dockerfile has also been renamed `Picofile` for the same reason.
 
-After building the image, set up a **persistent** container! This is critical, because in Windows, you can't use `make` commands to do the job easily for you. (You probably can, but I don't want to write it.) If you leave it as persistent, then the convenient GUI of Docker Desktop will let you have a running 'executable' that just compiles the build folder for you. To do this, run:
+After building the image, make sure you've removed any existing `build` folder, because CMake will be mad if you try building in a folder not made inside Docker.
+```
+cd /path/to/whale-tag-recovery
+rm -r build
+```
+
+Now, set up a **persistent** container! This is critical, because in Windows, you can't use `make` commands to do the job easily for you. (You probably can, but I don't want to write it.) If you leave it as persistent, then the convenient GUI of Docker Desktop will let you have a running 'executable' that just compiles the build folder for you. To do this, run:
 
 ```
-cd /path/to/whale-tag-repository
+cd /path/to/whale-tag-recovery
 docker run -v ${PWD}:/project --name pico-dev ceti:pico
 ```
 
