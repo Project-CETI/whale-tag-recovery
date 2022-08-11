@@ -51,7 +51,11 @@ bool q145 = false; ///< Boolean for selecting 144.39MHz or 145.05MHz transmissio
 /** Array of sin values for the DAC output.
  * Corresponds to one whole 8-bit sine output.
  */
-extern uint8_t* sinValues;
+const uint8_t sinValues2[NUM_SINS] = {
+  152, 176, 198, 217, 233, 245, 252, 255, 252, 245, 233,
+  217, 198, 176, 152, 127, 103, 79,  57,  38,  22,  10,
+  3,   1,   3,   10,  22,  38,  57,  79,  103, 128
+};
 // APRS VARS [END] ------------------------------------------------------
 
 
@@ -60,8 +64,9 @@ extern uint8_t* sinValues;
  * Loops through the DAC output array using currOutput.
  */
 void setNextSin(void) {
+	// printf("%d | %d\n", aprs_cc.currOutput, sinValues[aprs_cc.currOutput]);
   if (aprs_cc.currOutput == NUM_SINS) aprs_cc.currOutput = 0;
-  setOutput(sinValues[aprs_cc.currOutput++]);
+  setOutput(sinValues2[aprs_cc.currOutput++]);
 }
 
 /** Sets a 1200Hz output wave via the DAC.
