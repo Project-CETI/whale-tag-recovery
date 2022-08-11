@@ -27,7 +27,7 @@ clean-dev:
 #
 
 docs-image:
-	docker build -t cetisdock/docs\:recovery $(shell pwd)/docker/docs/Docsfile .
+	docker build -t cetisdock/docs\:recovery -f $(shell pwd)/docker/docs/Docsfile .
 
 docs-server:
 	docker run --rm -dp 8080\:80 --name ceti-docs cetisdock/docs\:recovery
