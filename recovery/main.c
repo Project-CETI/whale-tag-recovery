@@ -34,7 +34,7 @@ void initAll(const gps_config_s * gps_cfg, const tag_config_s * tag_cfg);
 const aprs_config_s aprs_config = {
 	"J75Y", 1,
 	"APLIGA", "WIDE2", 1, "Ceti b1.1 7-8",
-	5000, false, 2
+	5000, true, 2
 };
 
 /** @struct Defines unchanging configuration parameters for GPS communication.
@@ -162,7 +162,7 @@ int main() {
 		if (gps_data.datCheck && yagiIsOn) {
 			cancel_repeating_timer(&yagiTimer);
 			yagiIsOn = false;
-			setVhfState(false);
+			setVhfState(true);
 			// printf("We're in the timer zone now.\n");
 			// startAPRS(&aprs_config, &aprsTimer);
 			// printf("Started aprs timer.\n");

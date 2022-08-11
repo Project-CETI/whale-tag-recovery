@@ -155,7 +155,7 @@ void configureVHF(void) {
     sleep_ms(600);
     // printf("Configuring DRA818V...\n");
     initializeDra818v(true);
-    configureDra818v(144.39,144.39,8,false,false,false);
+    configureDra818v(144.39,144.39,4,false,false,false);
     setPttState(false);
     setVhfState(true);
     // printf("DRA818V configured.\n");
