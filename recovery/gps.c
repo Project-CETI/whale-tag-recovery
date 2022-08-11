@@ -53,14 +53,16 @@ void readFromGps(const gps_config_s * gps_cfg, gps_data_s * gps_dat) {
 			gps_dat->datCheck = true;
       int i = 0;
       gps_rd_buf[i++] = inChar;
+      // printf("0x%x ", inChar);
       while (inChar != '\r') {
         inChar = uart_getc(gps_cfg->uart);
 				gps_rd_buf[i++] = inChar;
+        // printf("0x%x ", inChar);
       }
       gps_rd_buf[i-1] = '\0';
       gps_buf_len = i-1;
       parseGpsOutput(gps_rd_buf, gps_buf_len, gps_dat);
-      printf("%s\r\n",gps_rd_buf);
+      printf("\n%s\r\n",gps_rd_buf);
     }
 
   }
@@ -90,9 +92,7 @@ void gpsInit(const gps_config_s * gps_cfg) {
 	uart_init(gps_cfg->uart, gps_cfg->baudrate);
 	gpio_set_function(gps_cfg->txPin, GPIO_FUNC_UART);
 	gpio_set_function(gps_cfg->rxPin, GPIO_FUNC_UART);
-  sleep_ms(750);
-  printf("Initialized the GPS\n");
-  writeAllConfigurationsToUblox(gps_cfg->uart);
+  
 
 }
 
@@ -124,7 +124,7 @@ void calculateUBXChecksum(uint8_t length, uint8_t* byte_stream) {
 bool writeAllConfigurationsToUblox(uart_inst_t* uart) {
   for (uint8_t i = 0; i < NUM_UBLOX_CONFIGS; i++) {
     // do bit magic for the length
-    uint16_t length = (((uint16_t)ubx_configurations[i][4] << 8) | ubx_configurations[i][5]) + 0x8;
+    uint16_t length = (((uint16_t)ubx_configurations[i][5] << 8) | ubx_configurations[i][4]) + 0x8;
     // calculateUBXChecksum(length, ubx_configurations[i]);
     writeSingleConfiguration(uart, ubx_configurations[i]);
   }
@@ -133,31 +133,32 @@ bool writeAllConfigurationsToUblox(uart_inst_t* uart) {
 }
 
 void writeSingleConfiguration(uart_inst_t* uart, uint8_t* byte_stream) {
-  if (!uart_is_writable(uart)) uart_tx_wait_blocking(uart);
-  uart_puts(uart, byte_stream);
   printf("Writing Configuration: %x %x\n", byte_stream[2], byte_stream[3]);
+  // if (!uart_is_writable(uart)) uart_tx_wait_blocking(uart);
+  // uart_puts(uart, byte_stream);
+  sleep_ms(500);
   // TODO: fix this to have check for ACKs
-  char inChar;
-	char ack_rd_buf[MAX_GPS_ACK_LENGTH];
-	uint8_t ack_rd_buf_pos = 0;
-	uint8_t ack_buf_len = 0;
-  bool ack = true;
-  if (uart_is_readable_within_us(uart, 10000)) {
-    // uart_read_blocking(uart, ack_rd_buf, MAX_GPS_ACK_LENGTH);
-    inChar = uart_getc(uart);
-    int i = 0;
-    ack_rd_buf[i] = inChar;
-    ack = ack && (inChar == ack_header[i++]);
-    while (inChar != '\r' && i < 100) {
-      inChar = uart_getc(uart);
-      ack_rd_buf[i] = inChar;
-      ack = ack && (inChar == ack_header[i++]);
-      printf("%x-%c ", inChar, inChar);
-    }
-    ack_rd_buf[i-1] = '\0';
-    ack_buf_len = i-1;
-    printf("\nAck: %s: %s\r\n", ack_rd_buf, ack ? "true" : "false");
-  }
+  // char inChar;
+	// char ack_rd_buf[MAX_GPS_ACK_LENGTH];
+	// uint8_t ack_rd_buf_pos = 0;
+	// uint8_t ack_buf_len = 0;
+  // bool ack = true;
+  // if (uart_is_readable_within_us(uart, 10000)) {
+  //   // uart_read_blocking(uart, ack_rd_buf, MAX_GPS_ACK_LENGTH);
+  //   inChar = uart_getc(uart);
+  //   int i = 0;
+  //   ack_rd_buf[i] = inChar;
+  //   ack = ack && (inChar == ack_header[i++]);
+  //   while (inChar != '\r' && i < 100) {
+  //     inChar = uart_getc(uart);
+  //     ack_rd_buf[i] = inChar;
+  //     ack = ack && (inChar == ack_header[i++]);
+  //     // printf("0x%x ", inChar);
+  //   }
+  //   ack_rd_buf[i-1] = '\0';
+  //   ack_buf_len = i-1;
+  //   // printf("\nAck: %s: %s\r\n", ack_rd_buf, ack ? "true" : "false");
+  // }
 
 }
 

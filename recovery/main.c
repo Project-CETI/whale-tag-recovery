@@ -38,7 +38,7 @@ const aprs_config_s aprs_config = {
 /** @struct Defines unchanging configuration parameters for GPS communication.
  * GPS_TX, GPS_RX, GPS_BAUD, UART_NUM, QINTERACTIVE
  */
-const gps_config_s gps_config = {1, 0, 9600, uart0, false};
+const gps_config_s gps_config = {0, 1, 9600, uart0, false};
 gps_data_s gps_data = {{42.3648,0},
 											{0,0,0},
 											"$GN 42.3648,-71.1247,0,360,0*38",
@@ -139,9 +139,10 @@ int main() {
 	bool yagiIsOn = true;
 
 	
-
+   printf("Initialized the GPS\n");
   // Loop
   while (true) {
+	writeAllConfigurationsToUblox(gps_config.uart);
     readFromGps(&gps_config, &gps_data);
 		if (gps_data.datCheck && yagiIsOn) {
 			cancel_repeating_timer(&yagiTimer);
