@@ -3,5 +3,6 @@
         "ublox-config.h": "c",
         "uart_tx.pio.h": "c",
         "gps.h": "c"
-    }
+    },
+    "C_Cpp.errorSquiggles": "Enabled"
 }

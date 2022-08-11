@@ -60,8 +60,8 @@ void readFromGps(const gps_config_s * gps_cfg, gps_data_s * gps_dat) {
       gps_rd_buf[i-1] = '\0';
       gps_buf_len = i-1;
       parseGpsOutput(gps_rd_buf, gps_buf_len, gps_dat);
+      printf("%s\r\n",gps_rd_buf);
     }
-    printf("Reading from GPS: %c\n",inChar);
 
   }
 }
@@ -90,7 +90,10 @@ void gpsInit(const gps_config_s * gps_cfg) {
 	uart_init(gps_cfg->uart, gps_cfg->baudrate);
 	gpio_set_function(gps_cfg->txPin, GPIO_FUNC_UART);
 	gpio_set_function(gps_cfg->rxPin, GPIO_FUNC_UART);
-  
+  sleep_ms(750);
+  printf("Initialized the GPS\n");
+  writeAllConfigurationsToUblox(gps_cfg->uart);
+
 }
 
 /**
@@ -122,18 +125,40 @@ bool writeAllConfigurationsToUblox(uart_inst_t* uart) {
   for (uint8_t i = 0; i < NUM_UBLOX_CONFIGS; i++) {
     // do bit magic for the length
     uint16_t length = (((uint16_t)ubx_configurations[i][4] << 8) | ubx_configurations[i][5]) + 0x8;
-    calculateUBXChecksum(length, ubx_configurations[i]);
-    printf("Writing configuration: %x %x\n", ubx_configurations[i][2], ubx_configurations[i][3]);
+    // calculateUBXChecksum(length, ubx_configurations[i]);
     writeSingleConfiguration(uart, ubx_configurations[i]);
   }
 
-  // TODO: fix this to have check for ACKs
-  return true;
+  
 }
 
 void writeSingleConfiguration(uart_inst_t* uart, uint8_t* byte_stream) {
   if (!uart_is_writable(uart)) uart_tx_wait_blocking(uart);
   uart_puts(uart, byte_stream);
+  printf("Writing Configuration: %x %x\n", byte_stream[2], byte_stream[3]);
+  // TODO: fix this to have check for ACKs
+  char inChar;
+	char ack_rd_buf[MAX_GPS_ACK_LENGTH];
+	uint8_t ack_rd_buf_pos = 0;
+	uint8_t ack_buf_len = 0;
+  bool ack = true;
+  if (uart_is_readable_within_us(uart, 10000)) {
+    // uart_read_blocking(uart, ack_rd_buf, MAX_GPS_ACK_LENGTH);
+    inChar = uart_getc(uart);
+    int i = 0;
+    ack_rd_buf[i] = inChar;
+    ack = ack && (inChar == ack_header[i++]);
+    while (inChar != '\r' && i < 100) {
+      inChar = uart_getc(uart);
+      ack_rd_buf[i] = inChar;
+      ack = ack && (inChar == ack_header[i++]);
+      printf("%x-%c ", inChar, inChar);
+    }
+    ack_rd_buf[i-1] = '\0';
+    ack_buf_len = i-1;
+    printf("\nAck: %s: %s\r\n", ack_rd_buf, ack ? "true" : "false");
+  }
+
 }
 
 // GPS FUNCTIONS [END] ------------------------------------------------

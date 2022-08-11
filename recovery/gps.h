@@ -6,6 +6,7 @@
 
 // GPS DEFS [START] ---------------------------------------------------
 #define MAX_GPS_MSG_LEN 500
+#define MAX_GPS_ACK_LENGTH 11
 // GPS DEFS [END] -----------------------------------------------------
 
 // Critical typedefs

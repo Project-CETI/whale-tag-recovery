@@ -138,8 +138,7 @@ int main() {
 	add_repeating_timer_ms(-1000, vhf_pulse_callback, NULL, &yagiTimer);
 	bool yagiIsOn = true;
 
-	printf("Initialized the GPS\n");
-  	writeAllConfigurationsToUblox(gps_config.uart);
+	
 
   // Loop
   while (true) {
