@@ -60,17 +60,21 @@ void readFromGps(const gps_config_s * gps_cfg, gps_data_s * gps_dat) {
       gps_rd_buf[i-1] = '\0';
       gps_buf_len = i-1;
       parseGpsOutput(gps_rd_buf, gps_buf_len, gps_dat);
-      printf("%s\r\n",gps_rd_buf);
+      // printf("%s\r\n",gps_rd_buf);
     }
   }
 }
 
 void drainGpsFifo(const gps_config_s * gps_cfg, gps_data_s * gps_dat) {
+	// printf("Starting draining.\n");
 	char gps_rd_buf[MAX_GPS_MSG_LEN];
-	if (uart_is_readable(gps_cfg->uart))
+	if (uart_is_readable(gps_cfg->uart)) {
+		// printf("How much to read: %d\n", uart_is_readable(gps_cfg->uart));
 		uart_read_blocking(gps_cfg->uart,
 											 gps_rd_buf,
 											 uart_is_readable(gps_cfg->uart));
+	}
+	// printf("Finished draining.\n");
 	gps_dat->datCheck = false;
 	gps_dat->posCheck = false;
 }
