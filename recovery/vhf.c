@@ -118,22 +118,22 @@ void configureDra818v(float txFrequency, float rxFrequency, uint8_t volume, bool
   uart_tx_program_init(pio, sm, offset, VHF_TX, 9600);
 	// Configuration initialization handshake
   uart_tx_program_puts(pio, sm, "AT+DMOCONNECT\r\n");
-  sleep_ms(vhfEnableDelay);
+  busy_wait_ms(vhfEnableDelay);
 	char temp[100];
 	// Set group parameters - TX and RX frequencies, TX CTCSS, squelch, RX CTCSS
 	sprintf(temp, "AT+DMOSETGROUP=0,%.04f,%.04f,0000,0,0000\r\n",
 					txFrequency, rxFrequency);
   uart_tx_program_puts(pio, sm, temp);
-  sleep_ms(vhfEnableDelay);
+  busy_wait_ms(vhfEnableDelay);
 	// Set volume (1~8)
 	if (volume<1 || volume >8) volume=4; // Default to intermediate volume.
 	sprintf(temp, "AT+DMOSETVOLUME=%d\r\n",volume);
 	uart_tx_program_puts(pio, sm, temp);
-  sleep_ms(vhfEnableDelay);
+  busy_wait_ms(vhfEnableDelay);
 	// Set filters
   sprintf(temp, "AT+SETFILTER=%u,%u,%u\r\n",emphasis,hpf,lpf);
   uart_tx_program_puts(pio, sm, temp);
-  sleep_ms(vhfEnableDelay);
+  busy_wait_ms(vhfEnableDelay);
 	// Clean up
   pio_remove_program(pio, &uart_tx_program, offset);
   pio_sm_unclaim(pio, sm);

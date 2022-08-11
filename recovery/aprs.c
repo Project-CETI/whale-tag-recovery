@@ -36,7 +36,7 @@ struct aprs_sig_s {
 	const uint32_t delay1200; ///< Delay for 1200Hz signal.
 	const uint32_t delay2200; ///< Delay for 2200Hz signal.
 	uint64_t endTimeAPRS; ///< us counter on how long to hold steps in DAC output.
-} aprs_sig = {832, 23, 15, 0};
+} aprs_sig = {832, 18, 7, 0};
 
 /// APRS payload arrays
 struct aprs_pyld_s {
@@ -285,15 +285,15 @@ void sendHeader(const aprs_config_s * aprs_cfg) {
  * @param acs Three-value 2-byte array of altitude, course, and speed, from main loop.
  */
 void sendPacket(const aprs_config_s * aprs_cfg, float *latlon, uint16_t *acs) {
-  if (latlon[0] < 17.71468 && !q145) {
-			configureDra818v(145.05,145.05,8,false,false,false);
+	setVhfState(true);
+	if (latlon[0] < 17.71468 && !q145) {
+		configureDra818v(145.05,145.05,8,false,false,false);
     q145 = true;
   }
   else if (latlon[0] >= 17.71468 && q145) {
-			configureDra818v(144.39,144.39,8,false,false,false);
+		configureDra818v(144.39,144.39,8,false,false,false);
     q145 = false;
   }
-  setVhfState(true);
   setPttState(true);
   setPayload(latlon, acs);
 
@@ -318,7 +318,7 @@ void sendPacket(const aprs_config_s * aprs_cfg, float *latlon, uint16_t *acs) {
   sendCrc();
   sendFlag(3);
   setPttState(false);
-  setVhfState(false);
+  setVhfState(true);
 }
 
 // Debug TX functions
