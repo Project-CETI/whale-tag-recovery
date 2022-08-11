@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/bin/bash
 set -e
 trap 'echo "This script is customized for a RPi formatted for CETI use. Change it to fit the current system so it does not error again."' EXIT
 
@@ -19,7 +19,7 @@ for d in ${d1200s[@]}; do
 				sed -n -e 35p ../recovery/main.c
 
 			  make -j4
-			  picotool load -xv recovery/recovery.uf2 -f
+			  sudo picotool load -xv recovery/recovery.uf2 -f
 				sleep 1m 10s
     done
 done
