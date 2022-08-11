@@ -21,8 +21,8 @@ void setLed(bool state);
 void initLed(void);
 // bool txAprs(repeating_timer_t *rt);
 bool txAprs(void);
-void startAPRS(const aprs_config_s * aprs_cfg, repeating_timer_t *aprsTimer);
-void startTag(const tag_config_s * tag_cfg, repeating_timer_t *tagTimer);
+// void startAPRS(const aprs_config_s * aprs_cfg, repeating_timer_t *aprsTimer);
+// void startTag(const tag_config_s * tag_cfg, repeating_timer_t *tagTimer);
 bool txTag(void);
 void initAll(const gps_config_s * gps_cfg, const tag_config_s * tag_cfg);
 
@@ -40,8 +40,8 @@ const aprs_config_s aprs_config = {
 /** @struct Defines unchanging configuration parameters for GPS communication.
  * GPS_TX, GPS_RX, GPS_BAUD, UART_NUM, QINTERACTIVE
  */
-const gps_config_s gps_config = {1, 0, 9600, uart0, false};
-gps_data_s gps_data = {{42.3648,0},
+const gps_config_s gps_config = {0, 1, 9600, uart0, false};
+gps_data_s gps_data = {{42.3648,-71.1247},
 											{0,0,0},
 											"$GN 42.3648,-71.1247,0,360,0*38",
 											"$DT 20190408195123,V*41",
@@ -65,34 +65,41 @@ void setLed(bool state) {gpio_put(LED_PIN, state);}
 void initLed(void) {gpio_init(LED_PIN); gpio_set_dir(LED_PIN, GPIO_OUT);}
 
 // bool txAprs(repeating_timer_t *rt) {
+/* bool txAprs(void) { */
+/* 	// printf("Draining fifo.\n"); */
+/* 	drainGpsFifo(&gps_config, &gps_data); */
+/* 	// printf("Back to center.\n"); */
+/* 	busy_wait_ms(100); */
+/* 	int i = 0; */
+/* 	// printf("Checking new position.\n"); */
+/* CHECK_POS: readFromGps(&gps_config, &gps_data); */
+/* 	gps_data.posCheck = true; */
+/* 	// printf("Received new position\n."); */
+/* 	if (gps_data.posCheck != false) { */
+/* 		/\* getPos(coords); *\/ */
+/* 		/\* getACS(aCS); *\/ */
+/* 		setLed(true); */
+/* 		if (aprs_config.debug) */
+/* 			sendTestPackets(&aprs_config); */
+/* 		else */
+/* 			sendPacket(&aprs_config, gps_data.latlon, gps_data.acs); */
+/* 		setLed(false); */
+/* 		return true; */
+/* 	} */
+/* 	else { */
+/* 		i++; */
+/* 		sleep_ms(1000); */
+/* 		if (i < 1) goto CHECK_POS; */
+/* 	} */
+/* 	txTag(); */
+/* 	return false; */
+/* } */
+
 bool txAprs(void) {
-	// printf("Draining fifo.\n");
-	drainGpsFifo(&gps_config, &gps_data);
-	// printf("Back to center.\n");
-	busy_wait_ms(100);
-	int i = 0;
-	// printf("Checking new position.\n");
-CHECK_POS: readFromGps(&gps_config, &gps_data);
-	gps_data.posCheck = true;
-	// printf("Received new position\n.");
-	if (gps_data.posCheck != false) {
-		/* getPos(coords); */
-		/* getACS(aCS); */
-		setLed(true);
-		if (aprs_config.debug)
-			sendTestPackets(&aprs_config);
-		else
-			sendPacket(&aprs_config, gps_data.latlon, gps_data.acs);
-		setLed(false);
-		return true;
-	}
-	else {
-		i++;
-		sleep_ms(1000);
-		if (i < 1) goto CHECK_POS;
-	}
-	txTag();
-	return false;
+	setLed(true);
+	if (aprs_config.debug) sendTestPackets(&aprs_config);
+	else sendPacket(&aprs_config, gps_data.latlon, gps_data.acs);
+	setLed(false);
 }
 
 /* void startAPRS(const aprs_config_s * aprs_cfg, repeating_timer_t *aprsTimer) { */
@@ -147,40 +154,42 @@ int main() {
 	float vhfTxFreq = 148.056;
 	const uint32_t yagiInterval = 600000;
 	repeating_timer_t yagiTimer;
-	prepFishTx(vhfTxFreq);
+	// prepFishTx(vhfTxFreq);
 
 	// Start the VHF pulsing until GPS lock
 	setVhfState(true);
-	add_repeating_timer_ms(-1000, vhf_pulse_callback, NULL, &yagiTimer);
+	// add_repeating_timer_ms(-1000, vhf_pulse_callback, NULL, &yagiTimer);
 	bool yagiIsOn = true;
 	// printf("Init yagi.\n");
 
   // Loop
   while (true) {
-    readFromGps(&gps_config, &gps_data);
-		gps_data.datCheck = true;
-		if (gps_data.datCheck && yagiIsOn) {
-			cancel_repeating_timer(&yagiTimer);
-			yagiIsOn = false;
-			setVhfState(true);
-			// printf("We're in the timer zone now.\n");
-			// startAPRS(&aprs_config, &aprsTimer);
-			// printf("Started aprs timer.\n");
-			// startTag(&tag_config, &tagTimer);
-		}
-		else if (!gps_data.datCheck && !yagiIsOn) {
-			setVhfState(true);
-			cancel_repeating_timer(&aprsTimer);
-			// DO NOT CANCEL TAG TIMER, WE WILL REPORT THROUGH DATA LOSS
-			prepFishTx(vhfTxFreq);
-			add_repeating_timer_ms(-1000, vhf_pulse_callback, NULL, &yagiTimer);
-			yagiIsOn = true;
-		}
-		else {
-			// printf("repeating sleep ...\n");
-			sleep_ms(aprs_config.interval);
-			txAprs();
-		}
+		txAprs();
+		sleep_ms(aprs_config.interval);
+    /* readFromGps(&gps_config, &gps_data); */
+		/* gps_data.datCheck = true; */
+		/* if (gps_data.datCheck && yagiIsOn) { */
+		/* 	cancel_repeating_timer(&yagiTimer); */
+		/* 	yagiIsOn = false; */
+		/* 	setVhfState(true); */
+		/* 	// printf("We're in the timer zone now.\n"); */
+		/* 	// startAPRS(&aprs_config, &aprsTimer); */
+		/* 	// printf("Started aprs timer.\n"); */
+		/* 	// startTag(&tag_config, &tagTimer); */
+		/* } */
+		/* else if (!gps_data.datCheck && !yagiIsOn) { */
+		/* 	setVhfState(true); */
+		/* 	cancel_repeating_timer(&aprsTimer); */
+		/* 	// DO NOT CANCEL TAG TIMER, WE WILL REPORT THROUGH DATA LOSS */
+		/* 	prepFishTx(vhfTxFreq); */
+		/* 	add_repeating_timer_ms(-1000, vhf_pulse_callback, NULL, &yagiTimer); */
+		/* 	yagiIsOn = true; */
+		/* } */
+		/* else { */
+		/* 	// printf("repeating sleep ...\n"); */
+		/* 	sleep_ms(aprs_config.interval); */
+		/* 	txAprs(); */
+		/* } */
   }
 	return 0;
 }
