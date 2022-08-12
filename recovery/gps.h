@@ -10,6 +10,7 @@
 // GPS DEFS [END] -----------------------------------------------------
 
 // Critical typedefs
+// the GPS configuration for UBLOX
 typedef struct gps_config_t {
 	int txPin; // confusing, is the what pin is transmitting the GPS data 
 	// being received by the pi (pi RX)? or is this what pin the pi is transmitting to the gps on? (pi tx)

@@ -1,0 +1,5 @@
+FROM nginx:alpine
+RUN apk update && apk add doxygen && mkdir -p project/docs/doxygen
+COPY docs/Doxyfile.in /project/docs/Doxyfile.in
+COPY recovery /project/recovery
+RUN cd /project/docs/ && doxygen /project/docs/Doxyfile.in && cp -r /project/docs/doxygen/html/ /usr/share/nginx/

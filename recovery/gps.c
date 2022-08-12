@@ -56,13 +56,18 @@ void readFromGps(const gps_config_s * gps_cfg, gps_data_s * gps_dat) {
       // printf("0x%x ", inChar);
       while (inChar != '\r') {
         inChar = uart_getc(gps_cfg->uart);
+				if (inChar == '$') i = 0;
 				gps_rd_buf[i++] = inChar;
         // printf("0x%x ", inChar);
       }
       gps_rd_buf[i-1] = '\0';
       gps_buf_len = i-1;
       parseGpsOutput(gps_rd_buf, gps_buf_len, gps_dat);
+<<<<<<< HEAD
       printf("\n%s\r\n",gps_rd_buf);
+=======
+      printf("%s\r\n",gps_rd_buf);
+>>>>>>> sdk
     }
 
   }
