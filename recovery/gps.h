@@ -11,7 +11,8 @@
 
 // Critical typedefs
 typedef struct gps_config_t {
-	int txPin;
+	int txPin; // confusing, is the what pin is transmitting the GPS data 
+	// being received by the pi (pi RX)? or is this what pin the pi is transmitting to the gps on? (pi tx)
 	int rxPin;
 	int baudrate;
 	uart_inst_t *uart;
@@ -38,7 +39,7 @@ void gpsInit(const gps_config_s *);
 // Ublox configuration functions
 void calculateUBXChecksum(uint8_t length, uint8_t* byte_stream);
 bool writeAllConfigurationsToUblox(uart_inst_t* uart);
-void writeSingleConfiguration(uart_inst_t* uart, uint8_t* byte_stream);
+void writeSingleConfiguration(uart_inst_t* uart, uint8_t* byte_stream, uint8_t len);
 
 
 #endif

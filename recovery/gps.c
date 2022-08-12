@@ -126,16 +126,19 @@ bool writeAllConfigurationsToUblox(uart_inst_t* uart) {
     // do bit magic for the length
     uint16_t length = (((uint16_t)ubx_configurations[i][5] << 8) | ubx_configurations[i][4]) + 0x8;
     // calculateUBXChecksum(length, ubx_configurations[i]);
-    writeSingleConfiguration(uart, ubx_configurations[i]);
+    // writeSingleConfiguration(uart, ubx_configurations[i], length);
   }
 
   
 }
 
-void writeSingleConfiguration(uart_inst_t* uart, uint8_t* byte_stream) {
-  printf("Writing Configuration: %x %x\n", byte_stream[2], byte_stream[3]);
-  // if (!uart_is_writable(uart)) uart_tx_wait_blocking(uart);
-  // uart_puts(uart, byte_stream);
+void writeSingleConfiguration(uart_inst_t* uart, uint8_t* byte_stream, uint8_t len) {
+  // printf("Writing Configuration: %x %x\n", byte_stream[2], byte_stream[3]);
+  if (!uart_is_writable(uart)) uart_tx_wait_blocking(uart);
+  for (uint8_t i = 0; i < len; i++) {
+    uart_putc_raw(uart, byte_stream[i]);
+  }
+  // uart_puts(uart, (char *)byte_stream);
   sleep_ms(500);
   // TODO: fix this to have check for ACKs
   // char inChar;

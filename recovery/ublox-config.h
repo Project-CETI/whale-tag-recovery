@@ -3,7 +3,7 @@
 
 #define NUM_UBLOX_CONFIGS 2
 
-typedef uint8_t ubx_cfg_t;
+typedef char ubx_cfg_t;
 
 /**
  *  +--------+-------+----+-----+---------+------+------+
@@ -72,7 +72,7 @@ static ubx_cfg_t msg_zda[16] = { /* header */     0xB5, 0x62,
                                               0x00, 0x00, 0x00, 0x00,
                            /* checksum */     0x07, 0x5B};
 
-static ubx_cfg_t mon_ver[8] = { 0xB5, 0x62, 0x0A, 0x04, 0x00, 0x00, 0x0E, 0x34};
+static ubx_cfg_t mon_ver[8] = { 0xB5, 0x62, 0x0A, 0x04, 0, 0, 0x0E, 0x34};
 // // UBX-CFG-PM2
 // // Load the configuration from memory
 // static ubx_cfg_t pm2[22] = { /* header */     0xB5, 0x62, 
