@@ -12,18 +12,28 @@
 void parseGpsOutput(char *line, int buf_len, gps_data_s * gps_dat) {
   switch (minmea_sentence_id(line, false)) {
   case MINMEA_SENTENCE_RMC: {
+		gps_dat->posCheck = true;
     struct minmea_sentence_rmc frame;
     if (minmea_parse_rmc(&frame, line)) {
       memcpy(gps_dat->lastGpsBuffer, line, buf_len);
       gps_dat->latlon[0] = minmea_tocoord(&frame.latitude);
       gps_dat->latlon[1] = minmea_tocoord(&frame.longitude);
-      if (isnan(gps_dat->latlon[0])) gps_dat->latlon[0] = 42.3648;
-      if (isnan(gps_dat->latlon[1])) gps_dat->latlon[1] = 0.0;
+      if (isnan(gps_dat->latlon[0])) {
+				gps_dat->posCheck = false;
+				gps_dat->latlon[0] = 42.3648;
+			}
+      if (isnan(gps_dat->latlon[1])) {
+				gps_dat->posCheck = false;
+				gps_dat->latlon[1] = 0.0;
+			}
       gps_dat->acs[1] = minmea_rescale(&frame.course, 3);
       gps_dat->acs[2] = minmea_rescale(&frame.speed, 1);
-      // printf("[PARSED]: %f, %f, %d, %d\n", gps_dat->latlon[0], gps_dat->latlon[1], gps_dat->acs[1], gps_dat->acs[2]);
+			printf("[PARSED]: %d | %f, %f, %d, %d\n", gps_dat->posCheck,
+						 minmea_tocoord(&frame.latitude),
+						 minmea_tocoord(&frame.longitude),
+						 minmea_rescale(&frame.course, 3),
+						 minmea_rescale(&frame.speed, 1));
       // printf("[C/S]: %d, %d, %d, %d, %d, %d\n", &frame.course.value, &frame.course.scale, gps_dat->acs[0], &frame.speed.value, &frame.speed.scale, gps_dat->acs[1]);
-			gps_dat->posCheck = true;
     }
     break;
   }
@@ -31,7 +41,7 @@ void parseGpsOutput(char *line, int buf_len, gps_data_s * gps_dat) {
     struct minmea_sentence_zda frame;
     if (minmea_parse_zda(&frame, line))
 			memcpy(gps_dat->lastDtBuffer, line, buf_len);
-    // printf("[DT]: %s", gps_dat->lastDtBuffer);
+    printf("[DT]: %s\n", gps_dat->lastDtBuffer);
     break;
   }
   case MINMEA_INVALID:
@@ -60,23 +70,25 @@ void readFromGps(const gps_config_s * gps_cfg, gps_data_s * gps_dat) {
       gps_rd_buf[i-1] = '\0';
       gps_buf_len = i-1;
       parseGpsOutput(gps_rd_buf, gps_buf_len, gps_dat);
-      // printf("%s\r\n",gps_rd_buf);
+      // printf("\r\n%s\r\n",gps_rd_buf);
     }
   }
 }
 
-void drainGpsFifo(const gps_config_s * gps_cfg, gps_data_s * gps_dat) {
-	// printf("Starting draining.\n");
-	char gps_rd_buf[MAX_GPS_MSG_LEN];
-	if (uart_is_readable(gps_cfg->uart)) {
-		// printf("How much to read: %d\n", uart_is_readable(gps_cfg->uart));
-		uart_read_blocking(gps_cfg->uart,
-											 gps_rd_buf,
-											 uart_is_readable(gps_cfg->uart));
-	}
-	// printf("Finished draining.\n");
-	gps_dat->datCheck = false;
+/* void getFullGps(const gps_config_s * gps_cfg) { */
+/* 	char gps_rd_buf[MAX_GPS_MSG_LEN] = "\0"; */
+/* 	uart_read_blocking(gps_cfg->uart, gps_rd_buf, MAX_GPS_MSG_LEN); */
+/* 	if (strlen(gps_rd_buf)) */
+/* 		printf("\r\n%d | %s\r\n", strlen(gps_rd_buf), gps_rd_buf); */
+/* } */
+void gps_get_lock(const gps_config_s * gps_cfg, gps_data_s * gps_dat) {
 	gps_dat->posCheck = false;
+	uint32_t startTime = to_ms_since_boot(get_absolute_time());
+	while (gps_dat->posCheck != true) {
+		readFromGps(gps_cfg, gps_dat);
+		if (to_ms_since_boot(get_absolute_time()) - startTime > 1000)
+			break;
+	}
 }
 
 void echoGpsOutput(char *line, int buf_len) {
