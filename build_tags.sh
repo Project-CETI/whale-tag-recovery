@@ -43,9 +43,9 @@ sed -i "9s/NAME .*/NAME ${uf2name})/" ../recovery/CMakeLists.txt
 
 for i in ${tagIDs[@]}; do
 		echo "************** TAG ${i} **************"
-		sed -i "35s/\", .*/\", ${i},/" ../recovery/main.c
-		sed -i "36s/b1..*/b1.1 Tag${i}\",/" ../recovery/main.c
-		sed -i "55s/for .*/for Tag ${i}\"));/" ../recovery/main.c
+		sed -i "37s/\", .*/\", ${i},/" ../recovery/main.c
+		sed -i "38s/b1..*/b1.1 Tag${i}\",/" ../recovery/main.c
+		sed -i "65s/for .*/for Tag ${i}\"));/" ../recovery/main.c
 
 		make -j4
 		rm -f "../bin/tag${i}/${uf2name}.uf2"
@@ -53,8 +53,8 @@ for i in ${tagIDs[@]}; do
 done
 
 echo "************** RESET TO STANDALONE BOARD **************"
-sed -i "35s/\", .*/\", 1,/" ../recovery/main.c
-sed -i "36s/b1..*/b1.1 2-S\",/" ../recovery/main.c
-sed -i "55s/for .*/for standalone recovery board 2-#\"));/" ../recovery/main.c
+sed -i "37s/\", .*/\", 1,/" ../recovery/main.c
+sed -i "38s/b1..*/b1.1 2-S\",/" ../recovery/main.c
+sed -i "65s/for .*/for standalone recovery board 2-S\"));/" ../recovery/main.c
 
 make -j4

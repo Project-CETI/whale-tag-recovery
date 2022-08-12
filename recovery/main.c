@@ -23,7 +23,7 @@ bool txVHF(repeating_timer_t *rt);
 void startVHF(repeating_timer_t *vhfTimer);
 bool txAprsIRQ(repeating_timer_t *rt);
 bool txAprs(void);
-// void startAPRS(const aprs_config_s * aprs_cfg, repeating_timer_t *aprsTimer);
+void startAPRS(const aprs_config_s * aprs_cfg, repeating_timer_t *aprsTimer);
 void startTag(const tag_config_s * tag_cfg, repeating_timer_t *tagTimer);
 bool txTag(repeating_timer_t *rt);
 void initAll(const gps_config_s * gps_cfg, const tag_config_s * tag_cfg);
@@ -36,7 +36,7 @@ void initAll(const gps_config_s * gps_cfg, const tag_config_s * tag_cfg);
 const aprs_config_s aprs_config = {
 	"J75Y", 1,
 	"APLIGA", "WIDE2", 1, "Ceti b1.2 4-S",
-	5000, false, 2
+	30000, false, 2
 };
 
 const bool qIRQ = false;
