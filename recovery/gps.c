@@ -28,11 +28,11 @@ void parseGpsOutput(char *line, int buf_len, gps_data_s * gps_dat) {
 			}
       gps_dat->acs[1] = minmea_rescale(&frame.course, 3);
       gps_dat->acs[2] = minmea_rescale(&frame.speed, 1);
-			printf("[PARSED]: %d | %f, %f, %d, %d\n", gps_dat->posCheck,
-						 minmea_tocoord(&frame.latitude),
-						 minmea_tocoord(&frame.longitude),
-						 minmea_rescale(&frame.course, 3),
-						 minmea_rescale(&frame.speed, 1));
+			/* printf("[PARSED]: %d | %f, %f, %d, %d\n", gps_dat->posCheck, */
+			/* 			 minmea_tocoord(&frame.latitude), */
+			/* 			 minmea_tocoord(&frame.longitude), */
+			/* 			 minmea_rescale(&frame.course, 3), */
+			/* 			 minmea_rescale(&frame.speed, 1)); */
       // printf("[C/S]: %d, %d, %d, %d, %d, %d\n", &frame.course.value, &frame.course.scale, gps_dat->acs[0], &frame.speed.value, &frame.speed.scale, gps_dat->acs[1]);
     }
     break;
