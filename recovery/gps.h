@@ -4,7 +4,7 @@
 #include "pico/stdlib.h"
 
 // GPS DEFS [START] ---------------------------------------------------
-#define MAX_GPS_MSG_LEN 500
+#define MAX_GPS_MSG_LEN 1000
 // GPS DEFS [END] -----------------------------------------------------
 
 // Critical typedefs
@@ -27,7 +27,7 @@ typedef struct gps_data_t {
 // RX functions from NEO-M8N
 void parseGpsOutput(char *line, int buf_len, gps_data_s * gps_dat);
 void readFromGps(const gps_config_s * gps_cfg, gps_data_s * gps_dat);
-void drainGpsFifo(const gps_config_s * gps_cfg, gps_data_s * gps_dat);
+void gps_get_lock(const gps_config_s * gps_cfg, gps_data_s * gps_dat);
 void echoGpsOutput(char *line, int buf_len);
 
 // Init NEO-M8N functions

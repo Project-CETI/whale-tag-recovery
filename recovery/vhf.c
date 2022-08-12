@@ -62,7 +62,7 @@ void prepFishTx(float txFreq) {
 /** @brief Callback for a repeating timer dictating transmissions.
  * Transmits a pulse for length defined in #YAGI_TX_LEN
  * Callback for repeating_timer functions */
-bool vhf_pulse_callback(repeating_timer_t *rt) {
+bool vhf_pulse_callback(void) {
 	setPttState(true);
 	uint32_t stepLen = VHF_HZ * 32;
 	int numSteps = stepLen * VHF_TX_LEN / 1000;
