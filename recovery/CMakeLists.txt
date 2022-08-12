@@ -1,4 +1,4 @@
-set(BIN_NAME "psps")
+set(BIN_NAME "recovery")
 set(SOURCES
 	main.c
 	aprs.c
