@@ -21,10 +21,10 @@ void set_bin_desc(void);
 void setLed(bool state);
 void initLed(void);
 bool txAprs(repeating_timer_t *rt);
-void startAPRS(const aprs_config_s * aprs_cfg, repeating_timer_t *aprsTimer);
-void startTag(const tag_config_s * tag_cfg, repeating_timer_t *tagTimer);
+void startAPRS(const aprs_config_s *aprs_cfg, repeating_timer_t *aprsTimer);
+void startTag(const tag_config_s *tag_cfg, repeating_timer_t *tagTimer);
 bool txTag(repeating_timer_t *rt);
-void initAll(const gps_config_s * gps_cfg, const tag_config_s * tag_cfg);
+void initAll(const gps_config_s *gps_cfg, const tag_config_s *tag_cfg);
 
 /** @struct Defines unchanging configuration parameters for APRS.
  * callsign, ssid, dest, digi, digissid, comment
@@ -32,42 +32,50 @@ void initAll(const gps_config_s * gps_cfg, const tag_config_s * tag_cfg);
 const aprs_config_s aprs_config = {
 	"J75Y", 1,
 	"APLIGA", "WIDE2", 1, "Ceti b1.1 GPS Standalone",
-	30000, false, 2
-};
+	30000, false, 2};
 
 /** @struct Defines unchanging configuration parameters for GPS communication.
  * GPS_TX, GPS_RX, GPS_BAUD, UART_NUM, QINTERACTIVE
  */
 const gps_config_s gps_config = {0, 1, 9600, uart0, false};
-gps_data_s gps_data = {{42.3648,0},
-											{0,0,0},
-											"$GN 42.3648,-71.1247,0,360,0*38",
-											"$DT 20190408195123,V*41",
-											false, false};
+gps_data_s gps_data = {{42.3648, 0},
+					   {0, 0, 0},
+					   "$GN 42.3648,-71.1247,0,360,0*38",
+					   "$DT 20190408195123,V*41",
+					   false,
+					   false};
 /** @struct Defines unchanging configuration parameters for tag communication.
  * TAG_TX, TAG_RX, TAG_BAUD, UART_NUM, SEND_INTERVAL, ACK_WAIT_TIME_US, ACK_WAIT_TIME_MS, NUM_TRIES
  */
 const tag_config_s tag_config = {4, 5, 115200, uart1, 10000, 1000, 1000, 3};
 
-void set_bin_desc(void) {
-  bi_decl(bi_program_description("Recovery process binary for standalone recovery board 2-#"));
-  bi_decl(bi_1pin_with_name(LED_PIN, "On-board LED"));
-  bi_decl(bi_1pin_with_name(gps_config.txPin, "TX UART to GPS"));
-  bi_decl(bi_1pin_with_name(gps_config.rxPin, "RX UART to GPS"));
-  bi_decl(bi_1pin_with_name(tag_config.txPin, "TX UART to TAG modem"));
-  bi_decl(bi_1pin_with_name(tag_config.rxPin, "RX UART to TAG modem"));
-  describeConfig();
+void set_bin_desc(void)
+{
+	bi_decl(bi_program_description("Recovery process binary for standalone recovery board 2-#"));
+	bi_decl(bi_1pin_with_name(LED_PIN, "On-board LED"));
+	bi_decl(bi_1pin_with_name(gps_config.txPin, "TX UART to GPS"));
+	bi_decl(bi_1pin_with_name(gps_config.rxPin, "RX UART to GPS"));
+	bi_decl(bi_1pin_with_name(tag_config.txPin, "TX UART to TAG modem"));
+	bi_decl(bi_1pin_with_name(tag_config.rxPin, "RX UART to TAG modem"));
+	describeConfig();
 }
 
-void setLed(bool state) {gpio_put(LED_PIN, state);}
-void initLed(void) {gpio_init(LED_PIN); gpio_set_dir(LED_PIN, GPIO_OUT);}
+void setLed(bool state) { gpio_put(LED_PIN, state); }
+void initLed(void)
+{
+	gpio_init(LED_PIN);
+	gpio_set_dir(LED_PIN, GPIO_OUT);
+}
 
-bool txAprs(repeating_timer_t *rt) {
+bool txAprs(repeating_timer_t *rt)
+{
 	drainGpsFifo(&gps_config, &gps_data);
 	sleep_ms(100);
 	int i = 0;
-CHECK_POS: readFromGps(&gps_config, &gps_data);
-	if (gps_data.posCheck != true) {
+CHECK_POS:
+	readFromGps(&gps_config, &gps_data);
+	if (gps_data.posCheck != true)
+	{
 		/* getPos(coords); */
 		/* getACS(aCS); */
 		setLed(true);
@@ -78,48 +86,55 @@ CHECK_POS: readFromGps(&gps_config, &gps_data);
 		setLed(false);
 		return true;
 	}
-	else {
+	else
+	{
 		i++;
 		sleep_ms(1000);
-		if (i < 1) goto CHECK_POS;
+		if (i < 1)
+			goto CHECK_POS;
 	}
 	return false;
 }
 
-void startAPRS(const aprs_config_s * aprs_cfg, repeating_timer_t *aprsTimer) {
+void startAPRS(const aprs_config_s *aprs_cfg, repeating_timer_t *aprsTimer)
+{
 	configureAPRS_TX(145.05);
 	add_repeating_timer_ms(-aprs_cfg->interval, txAprs, NULL, aprsTimer);
 }
 
-bool txTag (repeating_timer_t *rt) {
-  // getLastPDtBufs(lastGpsUpdate, lastDtUpdate);
-  writeGpsToTag(&tag_config, gps_data.lastGpsBuffer, gps_data.lastDtBuffer);
-  // detachTag();
-  // reqTagState();
+bool txTag(repeating_timer_t *rt)
+{
+	// getLastPDtBufs(lastGpsUpdate, lastDtUpdate);
+	writeGpsToTag(&tag_config, gps_data.lastGpsBuffer, gps_data.lastDtBuffer);
+	// detachTag();
+	// reqTagState();
 }
 
-void startTag(const tag_config_s * tag_cfg, repeating_timer_t *tagTimer) {
+void startTag(const tag_config_s *tag_cfg, repeating_timer_t *tagTimer)
+{
 	add_repeating_timer_ms(-tag_cfg->interval, txTag, NULL, tagTimer);
 }
 
-void initAll(const gps_config_s * gps_cfg, const tag_config_s * tag_cfg) {
-  set_bin_desc();
-  stdio_init_all();
+void initAll(const gps_config_s *gps_cfg, const tag_config_s *tag_cfg)
+{
+	set_bin_desc();
+	stdio_init_all();
 
-  initLed();
-  setLed(true);
+	initLed();
+	setLed(true);
 
-  gpsInit(gps_cfg);
+	gpsInit(gps_cfg);
 
-  initAPRS();
+	initAPRS();
 
-  initTagComm(tag_cfg);
-  setLed(false);
+	initTagComm(tag_cfg);
+	setLed(false);
 }
 
-int main() {
-  // Setup
-  initAll(&gps_config, &tag_config);
+int main()
+{
+	// Setup
+	initAll(&gps_config, &tag_config);
 
 	// APRS comms interrupt setup
 	repeating_timer_t aprsTimer;
@@ -138,31 +153,38 @@ int main() {
 	add_repeating_timer_ms(-1000, vhf_pulse_callback, NULL, &yagiTimer);
 	bool yagiIsOn = true;
 
-	
-   printf("Initialized the GPS\n");
-  // Loop
-  while (true) {
-	writeAllConfigurationsToUblox(gps_config.uart);
-    readFromGps(&gps_config, &gps_data);
-		if (gps_data.datCheck && yagiIsOn) {
+	// Loop
+	while (true)
+	{
+		writeAllConfigurationsToUblox(gps_config.uart);
+		readFromGps(&gps_config, &gps_data);
+		if (gps_data.datCheck && yagiIsOn){
 			cancel_repeating_timer(&yagiTimer);
 			setVhfState(false);
 			startAPRS(&aprs_config, &aprsTimer);
 			startTag(&tag_config, &tagTimer);
-		}
-		else if (gps_data.datCheck) sleep_ms(1000);
-		else if (!gps_data.datCheck && !yagiIsOn) {
+		} else if (gps_data.datCheck) {
+			sleep_ms(1000);
+		
+		} else if (!gps_data.datCheck && !yagiIsOn){
 			setVhfState(true);
 			cancel_repeating_timer(&aprsTimer);
 			// DO NOT CANCEL TAG TIMER, WE WILL REPORT THROUGH DATA LOSS
 			prepFishTx(vhfTxFreq);
 			add_repeating_timer_ms(-1000, vhf_pulse_callback, NULL, &yagiTimer);
 			yagiIsOn = true;
-		}
-		else {
-			
+		} else {
 			sleep_ms(1000);
 		}
-  }
+
+		/*
+		if (!gps_data.position_lock) {
+			// If we don't have GPS lock, sleep for a second, and don't transmit APRS
+			sleep_ms(1000);
+			setVhfState(true);
+
+		} else 
+		*/
+	}
 	return 0;
 }

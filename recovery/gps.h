@@ -19,6 +19,7 @@ typedef struct gps_config_t {
 	uart_inst_t *uart;
 	bool gpsInteractive;
 } gps_config_s;
+// Need comment to describe these
 typedef struct gps_data_t {
 	float latlon[2];
 	uint16_t acs[3];

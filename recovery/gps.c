@@ -11,34 +11,53 @@
 // RX functions from NEO-M8N
 
 void parseGpsOutput(char *line, int buf_len, gps_data_s * gps_dat) {
+  gps_dat->posCheck = false;
   switch (minmea_sentence_id(line, false)) {
-  case MINMEA_SENTENCE_RMC: {
-    struct minmea_sentence_rmc frame;
-    if (minmea_parse_rmc(&frame, line)) {
-      memcpy(gps_dat->lastGpsBuffer, line, buf_len);
-      gps_dat->latlon[0] = minmea_tocoord(&frame.latitude);
-      gps_dat->latlon[1] = minmea_tocoord(&frame.longitude);
-      if (isnan(gps_dat->latlon[0])) gps_dat->latlon[0] = 42.3648;
-      if (isnan(gps_dat->latlon[1])) gps_dat->latlon[1] = 0.0;
-      gps_dat->acs[1] = minmea_rescale(&frame.course, 3);
-      gps_dat->acs[2] = minmea_rescale(&frame.speed, 1);
-      // printf("[PARSED]: %f, %f, %d, %d\n", gps_dat->latlon[0], gps_dat->latlon[1], gps_dat->acs[1], gps_dat->acs[2]);
-      // printf("[C/S]: %d, %d, %d, %d, %d, %d\n", &frame.course.value, &frame.course.scale, gps_dat->acs[0], &frame.speed.value, &frame.speed.scale, gps_dat->acs[1]);
-			gps_dat->posCheck = true;
+    case MINMEA_SENTENCE_RMC: {
+      struct minmea_sentence_rmc frame;
+      if (minmea_parse_rmc(&frame, line)) {
+        memcpy(gps_dat->lastGpsBuffer, line, buf_len);
+        gps_dat->latlon[0] = minmea_tocoord(&frame.latitude);
+        gps_dat->latlon[1] = minmea_tocoord(&frame.longitude);
+         gps_dat->posCheck = frame.valid;// && !isnan(gps_dat->latlon[0]) && !isnan(gps_dat->latlon[1]);
+
+        // Set test data values
+        if (isnan(gps_dat->latlon[0])) gps_dat->latlon[0] = 42.3648;
+        if (isnan(gps_dat->latlon[1])) gps_dat->latlon[1] = 0.0;
+        gps_dat->acs[1] = minmea_rescale(&frame.course, 3);
+        gps_dat->acs[2] = minmea_rescale(&frame.speed, 1);
+        // printf("[PARSED]: %f, %f, %d, %d\n", gps_dat->latlon[0], gps_dat->latlon[1], gps_dat->acs[1], gps_dat->acs[2]);
+        // printf("[C/S]: %d, %d, %d, %d, %d, %d\n", &frame.course.value, &frame.course.scale, gps_dat->acs[0], &frame.speed.value, &frame.speed.scale, gps_dat->acs[1]);
+        
+      }
+      break;
     }
-    break;
-  }
-  case MINMEA_SENTENCE_ZDA: {
-    struct minmea_sentence_zda frame;
-    if (minmea_parse_zda(&frame, line))
-			memcpy(gps_dat->lastDtBuffer, line, buf_len);
-    // printf("[DT]: %s", gps_dat->lastDtBuffer);
-    break;
-  }
-  case MINMEA_INVALID:
-    break;
-  default:
-    break;
+    case MINMEA_SENTENCE_ZDA: {
+      struct minmea_sentence_zda frame;
+      if (minmea_parse_zda(&frame, line))
+        memcpy(gps_dat->lastDtBuffer, line, buf_len);
+      // printf("[DT]: %s", gps_dat->lastDtBuffer);
+      break;
+    }
+    case MINMEA_SENTENCE_GLL: {
+      struct minmea_sentence_gll frame;
+      if (minmea_parse_gll(&frame, line)) {
+        memcpy(gps_dat->lastDtBuffer, line, buf_len);
+        gps_dat->latlon[0] = minmea_tocoord(&frame.latitude);
+        gps_dat->latlon[1] = minmea_tocoord(&frame.longitude);
+        gps_dat->posCheck = !isnan(gps_dat->latlon[0]) && !isnan(gps_dat->latlon[1]);
+
+        // Set test data values
+        if (isnan(gps_dat->latlon[0])) gps_dat->latlon[0] = 42.3648;
+        if (isnan(gps_dat->latlon[1])) gps_dat->latlon[1] = 0.0;
+        
+      }
+      break;
+    }
+    case MINMEA_INVALID:
+      break;
+    default:
+      break;
   }
 }
 
@@ -63,11 +82,7 @@ void readFromGps(const gps_config_s * gps_cfg, gps_data_s * gps_dat) {
       gps_rd_buf[i-1] = '\0';
       gps_buf_len = i-1;
       parseGpsOutput(gps_rd_buf, gps_buf_len, gps_dat);
-<<<<<<< HEAD
-      printf("\n%s\r\n",gps_rd_buf);
-=======
-      printf("%s\r\n",gps_rd_buf);
->>>>>>> sdk
+      printf("%s %s\r\n",gps_rd_buf, gps_dat->posCheck ? "true" : "false");
     }
 
   }
@@ -130,8 +145,8 @@ bool writeAllConfigurationsToUblox(uart_inst_t* uart) {
   for (uint8_t i = 0; i < NUM_UBLOX_CONFIGS; i++) {
     // do bit magic for the length
     uint16_t length = (((uint16_t)ubx_configurations[i][5] << 8) | ubx_configurations[i][4]) + 0x8;
-    // calculateUBXChecksum(length, ubx_configurations[i]);
-    // writeSingleConfiguration(uart, ubx_configurations[i], length);
+    calculateUBXChecksum(length, ubx_configurations[i]);
+    writeSingleConfiguration(uart, ubx_configurations[i], length);
   }
 
   
@@ -144,7 +159,7 @@ void writeSingleConfiguration(uart_inst_t* uart, uint8_t* byte_stream, uint8_t l
     uart_putc_raw(uart, byte_stream[i]);
   }
   // uart_puts(uart, (char *)byte_stream);
-  sleep_ms(500);
+  // sleep_ms(500);
   // TODO: fix this to have check for ACKs
   // char inChar;
 	// char ack_rd_buf[MAX_GPS_ACK_LENGTH];
