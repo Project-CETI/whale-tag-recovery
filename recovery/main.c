@@ -15,6 +15,12 @@
 #define VHF_TX_LEN 800
 /// Location of the LED pin
 #define LED_PIN 29
+/// Choose whether or not to use interrupts for APRS
+#define Q_IRQ 0
+/// Turns on communications with the main tag (only for fully CONNected tags)
+#define TAG_CONN 0
+/// Turns on fish tracker behavior when no GPS
+#define USE_YAGI 0
 
 void set_bin_desc(void);
 void setLed(bool state);
@@ -22,7 +28,7 @@ void initLed(void);
 bool txVHF(repeating_timer_t *rt);
 void startVHF(repeating_timer_t *vhfTimer);
 bool txAprsIRQ(repeating_timer_t *rt);
-bool txAprs(void);
+bool txAprsNoIRQ(void);
 void startAPRS(const aprs_config_s * aprs_cfg, repeating_timer_t *aprsTimer);
 void startTag(const tag_config_s * tag_cfg, repeating_timer_t *tagTimer);
 bool txTag(repeating_timer_t *rt);
@@ -34,13 +40,10 @@ void initAll(const gps_config_s * gps_cfg, const tag_config_s * tag_cfg);
  * interval, debug, debug style
  */
 const aprs_config_s aprs_config = {
-	"J75Y", 1,
+	"J73MAB", 1,
 	"APLIGA", "WIDE2", 1, "Ceti b1.2 4-S",
-	30000, false, 2
+	120000, false, 2
 };
-
-const bool qIRQ = false;
-const bool tagConnected = false;
 
 /** @struct Defines unchanging configuration parameters for GPS communication.
  * GPS_TX, GPS_RX, GPS_BAUD, UART_NUM, QINTERACTIVE
@@ -88,22 +91,22 @@ void startVHF(repeating_timer_t *vhfTimer) {
 
 bool txAprsIRQ(repeating_timer_t *rt) {
 	gps_get_lock(&gps_config, &gps_data);
-	if (gps_data.posCheck != false) {
+	if (aprs_config.debug) sendTestPackets(&aprs_config);
+	else {
 		// printf("aprsing 1\n");
 		setLed(true);
-		if (aprs_config.debug) sendTestPackets(&aprs_config);
-		else sendPacket(&aprs_config, gps_data.latlon, gps_data.acs);
+		sendPacket(&aprs_config, gps_data.latlon, gps_data.acs);
 		setLed(false);
 	}
 	return gps_data.posCheck;
 }
-bool txAprs(void) {
+bool txAprsNoIRQ(void) {
 	gps_get_lock(&gps_config, &gps_data);
-	if (gps_data.posCheck != false) {
+	if (aprs_config.debug) sendTestPackets(&aprs_config);
+	else {
 		// printf("aprsing 1\n");
 		setLed(true);
-		if (aprs_config.debug) sendTestPackets(&aprs_config);
-		else sendPacket(&aprs_config, gps_data.latlon, gps_data.acs);
+		sendPacket(&aprs_config, gps_data.latlon, gps_data.acs);
 		setLed(false);
 	}
 	return gps_data.posCheck;
@@ -151,40 +154,53 @@ int main() {
 	repeating_timer_t aprsTimer;
 
 	// Tag comms interrupt setup
+	#if TAG_CONN
 	repeating_timer_t tagTimer;
-	if (tagConnected) startTag(&tag_config, &tagTimer);
+	startTag(&tag_config, &tagTimer);
+	#endif
 
+	#if USE_YAGI
 	// VHF pulse interrupt setup
 	repeating_timer_t yagiTimer;
-
 	// Start the VHF pulsing until GPS lock
 	setVhfState(true);
 	startVHF(&yagiTimer);
 	bool yagiIsOn = true;
+	#endif
 	// printf("Init yagi.\n");
 
   // Loop
   while (true) {
-		if (gps_data.posCheck && yagiIsOn) {
-			setVhfState(true);
-			yagiIsOn = false;
-			// printf("We're in the timer zone now.\n");
-			if (qIRQ) startAPRS(&aprs_config, &aprsTimer);
-			else configureAPRS_TX(144.39);
-			printf("Started aprs timer.\n");
-		}
-		else if (!gps_data.datCheck && !yagiIsOn) {
-			setVhfState(true);
-			// DO NOT CANCEL TAG TIMER, WE WILL REPORT THROUGH DATA LOSS
-			startVHF(&yagiTimer);
-			yagiIsOn = true;
-		}
-		else {
-			printf("repeating sleep ...\n");
-			sleep_ms(aprs_config.interval); // sleep for two minutes before re-evaluating gps quality
-			if (qIRQ) gps_get_lock(&gps_config, &gps_data);
-			else txAprs();
-		}
+		#if USE_YAGI
+			if (gps_data.posCheck && yagiIsOn) {
+				setVhfState(true);
+				yagiIsOn = false;
+				// printf("We're in the timer zone now.\n");
+				#if Q_IRQ
+				startAPRS(&aprs_config, &aprsTimer);
+				printf("Started aprs timer.\n");
+				#else
+				configureAPRS_TX(144.39);
+				#endif
+			}
+			else if (!gps_data.datCheck && !yagiIsOn) {
+				setVhfState(true);
+				// DO NOT CANCEL TAG TIMER, WE WILL REPORT THROUGH DATA LOSS
+				startVHF(&yagiTimer);
+				yagiIsOn = true;
+			}
+			else {
+				#if Q_IRQ
+				gps_get_lock(&gps_config, &gps_data);
+				#else
+				txAprsNoIRQ();
+				#endif
+			}
+		#else
+			txAprsNoIRQ();
+		#endif
+		printf("repeating sleep over here ...\n");
+		sleep_ms(aprs_config.interval); // sleep for two minutes before re-evaluating gps quality
   }
 	return 0;
 }
