@@ -18,9 +18,9 @@
 /// Choose whether or not to use interrupts for APRS
 #define Q_IRQ 0
 /// Turns on communications with the main tag (only for fully CONNected tags)
-#define TAG_CONN 1
+#define TAG_CONN 0
 /// Turns on fish tracker behavior when no GPS
-#define USE_YAGI 1
+#define USE_YAGI 0
 
 void set_bin_desc(void);
 void setLed(bool state);
@@ -40,9 +40,9 @@ void initAll(const gps_config_s * gps_cfg, const tag_config_s * tag_cfg);
  * interval, debug, debug style
  */
 const aprs_config_s aprs_config = {
-	"J75Y", 1,
+	"J73MAB", 1,
 	"APLIGA", "WIDE2", 1, "Ceti b1.2 4-S",
-	5000, false, 2
+	120000, false, 2
 };
 
 /** @struct Defines unchanging configuration parameters for GPS communication.
