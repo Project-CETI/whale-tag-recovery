@@ -17,27 +17,29 @@
 // APRS VARS [START] ----------------------------------------------------
 
 /// APRS protocol config (don't change)
-struct aprs_pc_s {
+const struct aprs_pc_s {
 	const uint16_t _FLAG; ///< Flag for APRS transmissions. Must be 0x7e.
 	const uint16_t _CTRL_ID; ///< CTRL ID for APRS transmission. Must be 0x03.
 	const uint16_t _PID; ///< PID for APRS transmission. Must be 0xf0.
 	const char _DT_POS; ///< APRS character, defines transmissions as real-time.
 	const char sym_ovl; ///< Symbol Table ID. \ for the Alternative symbols.
 	const char sym_tab; ///< Symbol Code.
+} aprs_pc = {0x7e, 0x03, 0xf0, '!', '\\', '-'};
+struct aprs_cc_s {
 	bool nada;
 	char bitStuff; ///< Tracks the bit position in byte being transmitted.
 	uint16_t crc; ///< CRC-16 CCITT value. Initialize at 0xffff.
 	uint8_t currOutput; ///< Tracks location in FSK wave output. Range 0-31.
-} aprs_pc = {0x7e, 0x03, 0xf0, '!', '\\', '-', 0, 0, 0xffff, 0};
+} aprs_cc = {0, 0, 0xffff, 0};
 
 /// APRS signal TX config
-struct aprs_sig_s {
+const struct aprs_sig_s {
 	const uint64_t bitPeriod; ///< Total length of signal period per bit.
 	const uint32_t delay1200; ///< Delay for 1200Hz signal.
 	const uint32_t delay2200; ///< Delay for 2200Hz signal.
-	uint64_t endTimeAPRS; ///< us counter on how long to hold steps in DAC output.
-} aprs_sig = {832, 23, 15, 0};
+} aprs_sig = {832, 23, 15};
 
+uint64_t endTimeAPRS; ///< us counter on how long to hold steps in DAC output.
 /// APRS payload arrays
 struct aprs_pyld_s {
 	char lati[9]; ///< Character array to hold the latitude coordinate.
@@ -49,7 +51,11 @@ bool q145 = false; ///< Boolean for selecting 144.39MHz or 145.05MHz transmissio
 /** Array of sin values for the DAC output.
  * Corresponds to one whole 8-bit sine output.
  */
-extern uint8_t* sinValues;
+const uint8_t sinValues2[NUM_SINS] = {
+  152, 176, 198, 217, 233, 245, 252, 255, 252, 245, 233,
+  217, 198, 176, 152, 127, 103, 79,  57,  38,  22,  10,
+  3,   1,   3,   10,  22,  38,  57,  79,  103, 128
+};
 // APRS VARS [END] ------------------------------------------------------
 
 
@@ -58,9 +64,9 @@ extern uint8_t* sinValues;
  * Loops through the DAC output array using currOutput.
  */
 void setNextSin(void) {
-  aprs_pc.currOutput++;
-  if (aprs_pc.currOutput == NUM_SINS) aprs_pc.currOutput = 0;
-  setOutput(sinValues[aprs_pc.currOutput]);
+	// printf("%d | %d\n", aprs_cc.currOutput, sinValues[aprs_cc.currOutput]);
+  if (aprs_cc.currOutput == NUM_SINS) aprs_cc.currOutput = 0;
+  setOutput(sinValues2[aprs_cc.currOutput++]);
 }
 
 /** Sets a 1200Hz output wave via the DAC.
@@ -68,8 +74,8 @@ void setNextSin(void) {
  * @see setNextSin
  */
 void setNada1200(void) {
-  aprs_sig.endTimeAPRS = to_us_since_boot(get_absolute_time()) + aprs_sig.bitPeriod;
-  while (to_us_since_boot(get_absolute_time()) < aprs_sig.endTimeAPRS) {
+  endTimeAPRS = to_us_since_boot(get_absolute_time()) + aprs_sig.bitPeriod;
+  while (to_us_since_boot(get_absolute_time()) < endTimeAPRS) {
     setNextSin();
     busy_wait_us_32(aprs_sig.delay1200);
   }
@@ -79,8 +85,8 @@ void setNada1200(void) {
  * @see setNextSin
  */
 void setNada2400(void) {
-  aprs_sig.endTimeAPRS = to_us_since_boot(get_absolute_time()) + aprs_sig.bitPeriod;
-  while (to_us_since_boot(get_absolute_time()) < aprs_sig.endTimeAPRS) {
+  endTimeAPRS = to_us_since_boot(get_absolute_time()) + aprs_sig.bitPeriod;
+  while (to_us_since_boot(get_absolute_time()) < endTimeAPRS) {
     setNextSin();
     busy_wait_us(aprs_sig.delay2200);
   }
@@ -109,10 +115,10 @@ void set_nada(bool nada) {
 void calc_crc(bool inBit) {
   unsigned short xorIn;
 
-  xorIn = aprs_pc.crc ^ inBit;
-  aprs_pc.crc >>= 1;
+  xorIn = aprs_cc.crc ^ inBit;
+  aprs_cc.crc >>= 1;
 
-  if (xorIn & 0x01) aprs_pc.crc ^= 0x8408;
+  if (xorIn & 0x01) aprs_cc.crc ^= 0x8408;
 }
 
 /** Sends the calculated CRC value via FSK transmission.
@@ -120,8 +126,8 @@ void calc_crc(bool inBit) {
  * @see calc_crc
  */
 void sendCrc(void) {
-  uint8_t crcLo = aprs_pc.crc ^ 0xff;
-  uint8_t crcHi = (aprs_pc.crc >> 8) ^ 0xff;
+  uint8_t crcLo = aprs_cc.crc ^ 0xff;
+  uint8_t crcHi = (aprs_cc.crc >> 8) ^ 0xff;
 
   sendCharNRZI(crcLo, true);
   sendCharNRZI(crcHi, true);
@@ -147,20 +153,20 @@ void sendCharNRZI(unsigned char in_byte, bool enBitStuff) {
     calc_crc(bits);
 
     if (bits) {
-      set_nada(aprs_pc.nada);
-      aprs_pc.bitStuff++;
+      set_nada(aprs_cc.nada);
+      aprs_cc.bitStuff++;
 
-      if ((enBitStuff) && (aprs_pc.bitStuff == 5)) {
-        aprs_pc.nada ^= 1;
-        set_nada(aprs_pc.nada);
+      if ((enBitStuff) && (aprs_cc.bitStuff == 5)) {
+        aprs_cc.nada ^= 1;
+        set_nada(aprs_cc.nada);
 
-        aprs_pc.bitStuff = 0;
+        aprs_cc.bitStuff = 0;
       }
     } else {
-      aprs_pc.nada ^= 1;
-      set_nada(aprs_pc.nada);
+      aprs_cc.nada ^= 1;
+      set_nada(aprs_cc.nada);
 
-      aprs_pc.bitStuff = 0;
+      aprs_cc.bitStuff = 0;
     }
     in_byte >>= 1;
   }
@@ -285,15 +291,15 @@ void sendHeader(const aprs_config_s * aprs_cfg) {
  * @param acs Three-value 2-byte array of altitude, course, and speed, from main loop.
  */
 void sendPacket(const aprs_config_s * aprs_cfg, float *latlon, uint16_t *acs) {
-  if (latlon[0] < 17.71468 && !q145) {
-			configureDra818v(145.05,145.05,8,false,false,false);
+	if (latlon[0] < 17.71468 && !q145) {
+		configureDra818v(145.05,145.05,8,false,false,false);
     q145 = true;
   }
   else if (latlon[0] >= 17.71468 && q145) {
-			configureDra818v(144.39,144.39,8,false,false,false);
+		configureDra818v(144.39,144.39,8,false,false,false);
     q145 = false;
   }
-  setVhfState(true);
+	setVhfState(true);
   setPttState(true);
   setPayload(latlon, acs);
 
@@ -304,7 +310,7 @@ void sendPacket(const aprs_config_s * aprs_cfg, float *latlon, uint16_t *acs) {
   //sendCharNRZI(0x99, true);
 
   sendFlag(150);
-  aprs_pc.crc = 0xffff;
+  aprs_cc.crc = 0xffff;
   sendHeader(aprs_cfg);
   // send payload
   sendCharNRZI(aprs_pc._DT_POS, true);
@@ -344,10 +350,10 @@ void sendTestPackets(const aprs_config_s * aprs_cfg) {
       sendStrLen(">...",strlen(">..."));
       break;
     case 4:
-      aprs_pc.crc = 0xffff;
+      aprs_cc.crc = 0xffff;
       sendStrLen("123456789",9);
       sendCrc();
-      aprs_pc.crc = 0xffff;
+      aprs_cc.crc = 0xffff;
       sendStrLen("A",1);
       sendCrc();
       break;
@@ -377,10 +383,10 @@ void initAPRS(void) {
 
 void configureAPRS_TX(float txFrequency) {
 	configureDra818v(txFrequency,txFrequency,8,false,false,false);
-	if ((txFrequency - 145.05) <= 0.00001)
-		q145 = true;
-	else
+	if (txFrequency < 145.0)
 		q145 = false;
+	else
+		q145 = true;
 }
 
 /** Adds any relevant information to the compiled binary.

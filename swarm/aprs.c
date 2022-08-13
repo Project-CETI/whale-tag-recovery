@@ -31,7 +31,7 @@ uint8_t currOutput = 0; ///< Tracks location in FSK wave output. Range 0-31.
 
 bool q145 = false; ///< Boolean for selecting 144.39MHz or 145.05MHz transmission.
 
-char callsign[8]="J73MAB"; ///< Personal APRS callsign.
+char callsign[8]="J73KEO"; ///< Personal APRS callsign.
 int ssid = 15; ///< Personal APRS SSID. Range 0-15.
 char destsign[8] = "APLIGA"; ///< Destination APRS callsign.
 char digisign[8] = "WIDE2"; ///< Digipeater callsign. Use WIDE1 or WIDE2.

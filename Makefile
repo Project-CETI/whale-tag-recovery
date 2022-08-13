@@ -32,7 +32,8 @@ docs-image:
 docs-server:
 	docker run --rm -dp 8080\:80 --name ceti-docs cetisdock/docs\:recovery
 
-docs: docs-image docs-server
+docs:
+	$(MAKE) docs-server || $(MAKE) docs-image docs-server
 
 stop-docs:
 	-docker kill ceti-docs

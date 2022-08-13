@@ -88,14 +88,20 @@ void readFromGps(const gps_config_s * gps_cfg, gps_data_s * gps_dat) {
   }
 }
 
-void drainGpsFifo(const gps_config_s * gps_cfg, gps_data_s * gps_dat) {
-	char gps_rd_buf[MAX_GPS_MSG_LEN];
-	if (uart_is_readable(gps_cfg->uart))
-		uart_read_blocking(gps_cfg->uart,
-											 gps_rd_buf,
-											 uart_is_readable(gps_cfg->uart));
-	gps_dat->datCheck = false;
+/* void getFullGps(const gps_config_s * gps_cfg) { */
+/* 	char gps_rd_buf[MAX_GPS_MSG_LEN] = "\0"; */
+/* 	uart_read_blocking(gps_cfg->uart, gps_rd_buf, MAX_GPS_MSG_LEN); */
+/* 	if (strlen(gps_rd_buf)) */
+/* 		printf("\r\n%d | %s\r\n", strlen(gps_rd_buf), gps_rd_buf); */
+/* } */
+void gps_get_lock(const gps_config_s * gps_cfg, gps_data_s * gps_dat) {
 	gps_dat->posCheck = false;
+	uint32_t startTime = to_ms_since_boot(get_absolute_time());
+	while (gps_dat->posCheck != true) {
+		readFromGps(gps_cfg, gps_dat);
+		if (to_ms_since_boot(get_absolute_time()) - startTime > 1000)
+			break;
+	}
 }
 
 void echoGpsOutput(char *line, int buf_len) {

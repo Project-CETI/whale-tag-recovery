@@ -24,7 +24,7 @@ void initializeOutput(void);
 void setOutput(uint8_t state);
 
 void prepFishTx(float txFreq);
-bool vhf_pulse_callback(repeating_timer_t *rt);
+bool vhf_pulse_callback(void);
 
 void initializeDra818v(bool highPower);
 void configureDra818v(float txFrequency, float rxFrequency, uint8_t volume, bool emphasis, bool hpf, bool lpf);
