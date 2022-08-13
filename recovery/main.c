@@ -18,9 +18,9 @@
 /// Choose whether or not to use interrupts for APRS
 #define Q_IRQ 0
 /// Turns on communications with the main tag (only for fully CONNected tags)
-#define TAG_CONN 0
+#define TAG_CONN 1
 /// Turns on fish tracker behavior when no GPS
-#define USE_YAGI 0
+#define USE_YAGI 1
 
 void set_bin_desc(void);
 void setLed(bool state);
@@ -40,9 +40,9 @@ void initAll(const gps_config_s * gps_cfg, const tag_config_s * tag_cfg);
  * interval, debug, debug style
  */
 const aprs_config_s aprs_config = {
-	"J73MAB", 1,
+	"J75Y", 1,
 	"APLIGA", "WIDE2", 1, "Ceti b1.2 4-S",
-	120000, false, 2
+	5000, false, 2
 };
 
 /** @struct Defines unchanging configuration parameters for GPS communication.
@@ -62,7 +62,7 @@ const tag_config_s tag_config = {4, 5, 115200, uart1, 10000, 1000, 1000, 3};
 const struct vhf_config_t {
 	float txFreq;
 	const uint32_t interval;
-} vhf_config = {148.056, 2000};
+} vhf_config = {148.056, 5000};
 
 void set_bin_desc(void) {
   bi_decl(bi_program_description("Recovery process binary for standalone recovery board 2-#"));
