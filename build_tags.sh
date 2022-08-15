@@ -6,7 +6,7 @@ trap 'echo "Exiting on \"${last_command}\""' EXIT
 
 ug="Usage: ./build_tags.sh [TAGS]\n\nREQUIRED TAGS:\n\n"
 
-un="\t-n -> Bin name:\n\t--------\n\tString holding name of the binary being compiled for multiple tags\n\n"
+un="\t-n -> Bin name:\n\t--------\n\tString: binary name (applies for all tags)\n\n"
 
 u="$ug$un\n"
 
