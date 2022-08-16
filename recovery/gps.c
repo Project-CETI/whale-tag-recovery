@@ -89,6 +89,7 @@ void gps_get_lock(const gps_config_s * gps_cfg, gps_data_s * gps_dat) {
 		if (to_ms_since_boot(get_absolute_time()) - startTime > 1000)
 			break;
 	}
+  printf("GPS LOCK: %s @ %.2f, %.2f\n", gps_dat->posCheck ? "true" : "false", gps_dat->latlon[0], gps_dat->latlon[1]);
 }
 
 void echoGpsOutput(char *line, int buf_len) {
