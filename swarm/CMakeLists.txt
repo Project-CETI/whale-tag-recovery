@@ -3,7 +3,6 @@ set(SOURCES
 	main.c
 	aprs.c
 	vhf.c
-	swarm.c
 	tag.c
 	)
 

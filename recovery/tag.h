@@ -1,6 +1,9 @@
 #ifndef TAG_H
 #define TAG_H
+
 #include "hardware/uart.h"
+#include "constants.h"
+
 
 typedef struct tag_config_t {
 	int txPin;
