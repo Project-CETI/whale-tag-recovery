@@ -51,6 +51,7 @@ void parseGpsOutput(char *line, int buf_len, gps_data_s *gps_dat) {
         }
         case MINMEA_SENTENCE_GLL: {
             struct minmea_sentence_gll frame;
+            gps_dat->posCheck = true;
             if (minmea_parse_gll(&frame, line)) {
                 memcpy(gps_dat->lastGpsBuffer, line, buf_len);
                 gps_dat->latlon[0] = minmea_tocoord(&frame.latitude);
