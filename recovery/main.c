@@ -81,7 +81,6 @@ bool txAprsIRQ(repeating_timer_t *rt) { return txAprs(); }
 
 bool txAprs(void) {
     // wake up the VHF since we're going to transmit APRS
-    // gps_get_lock(&gps_config, &gps_data);
     if (aprs_config.debug)
         sendTestPackets(&aprs_config);
     else if (gps_data.posCheck) {
@@ -90,9 +89,7 @@ bool txAprs(void) {
         setLed(true);
         sendPacket(&aprs_config, gps_data.latlon, gps_data.acs);
         setLed(false);
-    } else {
-        printf("[APRS TX] no valid position\n");
-    }
+    } 
 
     return gps_data.posCheck;
 }

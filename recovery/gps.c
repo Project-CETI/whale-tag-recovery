@@ -43,8 +43,9 @@ void parseGpsOutput(char *line, int buf_len, gps_data_s *gps_dat) {
         }
         case MINMEA_SENTENCE_ZDA: {
             struct minmea_sentence_zda frame;
-            if (minmea_parse_zda(&frame, line))
+            if (minmea_parse_zda(&frame, line)) {
                 memcpy(gps_dat->lastDtBuffer, line, buf_len);
+            }
             // printf("[DT] %s\n", gps_dat->lastDtBuffer);
             break;
         }
@@ -72,36 +73,38 @@ void parseGpsOutput(char *line, int buf_len, gps_data_s *gps_dat) {
     }
 }
 
-void readFromGps(const gps_config_s *gps_cfg, gps_data_s *gps_dat) {
+bool readFromGps(const gps_config_s *gps_cfg, gps_data_s *gps_dat) {
     char inChar;
     char gps_rd_buf[MAX_GPS_MSG_LEN];
     int gps_rd_buf_pos = 0;
     int gps_buf_len = 0;
-    uint32_t readable = uart_is_readable(gps_cfg->uart);
-    printf("[GPS] could read %d\n", readable);
-    if (readable > 0) {
+    if (uart_is_readable(gps_cfg->uart)) {
         inChar = uart_getc(gps_cfg->uart);
         if (inChar == '$') {
             gps_dat->datCheck = true;
             gps_rd_buf[gps_rd_buf_pos++] = inChar;
             while (inChar != '\r') {
                 inChar = uart_getc(gps_cfg->uart);
-                if (inChar == '$') gps_rd_buf_pos = 0;
+                if (inChar == '$') {
+                    gps_rd_buf_pos = 0;
+                }
                 gps_rd_buf[gps_rd_buf_pos++] = inChar;
             }
-            gps_rd_buf[i - 1] = '\0';
-            gps_buf_len = i - 1;
+            gps_rd_buf[gps_rd_buf_pos - 1] = '\0';
+            gps_buf_len = gps_rd_buf_pos - 1;
             parseGpsOutput(gps_rd_buf, gps_buf_len, gps_dat);
         }
     }
+    return gps_dat->posCheck;
 }
 
 void gps_get_lock(const gps_config_s *gps_cfg, gps_data_s *gps_dat) {
     gps_dat->posCheck = false;
     uint32_t startTime = to_ms_since_boot(get_absolute_time());
     while (gps_dat->posCheck != true) {
-        readFromGps(gps_cfg, gps_dat);
-        if (to_ms_since_boot(get_absolute_time()) - startTime > 1000) break;
+        if (readFromGps(gps_cfg, gps_dat) ||
+            to_ms_since_boot(get_absolute_time()) - startTime > 1000)
+            break;
     }
     printf("[GPS LOCK] %s @ %.2f, %.2f\n", gps_dat->posCheck ? "true" : "false",
            gps_dat->latlon[0], gps_dat->latlon[1]);

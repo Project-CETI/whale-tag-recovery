@@ -26,7 +26,7 @@ typedef struct gps_data_t {
 
 // RX functions from NEO-M8N
 void parseGpsOutput(char *line, int buf_len, gps_data_s *gps_dat);
-void readFromGps(const gps_config_s *gps_cfg, gps_data_s *gps_dat);
+bool readFromGps(const gps_config_s *gps_cfg, gps_data_s *gps_dat);
 void gps_get_lock(const gps_config_s *gps_cfg, gps_data_s *gps_dat);
 void echoGpsOutput(char *line, int buf_len);
 

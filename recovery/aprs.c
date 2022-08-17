@@ -390,11 +390,8 @@ void initializeAPRS(void) {
 }
 
 void configureAPRS_TX(float txFrequency) {
-    configureDra818v(txFrequency, txFrequency, 8, false, false, false);
-    if (txFrequency < 145.0)
-        shouldBe145 = false;
-    else
-        shouldBe145 = true;
+    configureDra818v(txFrequency, txFrequency, 4, false, false, false);
+    shouldBe145 = txFrequency >= 145.0;
 }
 
 /** Adds any relevant information to the compiled binary.
