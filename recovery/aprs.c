@@ -326,7 +326,7 @@ void sendPacket(const aprs_config_s *aprs_cfg, float *latlon, uint16_t *acs) {
     sendCrc();
     sendFlag(3);
     setPttState(false);
-    sleepVHF();
+    // sleepVHF();
 }
 
 // Debug TX functions

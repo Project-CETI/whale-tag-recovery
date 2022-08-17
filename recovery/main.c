@@ -12,6 +12,7 @@
 #include "tag.h"
 #include "vhf.h"
 #include <stdio.h>
+#include <stdlib.h>
 
 void set_bin_desc(void);
 void setLed(bool state);
@@ -31,7 +32,7 @@ void initAll(const gps_config_s *gps_cfg, const tag_config_s *tag_cfg);
  * interval, debug, debug style
  */
 const aprs_config_s aprs_config = {CALLSIGN,        SSID, "APLIGA", "WIDE2", 1,
-                                   "Ceti b1.2 4-S", 5000, false,    2};
+                                   "Ceti b1.2 4-S", 300000, false,    2};
 
 /** @struct Defines unchanging configuration parameters for GPS communication.
  * GPS_TX, GPS_RX, GPS_BAUD, UART_NUM, QINTERACTIVE
@@ -80,6 +81,8 @@ void startAPRS(const aprs_config_s *aprs_cfg, repeating_timer_t *aprsTimer) {
 bool txAprsIRQ(repeating_timer_t *rt) { return txAprs(); }
 
 bool txAprs(void) {
+    gps_get_lock(&gps_config, &gps_data);
+
     // wake up the VHF since we're going to transmit APRS
     if (aprs_config.debug)
         sendTestPackets(&aprs_config);
@@ -87,7 +90,10 @@ bool txAprs(void) {
         printf("[APRS TX] %s-%d @ %.6f, %.6f\n", CALLSIGN, SSID,
                gps_data.latlon[0], gps_data.latlon[1]);
         setLed(true);
-        sendPacket(&aprs_config, gps_data.latlon, gps_data.acs);
+        for (uint8_t i = 0; i < APRS_RETRANSMIT; i++) {
+            sendPacket(&aprs_config, gps_data.latlon, gps_data.acs);
+            sleep_ms(3000);
+        }
         setLed(false);
     } 
 
@@ -100,6 +106,7 @@ void startTag(const tag_config_s *tag_cfg, repeating_timer_t *tagTimer) {
 }
 
 bool txTag(repeating_timer_t *rt) {
+    gps_get_lock(&gps_config, &gps_data);
     writeGpsToTag(&tag_config, gps_data.lastGpsBuffer, gps_data.lastDtBuffer);
     return true;
 }
@@ -118,6 +125,7 @@ void initAll(const gps_config_s *gps_cfg, const tag_config_s *tag_cfg) {
 
     uint32_t tagBaud = initTagComm(tag_cfg);
     setLed(false);
+    srand(get_absolute_time());
 }
 
 int main() {
@@ -142,13 +150,13 @@ int main() {
 
     // Loop
     while (true) {
-        gps_get_lock(&gps_config, &gps_data);
         txAprs();
 
         sleepVHF();
-
-        sleep_ms((aprs_config.interval > VHF_WAKE_TIME_MS)
-                     ? (aprs_config.interval - VHF_WAKE_TIME_MS)
+        int32_t rand_modifier = rand() % 60000;
+        rand_modifier = rand_modifier <= 30000 ? rand_modifier : -rand_modifier;
+        sleep_ms(((aprs_config.interval + rand_modifier)  > VHF_WAKE_TIME_MS)
+                     ? ((aprs_config.interval + rand_modifier) - VHF_WAKE_TIME_MS)
                      : VHF_WAKE_TIME_MS);
 
         wakeVHF();  // wake here so there's enough time to fully wake up

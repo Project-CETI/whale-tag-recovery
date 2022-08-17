@@ -4,8 +4,8 @@
 #include "stdint.h"
 
 // Callsign and SSIS configuration
-#define CALLSIGN "J75Y"
-#define SSID 15
+#define CALLSIGN "J75Z"
+#define SSID 1
 #define DEFAULT_FREQ 144.39
 #define DEFAULT_LAT 15.31383
 #define DEFAULT_LON -61.30075
@@ -18,6 +18,8 @@
 #define NUM_SINS 32
 
 #define MAX_TAG_MSG_LEN 20
+
+#define APRS_RETRANSMIT 3
 
 // Static constants
 /// Location of the LED pin
@@ -33,7 +35,7 @@ static const uint32_t ackWaitT_ms = 1000;
 static const int numTries = 3;
 
 // VHF configuration //
-static const uint16_t VHF_WAKE_TIME_MS = 500;
+static const uint16_t VHF_WAKE_TIME_MS = 1000;
 // Frequency of tranmission pulse
 static const uint16_t VHF_HZ = 440;
 /** @brief GPIO pinmask used to drive input to the VHF module.
