@@ -141,7 +141,10 @@ void setPttState(bool state) { gpio_put(VHF_PTT, state); }
  *  */
 void setVhfState(bool state) { gpio_put(VHF_SLEEP, state); }
 
-void wakeVHF() { setVhfState(true); }
+void wakeVHF() {
+    printf("[VHF] waking \n");
+    setVhfState(true);
+}
 
 void sleepVHF() { setVhfState(false); }
 

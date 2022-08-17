@@ -4,16 +4,24 @@
 #include "stdint.h"
 
 // Callsign and SSIS configuration
-#define CALLSIGN "J73MAB"
-#define SSID 1
+#define CALLSIGN "J75Y"
+#define SSID 15
 #define DEFAULT_FREQ 144.39
+#define DEFAULT_LAT 15.31383
+#define DEFAULT_LON -61.30075
 
-/// Location of the LED pin
-#define LED_PIN 29
+// Pre-processor flags
 /// Turns on communications with the main tag (only for fully CONNected tags)
-#define TAG_CONNECTED 0
+#define TAG_CONNECTED 1
+
+/// Number of values in the sinValues DAC output array
+#define NUM_SINS 32
 
 #define MAX_TAG_MSG_LEN 20
+
+// Static constants
+/// Location of the LED pin
+static const uint8_t LED_PIN = 29;
 
 // do any of these operations?
 static uint32_t tMsgSent = 0;
@@ -25,9 +33,9 @@ static const uint32_t ackWaitT_ms = 1000;
 static const int numTries = 3;
 
 // VHF configuration //
-#define VHF_WAKE_TIME_MS 200
+static const uint16_t VHF_WAKE_TIME_MS = 500;
 // Frequency of tranmission pulse
-#define VHF_HZ 440
+static const uint16_t VHF_HZ = 440;
 /** @brief GPIO pinmask used to drive input to the VHF module.
  * The dra818v module modulates an analog input with the carrier frequency
  * defined during the latest configuration. The recovery board simulates that
@@ -37,23 +45,25 @@ static const int numTries = 3;
  * The pinmask is the value 0b00000011111111000000000000000000, which represents
  * which of the GPIO pins 0-31 are to be used. We are using GPIO pins 18-25 for
  * the DAC. */
-#define VHF_DACMASK 0x3fc0000
+static const uint32_t VHF_DACMASK = 0x3fc0000;
 /** Value to left-shift DAC masks to match GPIO pinmask.
  * Using the DAC requires passing an 8-bit pinmask 0b00000000 matching pins
  * 18-25, LSB=18. To match how the RP2040 SDK sets GPIO pins via pinmasks, this
  * DAC mask needs to be left-shifted to match the pin positions. */
-#define VHF_DACSHIFT 18
-/// Number of values in the sinValues DAC output array
-#define NUM_SINS 32
+static const uint8_t VHF_DACSHIFT = 18;
+
 /// Set how long the pure VHF pulse should be
-#define VHF_TX_LEN 50
+static const uint8_t VHF_TX_LEN = 50;
 
 // VHF control pins
-#define VHF_POWER_LEVEL 15  ///< Defines the VHF's power level pin.
-#define VHF_PTT 16          ///< Defines the VHF's sleep pin.
-#define VHF_SLEEP 14        ///< Defines the VHF's sleep pin.
-#define VHF_TX 12  ///< Defines the VHF's UART TX pin (for configuration).
-#define VHF_RX 13  ///< Defines the VHF's UART RX pin (for configuration).
+static const uint8_t VHF_POWER_LEVEL =
+    15;                               ///< Defines the VHF's power level pin.
+static const uint8_t VHF_PTT = 16;    ///< Defines the VHF's sleep pin.
+static const uint8_t VHF_SLEEP = 14;  ///< Defines the VHF's sleep pin.
+static const uint8_t VHF_TX =
+    12;  ///< Defines the VHF's UART TX pin (for configuration).
+static const uint8_t VHF_RX =
+    13;  ///< Defines the VHF's UART RX pin (for configuration).
 
 /// Defines the delay between each VHF configuration step.
 static const uint32_t vhfEnableDelay = 1000;

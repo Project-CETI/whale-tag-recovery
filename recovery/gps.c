@@ -21,11 +21,11 @@ void parseGpsOutput(char *line, int buf_len, gps_data_s *gps_dat) {
                 gps_dat->latlon[1] = minmea_tocoord(&frame.longitude);
                 if (isnan(gps_dat->latlon[0])) {
                     gps_dat->posCheck = false;
-                    gps_dat->latlon[0] = 42.3648;
+                    gps_dat->latlon[0] = DEFAULT_LAT;
                 }
                 if (isnan(gps_dat->latlon[1])) {
                     gps_dat->posCheck = false;
-                    gps_dat->latlon[1] = 0.0;
+                    gps_dat->latlon[1] = DEFAULT_LON;
                 }
                 gps_dat->acs[1] = minmea_rescale(&frame.course, 3);
                 gps_dat->acs[2] = minmea_rescale(&frame.speed, 1);
@@ -45,7 +45,7 @@ void parseGpsOutput(char *line, int buf_len, gps_data_s *gps_dat) {
             struct minmea_sentence_zda frame;
             if (minmea_parse_zda(&frame, line))
                 memcpy(gps_dat->lastDtBuffer, line, buf_len);
-            printf("[DT]: %s\n", gps_dat->lastDtBuffer);
+            printf("[DT] %s\n", gps_dat->lastDtBuffer);
             break;
         }
         case MINMEA_INVALID:
@@ -74,17 +74,10 @@ void readFromGps(const gps_config_s *gps_cfg, gps_data_s *gps_dat) {
             gps_rd_buf[i - 1] = '\0';
             gps_buf_len = i - 1;
             parseGpsOutput(gps_rd_buf, gps_buf_len, gps_dat);
-            // printf("\r\n%s\r\n",gps_rd_buf);
         }
     }
 }
 
-/* void getFullGps(const gps_config_s * gps_cfg) { */
-/* 	char gps_rd_buf[MAX_GPS_MSG_LEN] = "\0"; */
-/* 	uart_read_blocking(gps_cfg->uart, gps_rd_buf, MAX_GPS_MSG_LEN); */
-/* 	if (strlen(gps_rd_buf)) */
-/* 		printf("\r\n%d | %s\r\n", strlen(gps_rd_buf), gps_rd_buf); */
-/* } */
 void gps_get_lock(const gps_config_s *gps_cfg, gps_data_s *gps_dat) {
     gps_dat->posCheck = false;
     uint32_t startTime = to_ms_since_boot(get_absolute_time());
@@ -92,7 +85,7 @@ void gps_get_lock(const gps_config_s *gps_cfg, gps_data_s *gps_dat) {
         readFromGps(gps_cfg, gps_dat);
         if (to_ms_since_boot(get_absolute_time()) - startTime > 1000) break;
     }
-    printf("GPS LOCK: %s @ %.2f, %.2f\n", gps_dat->posCheck ? "true" : "false",
+    printf("[GPS LOCK] %s @ %.2f, %.2f\n", gps_dat->posCheck ? "true" : "false",
            gps_dat->latlon[0], gps_dat->latlon[1]);
 }
 
@@ -105,10 +98,11 @@ void echoGpsOutput(char *line, int buf_len) {
 }
 
 // Init NEO-M8N functions
-void gpsInit(const gps_config_s *gps_cfg) {
-    uart_init(gps_cfg->uart, gps_cfg->baudrate);
+uint32_t gpsInit(const gps_config_s *gps_cfg) {
+    uint32_t baud = uart_init(gps_cfg->uart, gps_cfg->baudrate);
     gpio_set_function(gps_cfg->txPin, GPIO_FUNC_UART);
     gpio_set_function(gps_cfg->rxPin, GPIO_FUNC_UART);
+    return baud;
 }
 
 // GPS FUNCTIONS [END] ------------------------------------------------

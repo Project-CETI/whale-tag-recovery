@@ -1,9 +1,9 @@
 #ifndef _RECOVERY_VHF_H_
 #define _RECOVERY_VHF_H_
 
+#include "constants.h"
 #include "stdbool.h"
 #include "stdint.h"
-#include "constants.h"
 
 void pinDescribe(void);
 
@@ -13,7 +13,6 @@ void setOutput(uint8_t state);
 // Fish tracker functions
 void prepFishTx(float txFreq);
 bool vhf_pulse_callback(void);
-
 
 static void initializeDra818v(bool highPower);
 void configureDra818v(float txFrequency, float rxFrequency, uint8_t volume,

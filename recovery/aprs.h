@@ -1,21 +1,20 @@
 #ifndef _RECOVERY_APRS_H_
 #define _RECOVERY_APRS_H_
 
+#include "constants.h"
 #include "stdbool.h"
 #include "stdint.h"
-#include "constants.h"
-
 
 typedef struct aprs_config_t {
-  char callsign[8];
-  int ssid;
-  char dest[8];
-  char digi[8];
-  int dssid;
-  char comment[128];
-  uint32_t interval;
-  bool debug;
-  int style;
+    char callsign[8];
+    int ssid;
+    char dest[8];
+    char digi[8];
+    int dssid;
+    char comment[128];
+    uint32_t interval;
+    bool debug;
+    int style;
 } aprs_config_s;
 
 typedef struct aprs_data_t aprs_data_s;
@@ -46,4 +45,4 @@ void sendTestPackets(const aprs_config_s *);
 void initializeAPRS(void);
 void configureAPRS_TX(float txFrequency);
 void describeConfig(void);
-#endif //_RECOVERY_APRS_H_
+#endif  //_RECOVERY_APRS_H_
