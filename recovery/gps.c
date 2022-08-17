@@ -45,7 +45,24 @@ void parseGpsOutput(char *line, int buf_len, gps_data_s *gps_dat) {
             struct minmea_sentence_zda frame;
             if (minmea_parse_zda(&frame, line))
                 memcpy(gps_dat->lastDtBuffer, line, buf_len);
-            printf("[DT] %s\n", gps_dat->lastDtBuffer);
+            // printf("[DT] %s\n", gps_dat->lastDtBuffer);
+            break;
+        }
+        case MINMEA_SENTENCE_GLL: {
+            struct minmea_sentence_gll frame;
+            if (minmea_parse_gll(&frame, line)) {
+                memcpy(gps_dat->lastGpsBuffer, line, buf_len);
+                gps_dat->latlon[0] = minmea_tocoord(&frame.latitude);
+                gps_dat->latlon[1] = minmea_tocoord(&frame.longitude);
+                if (isnan(gps_dat->latlon[0])) {
+                    gps_dat->posCheck = false;
+                    gps_dat->latlon[0] = DEFAULT_LAT;
+                }
+                if (isnan(gps_dat->latlon[1])) {
+                    gps_dat->posCheck = false;
+                    gps_dat->latlon[1] = DEFAULT_LON;
+                }
+            }
             break;
         }
         case MINMEA_INVALID:
@@ -60,16 +77,17 @@ void readFromGps(const gps_config_s *gps_cfg, gps_data_s *gps_dat) {
     char gps_rd_buf[MAX_GPS_MSG_LEN];
     int gps_rd_buf_pos = 0;
     int gps_buf_len = 0;
-    if (uart_is_readable(gps_cfg->uart)) {
+    uint32_t readable = uart_is_readable(gps_cfg->uart);
+    printf("[GPS] could read %d\n", readable);
+    if (readable > 0) {
         inChar = uart_getc(gps_cfg->uart);
         if (inChar == '$') {
             gps_dat->datCheck = true;
-            int i = 0;
-            gps_rd_buf[i++] = inChar;
+            gps_rd_buf[gps_rd_buf_pos++] = inChar;
             while (inChar != '\r') {
                 inChar = uart_getc(gps_cfg->uart);
-                if (inChar == '$') i = 0;
-                gps_rd_buf[i++] = inChar;
+                if (inChar == '$') gps_rd_buf_pos = 0;
+                gps_rd_buf[gps_rd_buf_pos++] = inChar;
             }
             gps_rd_buf[i - 1] = '\0';
             gps_buf_len = i - 1;

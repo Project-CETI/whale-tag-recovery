@@ -70,13 +70,6 @@ void initLed(void) {
     gpio_set_dir(LED_PIN, GPIO_OUT);
 }
 
-// bool txVHF(repeating_timer_t *rt) {
-//     printf("blast time\n");
-//     vhf_pulse_callback();
-//     gps_get_lock(&gps_config, &gps_data);
-//     return !gps_data.posCheck;
-// }
-
 // APRS //
 
 void startAPRS(const aprs_config_s *aprs_cfg, repeating_timer_t *aprsTimer) {
@@ -110,10 +103,7 @@ void startTag(const tag_config_s *tag_cfg, repeating_timer_t *tagTimer) {
 }
 
 bool txTag(repeating_timer_t *rt) {
-    // getLastPDtBufs(lastGpsUpdate, lastDtUpdate);
     writeGpsToTag(&tag_config, gps_data.lastGpsBuffer, gps_data.lastDtBuffer);
-    // detachTag();
-    // reqTagState(&tag_config);
     return true;
 }
 

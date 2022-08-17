@@ -11,13 +11,8 @@ int parseTagStatus(void) { return 0; }
 void writeGpsToTag(const tag_config_s *tag_cfg, char *lastGps, char *lastDt) {
     printf("[TAG TX] %s\n", lastGps);
     printf("[TAG TX] %s\n", lastDt);
-    // uart_putc_raw(tag_cfg->uart, testByte);
-    // uint8_t i = 0;
+
     if (!uart_is_writable(tag_cfg->uart)) uart_tx_wait_blocking(tag_cfg->uart);
-    // while (lastGps[i]) {
-    //   printf("%02x ", (uint8_t)lastGps[i]);
-    //    uart_putc_raw(tag_cfg->uart, (uint8_t)lastGps[i++]);
-    // }
     uart_putc(tag_cfg->uart, 'g');
     uart_puts(tag_cfg->uart, lastGps);
     uart_puts(tag_cfg->uart, lastDt);
@@ -48,15 +43,15 @@ void reqTagState(const tag_config_s *tag_cfg) {
     tMsgSent = to_ms_since_boot(get_absolute_time());
     uart_putc(tag_cfg->uart, 'T');
     uart_putc(tag_cfg->uart, '\n');
-    // while (to_ms_since_boot(get_absolute_time()) - tMsgSent <
-    //        tag_cfg->ackWaitT_ms) {
-    if (uart_is_readable_within_us(tag_cfg->uart, tag_cfg->ackWaitT_us)) {
-        uart_read_blocking(tag_cfg->uart, tag_rd_buf, MAX_TAG_MSG_LEN);
-        printf("[READ TAG] %s\n", tag_rd_buf);
-        // parseTagStatus(tag_rd_buf);
-        // break;
+    while (to_ms_since_boot(get_absolute_time()) - tMsgSent <
+           tag_cfg->ackWaitT_ms) {
+        if (uart_is_readable_within_us(tag_cfg->uart, tag_cfg->ackWaitT_us)) {
+            uart_read_blocking(tag_cfg->uart, tag_rd_buf, MAX_TAG_MSG_LEN);
+            printf("[READ TAG] %s\n", tag_rd_buf);
+            parseTagStatus();
+            break;
+        }
     }
-    // }
 }
 
 // Init functions
