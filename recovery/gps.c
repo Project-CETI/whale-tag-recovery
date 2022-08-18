@@ -1,13 +1,12 @@
 #include "gps.h"
 #include "constants.h"
 #include "minmea.h"
+#include "ublox-config.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include "ublox-config.h"
-
 
 // GPS FUNCTIONS [START] ----------------------------------------------
 // RX functions from NEO-M8N
@@ -17,15 +16,12 @@ void parseGpsOutput(char *line, int buf_len, gps_data_s *gps_dat) {
             printf("[RMC] ");
             struct minmea_sentence_rmc frame;
             if (minmea_parse_rmc(&frame, line)) {
-                memcpy(gps_dat->lastGpsBuffer[GPS_RMC], line,
-                       buf_len);
+                memcpy(gps_dat->lastGpsBuffer[GPS_RMC], line, buf_len);
                 float latitude = minmea_tocoord(&frame.latitude);
                 float longitude = minmea_tocoord(&frame.longitude);
                 if (isnan(latitude) || isnan(longitude)) {
-                    gps_dat->latlon[GPS_RMC][0] =
-                        DEFAULT_LAT;
-                    gps_dat->latlon[GPS_RMC][1] =
-                        DEFAULT_LON;
+                    gps_dat->latlon[GPS_RMC][0] = DEFAULT_LAT;
+                    gps_dat->latlon[GPS_RMC][1] = DEFAULT_LON;
                 } else {
                     gps_dat->latlon[GPS_RMC][0] = latitude;
                     gps_dat->latlon[GPS_RMC][1] = longitude;
@@ -61,15 +57,12 @@ void parseGpsOutput(char *line, int buf_len, gps_data_s *gps_dat) {
             printf("[GLL] ");
             struct minmea_sentence_gll frame;
             if (minmea_parse_gll(&frame, line)) {
-                memcpy(gps_dat->lastGpsBuffer[GPS_GLL], line,
-                       buf_len);
+                memcpy(gps_dat->lastGpsBuffer[GPS_GLL], line, buf_len);
                 float latitude = minmea_tocoord(&frame.latitude);
                 float longitude = minmea_tocoord(&frame.longitude);
                 if (isnan(latitude) || isnan(longitude)) {
-                    gps_dat->latlon[GPS_GLL][0] =
-                        DEFAULT_LAT;
-                    gps_dat->latlon[GPS_GLL][1] =
-                        DEFAULT_LON;
+                    gps_dat->latlon[GPS_GLL][0] = DEFAULT_LAT;
+                    gps_dat->latlon[GPS_GLL][1] = DEFAULT_LON;
                 } else {
                     gps_dat->latlon[GPS_GLL][0] = latitude;
                     gps_dat->latlon[GPS_GLL][1] = longitude;
@@ -83,15 +76,12 @@ void parseGpsOutput(char *line, int buf_len, gps_data_s *gps_dat) {
             printf("[GGA] ");
             struct minmea_sentence_gga frame;
             if (minmea_parse_gga(&frame, line)) {
-                memcpy(gps_dat->lastGpsBuffer[GPS_GGA], line,
-                       buf_len);
+                memcpy(gps_dat->lastGpsBuffer[GPS_GGA], line, buf_len);
                 float latitude = minmea_tocoord(&frame.latitude);
                 float longitude = minmea_tocoord(&frame.longitude);
                 if (isnan(latitude) || isnan(longitude)) {
-                    gps_dat->latlon[GPS_GGA][0] =
-                        DEFAULT_LAT;
-                    gps_dat->latlon[GPS_GGA][1] =
-                        DEFAULT_LON;
+                    gps_dat->latlon[GPS_GGA][0] = DEFAULT_LAT;
+                    gps_dat->latlon[GPS_GGA][1] = DEFAULT_LON;
                 } else {
                     gps_dat->latlon[GPS_GGA][0] = latitude;
                     gps_dat->latlon[GPS_GGA][1] = longitude;
@@ -193,72 +183,82 @@ uint32_t gpsInit(const gps_config_s *gps_cfg) {
 }
 
 /**
- * Calculates the checksum for the current byte stream using the 8-bit Fletcher Algorithm.
- * Requires that the given byte stream has the last two cells reserved to be filled by the 
- * calculated checksum. Calculation for the checksum starts at the class field, but does not
- * include the two sync bytes at the start (also known has header bytes). 
- * Byte stream should contain both of these sync bytes, as well as space for the two 
- * checksum bytes. 
- * @param length the length of the byte stream, including the checksum at the end
- * @param byte_stream the array for the byte stream, with the last two cells reserved 
- * to be filled by the checksum
+ * Calculates the checksum for the current byte stream using the 8-bit Fletcher
+ * Algorithm. Requires that the given byte stream has the last two cells
+ * reserved to be filled by the calculated checksum. Calculation for the
+ * checksum starts at the class field, but does not include the two sync bytes
+ * at the start (also known has header bytes). Byte stream should contain both
+ * of these sync bytes, as well as space for the two checksum bytes.
+ * @param length the length of the byte stream, including the checksum at the
+ * end
+ * @param byte_stream the array for the byte stream, with the last two cells
+ * reserved to be filled by the checksum
  */
-void calculateUBXChecksum(uint8_t length, uint8_t* byte_stream) {
-    
+void calculateUBXChecksum(uint8_t length, uint8_t *byte_stream) {
     uint8_t CK_A = 0;
     uint8_t CK_B = 0;
-    
-    for(uint8_t i = 2; i < length - 2; i++) {
+
+    for (uint8_t i = 2; i < length - 2; i++) {
         CK_A = CK_A + byte_stream[i];
         CK_B = CK_B + CK_A;
     }
 
-    byte_stream[length] = CK_A;
-    byte_stream[length+1] = CK_B;
+    byte_stream[length - 2] = CK_A;
+    byte_stream[length - 1] = CK_B;
+    printf("check sum: %02x %02x\n", CK_A, CK_B);
 }
 
-bool writeAllConfigurationsToUblox(uart_inst_t* uart) {
-  for (uint8_t i = 0; i < NUM_UBLOX_CONFIGS; i++) {
-    // do bit magic for the length
-    uint16_t length = (((uint16_t)ubx_configurations[i][5] << 8) | ubx_configurations[i][4]) + 0x8;
-    calculateUBXChecksum(length, ubx_configurations[i]);
-    writeSingleConfiguration(uart, ubx_configurations[i], length);
-  }
-
-  
+bool writeAllConfigurationsToUblox(uart_inst_t *uart) {
+    for (uint8_t i = 0; i < NUM_UBLOX_CONFIGS; i++) {
+        // do bit magic for the length
+        uint16_t length = (((uint16_t)ubx_configurations[i][5] << 8) |
+                           ubx_configurations[i][4]) +
+                          0x8;
+        calculateUBXChecksum(length, ubx_configurations[i]);
+        writeSingleConfiguration(uart, ubx_configurations[i], length);
+    }
 }
 
-void writeSingleConfiguration(uart_inst_t* uart, uint8_t* byte_stream, uint8_t len) {
-  // printf("Writing Configuration: %x %x\n", byte_stream[2], byte_stream[3]);
-  if (!uart_is_writable(uart)) uart_tx_wait_blocking(uart);
-  for (uint8_t i = 0; i < len; i++) {
-    uart_putc_raw(uart, byte_stream[i]);
-  }
-  // uart_puts(uart, (char *)byte_stream);
-  // sleep_ms(500);
-  // TODO: fix this to have check for ACKs
-  // char inChar;
-	// char ack_rd_buf[MAX_GPS_ACK_LENGTH];
-	// uint8_t ack_rd_buf_pos = 0;
-	// uint8_t ack_buf_len = 0;
-  // bool ack = true;
-  // if (uart_is_readable_within_us(uart, 10000)) {
-  //   // uart_read_blocking(uart, ack_rd_buf, MAX_GPS_ACK_LENGTH);
-  //   inChar = uart_getc(uart);
-  //   int i = 0;
-  //   ack_rd_buf[i] = inChar;
-  //   ack = ack && (inChar == ack_header[i++]);
-  //   while (inChar != '\r' && i < 100) {
-  //     inChar = uart_getc(uart);
-  //     ack_rd_buf[i] = inChar;
-  //     ack = ack && (inChar == ack_header[i++]);
-  //     // printf("0x%x ", inChar);
-  //   }
-  //   ack_rd_buf[i-1] = '\0';
-  //   ack_buf_len = i-1;
-  //   // printf("\nAck: %s: %s\r\n", ack_rd_buf, ack ? "true" : "false");
-  // }
+void writeSingleConfiguration(uart_inst_t *uart, uint8_t *byte_stream,
+                              uint8_t len) {
+    // printf("Writing Configuration: %x %x\n", byte_stream[2], byte_stream[3]);
+    if (!uart_is_writable(uart)) uart_tx_wait_blocking(uart);
+    for (uint8_t i = 0; i < len; i++) {
+        uart_putc_raw(uart, byte_stream[i]);
+        // printf("%02x ", byte_stream[i]);
+    }
+    // uart_puts(uart, (char *)byte_stream);
+    sleep_ms(500);
+    // TODO: fix this to have check for ACKs
+    // char inChar;
+    // char ack_rd_buf[MAX_GPS_ACK_LENGTH];
+    // uint8_t ack_rd_buf_pos = 0;
+    // uint8_t ack_buf_len = 0;
+    // bool ack = true;
+    // uint32_t startTime = to_ms_since_boot(get_absolute_time());
+    // while (uart_is_readable(uart) &&
+    //        to_ms_since_boot(get_absolute_time()) - startTime > 1000) {
+    //     char inChar = uart_getc(uart);
+    //     printf("%02x ", inChar);
+    // }
+    // printf("\n");
 
+    //   if (uart_is_readable(uart)) {
+    //   // uart_read_blocking(uart, ack_rd_buf, MAX_GPS_ACK_LENGTH);
+    //   inChar = uart_getc(uart);
+    //   int i = 0;
+    //   ack_rd_buf[i] = inChar;
+    //   ack = ack && (inChar == ack_header[i++]);
+    //   while (inChar != '\r' && i < 100) {
+    //     inChar = uart_getc(uart);
+    //     ack_rd_buf[i] = inChar;
+    //     ack = ack && (inChar == ack_header[i++]);
+    //     // printf("0x%x ", inChar);
+    //   }
+    //   ack_rd_buf[i-1] = '\0';
+    //   ack_buf_len = i-1;
+    //   // printf("\nAck: %s: %s\r\n", ack_rd_buf, ack ? "true" : "false");
+    // }
 }
 
 // GPS FUNCTIONS [END] ------------------------------------------------

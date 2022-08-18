@@ -27,7 +27,8 @@ typedef struct gps_data_t {
     uint8_t gpsReadFlags[MAX_GPS_DATA_BUFFER];
 
     uint32_t quality;
-    bool datCheck;
+    bool daytime;
+    bool outsideDominica;
     bool posCheck;
 } gps_data_s;
 

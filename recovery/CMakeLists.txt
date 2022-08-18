@@ -6,6 +6,7 @@ set(SOURCES
 	gps.c
 	tag.c
 	minmea.c
+	sleep.c
 	)
 
 add_executable(${BIN_NAME})
@@ -26,4 +27,6 @@ pico_enable_stdio_uart(${BIN_NAME} 0) # Need this so that swarm isn't in bad sha
 pico_generate_pio_header(${BIN_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/uart_tx.pio)
 pico_add_extra_outputs(${BIN_NAME})
 
-target_link_libraries(${BIN_NAME} PRIVATE pico_stdlib pico_time hardware_pio)
+target_link_libraries(${BIN_NAME} PRIVATE pico_stdlib pico_time hardware_pio hardware_clocks hardware_rosc hardware_rtc hardware_sleep)
+#pico_simple_hardware_target(sleep)
+

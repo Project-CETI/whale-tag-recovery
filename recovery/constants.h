@@ -2,6 +2,7 @@
 #define _RECOVERY_CONSTANTS_H_
 
 #include "stdint.h"
+#include "stdbool.h"
 
 // Callsign and SSIS configuration
 #define CALLSIGN "J75Z"
@@ -13,6 +14,9 @@
 // Pre-processor flags
 /// Turns on communications with the main tag (only for fully CONNected tags)
 #define TAG_CONNECTED 0
+#define FLOATER 1
+static bool deep_sleep = true;
+
 
 /// Number of values in the sinValues DAC output array
 #define NUM_SINS 32
@@ -24,6 +28,14 @@
 #else 
     #define APRS_RETRANSMIT 1
 #endif
+
+static const uint32_t DAY_SLEEP = 1200000; // 20 minutes in milliseconds
+static const uint32_t NIGHT_SLEEP = 3600000; // 60 minutes in milliseconds
+static const uint32_t GEOFENCE_SLEEP = 72000000; // 20 hours in milliseconds
+static const uint32_t FLOATER_VARIANCE = 120000; // 2 minutes in milliseconds
+static const uint32_t TAG_VARIANCE = 120000; // 2 minutes in milliseconds
+static const uint16_t DAY_NIGHT_ROLLOVER = 500; // 5am
+static const uint16_t NIGHT_DAY_ROLLOVER = 1900; // 7pm
 
 // Static constants
 /// Location of the LED pin

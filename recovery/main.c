@@ -9,10 +9,13 @@
 #include "pico/binary_info.h"
 #include "pico/stdlib.h"
 #include "pico/time.h"
+#include "sleep.h"
 #include "tag.h"
 #include "vhf.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include "ublox-config.h"
+
 
 void set_bin_desc(void);
 void setLed(bool state);
@@ -149,11 +152,11 @@ int main() {
 
     int gpsIRQ = gps_config.uart == uart0 ? UART0_IRQ : UART1_IRQ;
 
-    // And set up and enable the interrupt handlers
+    // // And set up and enable the interrupt handlers
     irq_set_exclusive_handler(gpsIRQ, gps_callback);
     irq_set_enabled(gpsIRQ, true);
 
-    // Now enable the UART to send interrupts - RX only
+    // // Now enable the UART to send interrupts - RX only
     uart_set_irq_enables(gps_config.uart, true, false);
 
     int32_t rand_modifier = 0;
@@ -164,14 +167,24 @@ int main() {
     rand_modifier = rand() % 60000;
 #endif
 
-    wakeVHF();  // wake here so there's enough time to fully wake up
+    // wakeVHF();  // wake here so there's enough time to fully wake up
 
-    sleep_ms(VHF_WAKE_TIME_MS);
+    // sleep_ms(VHF_WAKE_TIME_MS);
 
     // Loop
     while (true) {
+        while (deep_sleep) {
+            irq_remove_handler(gpsIRQ,gps_callback);
+            uart_deinit(uart0);
+            uart_deinit(uart1);
+            sleepVHF();
+            calculateUBXChecksum(16, sleep);
+            writeSingleConfiguration(gps_config.uart, sleep, 16);
+            rec_sleep_run_from_xosc();
+            rec_sleep_goto_dormant_until_edge_high(8);
+        }
+#if TAG_CONNECTED
         txAprs();
-
         sleepVHF();
         rand_modifier = rand_modifier <= 30000 ? rand_modifier : -rand_modifier;
         sleep_ms(
@@ -182,6 +195,9 @@ int main() {
         wakeVHF();  // wake here so there's enough time to fully wake up
 
         sleep_ms(VHF_WAKE_TIME_MS);
+#elif FLOATER
+        
+#endif
     }
     return 0;
 }
