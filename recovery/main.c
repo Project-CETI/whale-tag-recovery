@@ -25,14 +25,15 @@ void startAPRS(const aprs_config_s *aprs_cfg, repeating_timer_t *aprsTimer);
 void startTag(const tag_config_s *tag_cfg, repeating_timer_t *tagTimer);
 bool txTag(repeating_timer_t *rt);
 void initAll(const gps_config_s *gps_cfg, const tag_config_s *tag_cfg);
+void gos_callback();
 
 /** @struct Defines unchanging configuration parameters for APRS.
  * callsign, ssid
  * dest, digi, digissid, comment
  * interval, debug, debug style
  */
-const aprs_config_s aprs_config = {CALLSIGN,        SSID, "APLIGA", "WIDE2", 1,
-                                   "Ceti b1.2 4-S", 300000, false,    2};
+const aprs_config_s aprs_config = {
+    CALLSIGN, SSID, "APLIGA", "WIDE2", 2, "Ceti b1.2 4-S", 10000, false, 2};
 
 /** @struct Defines unchanging configuration parameters for GPS communication.
  * GPS_TX, GPS_RX, GPS_BAUD, UART_NUM, QINTERACTIVE
@@ -87,15 +88,18 @@ bool txAprs(void) {
     if (aprs_config.debug)
         sendTestPackets(&aprs_config);
     else if (gps_data.posCheck) {
-        printf("[APRS TX] %s-%d @ %.6f, %.6f\n", CALLSIGN, SSID,
-               gps_data.latlon[0], gps_data.latlon[1]);
-        setLed(true);
-        for (uint8_t i = 0; i < APRS_RETRANSMIT; i++) {
-            sendPacket(&aprs_config, gps_data.latlon, gps_data.acs);
+        struct gps_lat_lon_t latlon;
+        getBestLatLon(&gps_data, &latlon);
+        printf("[APRS TX:%s] %s-%d @ %.6f, %.6f \n", latlon.type, CALLSIGN,
+               SSID, latlon.lat, latlon.lon);
+
+        for (uint8_t retrans = 0; retrans < APRS_RETRANSMIT; retrans++) {
+            setLed(true);
+            sendPacket(&aprs_config, (float []){latlon.lat, latlon.lon}, gps_data.acs);
+            setLed(false);
             sleep_ms(3000);
         }
-        setLed(false);
-    } 
+    }
 
     return gps_data.posCheck;
 }
@@ -107,8 +111,14 @@ void startTag(const tag_config_s *tag_cfg, repeating_timer_t *tagTimer) {
 
 bool txTag(repeating_timer_t *rt) {
     gps_get_lock(&gps_config, &gps_data);
-    writeGpsToTag(&tag_config, gps_data.lastGpsBuffer, gps_data.lastDtBuffer);
+    struct gps_lat_lon_t latlon;
+    getBestLatLon(&gps_data, &latlon);
+    writeGpsToTag(&tag_config, latlon.msg, gps_data.lastDtBuffer);
     return true;
+}
+
+void gos_callback() {
+    gps_get_lock(&gps_config, &gps_data);
 }
 
 void initAll(const gps_config_s *gps_cfg, const tag_config_s *tag_cfg) {
@@ -131,12 +141,21 @@ void initAll(const gps_config_s *gps_cfg, const tag_config_s *tag_cfg) {
 int main() {
     // Setup
     initAll(&gps_config, &tag_config);
-    printf("[MAIN INIT] %s-%d @ %.2f, %.2f\n", CALLSIGN, SSID,
-           gps_data.latlon[0], gps_data.latlon[1]);
+    printf("[MAIN INIT] %s-%d \n", CALLSIGN, SSID);
 
     // // APRS comms interrupt setup
     // repeating_timer_t aprsTimer;
     // startAPRS(&aprs_config, &aprsTimer);
+
+    int gpsIRQ = gps_config.uart == uart0 ? UART0_IRQ : UART1_IRQ;
+
+    // And set up and enable the interrupt handlers
+    irq_set_exclusive_handler(gpsIRQ, gos_callback);
+    irq_set_enabled(gpsIRQ, true);
+
+    // Now enable the UART to send interrupts - RX only
+    uart_set_irq_enables(gps_config.uart, true, false);
+
 
 // Tag comms interrupt setup
 #if TAG_CONNECTED
@@ -155,9 +174,10 @@ int main() {
         sleepVHF();
         int32_t rand_modifier = rand() % 60000;
         rand_modifier = rand_modifier <= 30000 ? rand_modifier : -rand_modifier;
-        sleep_ms(((aprs_config.interval + rand_modifier)  > VHF_WAKE_TIME_MS)
-                     ? ((aprs_config.interval + rand_modifier) - VHF_WAKE_TIME_MS)
-                     : VHF_WAKE_TIME_MS);
+        sleep_ms(
+            ((aprs_config.interval + rand_modifier) > VHF_WAKE_TIME_MS)
+                ? ((aprs_config.interval + rand_modifier) - VHF_WAKE_TIME_MS)
+                : VHF_WAKE_TIME_MS);
 
         wakeVHF();  // wake here so there's enough time to fully wake up
 

@@ -7,25 +7,28 @@
 #include <string.h>
 #include <time.h>
 
+
 // GPS FUNCTIONS [START] ----------------------------------------------
 // RX functions from NEO-M8N
-
 void parseGpsOutput(char *line, int buf_len, gps_data_s *gps_dat) {
     switch (minmea_sentence_id(line, false)) {
         case MINMEA_SENTENCE_RMC: {
-            gps_dat->posCheck = true;
             struct minmea_sentence_rmc frame;
             if (minmea_parse_rmc(&frame, line)) {
-                memcpy(gps_dat->lastGpsBuffer, line, buf_len);
-                gps_dat->latlon[0] = minmea_tocoord(&frame.latitude);
-                gps_dat->latlon[1] = minmea_tocoord(&frame.longitude);
-                if (isnan(gps_dat->latlon[0])) {
-                    gps_dat->posCheck = false;
-                    gps_dat->latlon[0] = DEFAULT_LAT;
-                }
-                if (isnan(gps_dat->latlon[1])) {
-                    gps_dat->posCheck = false;
-                    gps_dat->latlon[1] = DEFAULT_LON;
+                memcpy(gps_dat->lastGpsBuffer[GPS_RMC], line,
+                       buf_len);
+                float latitude = minmea_tocoord(&frame.latitude);
+                float longitude = minmea_tocoord(&frame.longitude);
+                if (isnan(latitude) || isnan(longitude)) {
+                    gps_dat->latlon[GPS_RMC][0] =
+                        DEFAULT_LAT;
+                    gps_dat->latlon[GPS_RMC][1] =
+                        DEFAULT_LON;
+                } else {
+                    gps_dat->latlon[GPS_RMC][0] = latitude;
+                    gps_dat->latlon[GPS_RMC][1] = longitude;
+                    gps_dat->gpsReadFlags[GPS_RMC] = 1;
+                    gps_dat->posCheck = true;
                 }
                 gps_dat->acs[1] = minmea_rescale(&frame.course, 3);
                 gps_dat->acs[2] = minmea_rescale(&frame.speed, 1);
@@ -45,24 +48,50 @@ void parseGpsOutput(char *line, int buf_len, gps_data_s *gps_dat) {
             struct minmea_sentence_zda frame;
             if (minmea_parse_zda(&frame, line)) {
                 memcpy(gps_dat->lastDtBuffer, line, buf_len);
+                // todo add a better datatime check to make sure if valid
+                gps_dat->datCheck = true;
             }
             // printf("[DT] %s\n", gps_dat->lastDtBuffer);
             break;
         }
         case MINMEA_SENTENCE_GLL: {
             struct minmea_sentence_gll frame;
-            gps_dat->posCheck = true;
             if (minmea_parse_gll(&frame, line)) {
-                memcpy(gps_dat->lastGpsBuffer, line, buf_len);
-                gps_dat->latlon[0] = minmea_tocoord(&frame.latitude);
-                gps_dat->latlon[1] = minmea_tocoord(&frame.longitude);
-                if (isnan(gps_dat->latlon[0])) {
-                    gps_dat->posCheck = false;
-                    gps_dat->latlon[0] = DEFAULT_LAT;
+                memcpy(gps_dat->lastGpsBuffer[GPS_GLL], line,
+                       buf_len);
+                float latitude = minmea_tocoord(&frame.latitude);
+                float longitude = minmea_tocoord(&frame.longitude);
+                if (isnan(latitude) || isnan(longitude)) {
+                    gps_dat->latlon[GPS_GLL][0] =
+                        DEFAULT_LAT;
+                    gps_dat->latlon[GPS_GLL][1] =
+                        DEFAULT_LON;
+                } else {
+                    gps_dat->latlon[GPS_GLL][0] = latitude;
+                    gps_dat->latlon[GPS_GLL][1] = longitude;
+                    gps_dat->gpsReadFlags[GPS_GLL] = 1;
+                    gps_dat->posCheck = true;
                 }
-                if (isnan(gps_dat->latlon[1])) {
-                    gps_dat->posCheck = false;
-                    gps_dat->latlon[1] = DEFAULT_LON;
+            }
+            break;
+        }
+        case MINMEA_SENTENCE_GGA: {
+            struct minmea_sentence_gga frame;
+            if (minmea_parse_gga(&frame, line)) {
+                memcpy(gps_dat->lastGpsBuffer[GPS_GGA], line,
+                       buf_len);
+                float latitude = minmea_tocoord(&frame.latitude);
+                float longitude = minmea_tocoord(&frame.longitude);
+                if (isnan(latitude) || isnan(longitude)) {
+                    gps_dat->latlon[GPS_GGA][0] =
+                        DEFAULT_LAT;
+                    gps_dat->latlon[GPS_GGA][1] =
+                        DEFAULT_LON;
+                } else {
+                    gps_dat->latlon[GPS_GGA][0] = latitude;
+                    gps_dat->latlon[GPS_GGA][1] = longitude;
+                    gps_dat->gpsReadFlags[GPS_GGA] = 1;
+                    gps_dat->posCheck = true;
                 }
             }
             break;
@@ -79,7 +108,9 @@ bool readFromGps(const gps_config_s *gps_cfg, gps_data_s *gps_dat) {
     char gps_rd_buf[MAX_GPS_MSG_LEN];
     int gps_rd_buf_pos = 0;
     int gps_buf_len = 0;
-    if (uart_is_readable(gps_cfg->uart)) {
+    gps_dat->posCheck = false;
+    gps_dat->datCheck = false;
+    while (uart_is_readable(gps_cfg->uart)) {
         inChar = uart_getc(gps_cfg->uart);
         if (inChar == '$') {
             gps_dat->datCheck = true;
@@ -107,8 +138,37 @@ void gps_get_lock(const gps_config_s *gps_cfg, gps_data_s *gps_dat) {
             to_ms_since_boot(get_absolute_time()) - startTime > 1000)
             break;
     }
-    printf("[GPS LOCK] %s @ %.2f, %.2f\n", gps_dat->posCheck ? "true" : "false",
-           gps_dat->latlon[0], gps_dat->latlon[1]);
+    printf("[GPS LOCK] %s  GGA %.2f, %.2f  GLL %.2f, %.2f RMC %.2f, %.2f\n",
+           gps_dat->posCheck ? "true" : "false", gps_dat->latlon[0][0],
+           gps_dat->latlon[0][1], gps_dat->latlon[1][0], gps_dat->latlon[1][1],
+           gps_dat->latlon[2][0], gps_dat->latlon[2][1]);
+}
+
+void getBestLatLon(gps_data_s *gps_data, gps_lat_lon_s *latlon) {
+    if (gps_data->posCheck) {
+        uint8_t index = 0;
+        for (; index < MAX_GPS_DATA_BUFFER; index++) {
+            if (gps_data->gpsReadFlags[index]) {
+                latlon->lat = gps_data->latlon[index][0];
+                latlon->lon = gps_data->latlon[index][1];
+                gps_data->gpsReadFlags[index] = 0;
+                if (index == GPS_GGA) {
+                    memcpy(latlon->type, "GGA", 4);
+                } else if (index == GPS_GLL) {
+                    memcpy(latlon->type, "GLL", 4);
+                } else {
+                    memcpy(latlon->type, "RMC", 4);
+                }
+
+                break;
+            }
+        }
+    } else {
+        latlon->notAvail = true;
+        latlon->lat = DEFAULT_LAT;
+        latlon->lon = DEFAULT_LON;
+        memcpy(latlon->type, "NONE", 5);
+    }
 }
 
 void echoGpsOutput(char *line, int buf_len) {

@@ -12,14 +12,18 @@
 
 // Pre-processor flags
 /// Turns on communications with the main tag (only for fully CONNected tags)
-#define TAG_CONNECTED 1
+#define TAG_CONNECTED 0
 
 /// Number of values in the sinValues DAC output array
 #define NUM_SINS 32
 
 #define MAX_TAG_MSG_LEN 20
 
-#define APRS_RETRANSMIT 3
+#if TAG_CONNECTED
+    #define APRS_RETRANSMIT 3
+#else 
+    #define APRS_RETRANSMIT 1
+#endif
 
 // Static constants
 /// Location of the LED pin
