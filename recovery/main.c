@@ -25,7 +25,7 @@ void startAPRS(const aprs_config_s *aprs_cfg, repeating_timer_t *aprsTimer);
 void startTag(const tag_config_s *tag_cfg, repeating_timer_t *tagTimer);
 bool txTag(repeating_timer_t *rt);
 void initAll(const gps_config_s *gps_cfg, const tag_config_s *tag_cfg);
-void gos_callback();
+void gps_callback();
 
 /** @struct Defines unchanging configuration parameters for APRS.
  * callsign, ssid
@@ -117,7 +117,7 @@ bool txTag(repeating_timer_t *rt) {
     return true;
 }
 
-void gos_callback() {
+void gps_callback() {
     gps_get_lock(&gps_config, &gps_data);
 }
 
@@ -150,17 +150,18 @@ int main() {
     int gpsIRQ = gps_config.uart == uart0 ? UART0_IRQ : UART1_IRQ;
 
     // And set up and enable the interrupt handlers
-    irq_set_exclusive_handler(gpsIRQ, gos_callback);
+    irq_set_exclusive_handler(gpsIRQ, gps_callback);
     irq_set_enabled(gpsIRQ, true);
 
     // Now enable the UART to send interrupts - RX only
     uart_set_irq_enables(gps_config.uart, true, false);
 
-
+    int32_t rand_modifier = 0;
 // Tag comms interrupt setup
 #if TAG_CONNECTED
     repeating_timer_t tagTimer;
     startTag(&tag_config, &tagTimer);
+    rand_modifier = rand() % 60000;
 #endif
 
     wakeVHF();  // wake here so there's enough time to fully wake up
@@ -172,7 +173,6 @@ int main() {
         txAprs();
 
         sleepVHF();
-        int32_t rand_modifier = rand() % 60000;
         rand_modifier = rand_modifier <= 30000 ? rand_modifier : -rand_modifier;
         sleep_ms(
             ((aprs_config.interval + rand_modifier) > VHF_WAKE_TIME_MS)

@@ -1,0 +1,22 @@
+{
+    "configurations": [
+        {
+            "name": "Mac",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "/Users/silvara/CETI/pi-sdk/pico-sdk/src/common/pico_stdlib/include",
+                "/Users/silvara/CETI/pi-sdk/pico-sdk/src/rp2_common/hardware_uart/include/**",
+                "/Users/silvara/CETI/pi-sdk/pico-sdk/src/common/**",
+                "/Users/silvara/CETI/pi-sdk/pico-sdk/src/rp2_common/hardware_uart/include"
+            ],
+            "defines": [],
+            "macFrameworkPath": [],
+            "compilerPath": "/opt/homebrew/bin/arm-none-eabi-gcc",
+            "cStandard": "gnu17",
+            "cppStandard": "gnu++17",
+            "intelliSenseMode": "macos-gcc-arm64",
+            "configurationProvider": "ms-vscode.cmake-tools"
+        }
+    ],
+    "version": 4
+}

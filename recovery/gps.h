@@ -6,9 +6,11 @@
 // GPS DEFS [START] ---------------------------------------------------
 #define MAX_GPS_MSG_LEN 255
 #define MAX_GPS_DATA_BUFFER 4
+#define MAX_GPS_ACK_LENGTH 11
 // GPS DEFS [END] -----------------------------------------------------
 
 // Critical typedefs
+// the GPS configuration for UBLOX
 typedef struct gps_config_t {
     int txPin;
     int rxPin;
@@ -52,5 +54,11 @@ void getBestLatLon(gps_data_s *gps_dat, gps_lat_lon_s *latlon);
 
 // Init NEO-M8N functions
 uint32_t gpsInit(const gps_config_s *);
+
+// Ublox configuration functions
+void calculateUBXChecksum(uint8_t length, uint8_t* byte_stream);
+bool writeAllConfigurationsToUblox(uart_inst_t* uart);
+void writeSingleConfiguration(uart_inst_t* uart, uint8_t* byte_stream, uint8_t len);
+
 
 #endif
