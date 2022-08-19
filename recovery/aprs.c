@@ -304,7 +304,6 @@ void sendPacket(const aprs_config_s *aprs_cfg, float *latlon, uint16_t *acs) {
     }
     setPttState(true);
     setPayload(latlon, acs);
-
     // TODO TEST IF THIS IMPROVES RECEPTION
     // Send initialize sequence for receiver
     // sendCharNRZI(0x99, true);

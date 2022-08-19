@@ -27,9 +27,10 @@ typedef struct gps_data_t {
     uint8_t gpsReadFlags[MAX_GPS_DATA_BUFFER];
 
     uint32_t quality;
-    bool daytime;
-    bool outsideDominica;
+    datetime_t dt;
+    bool inDominica;
     bool posCheck;
+    bool dtCheck;
 } gps_data_s;
 
 typedef struct gps_lat_lon_t {
@@ -52,6 +53,8 @@ bool readFromGps(const gps_config_s *gps_cfg, gps_data_s *gps_dat);
 void gps_get_lock(const gps_config_s *gps_cfg, gps_data_s *gps_dat);
 void echoGpsOutput(char *line, int buf_len);
 void getBestLatLon(gps_data_s *gps_dat, gps_lat_lon_s *latlon);
+uint8_t getDayOfWeek(datetime_t *dt);
+bool inDominica(float lat);
 
 // Init NEO-M8N functions
 uint32_t gpsInit(const gps_config_s *);

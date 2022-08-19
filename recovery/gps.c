@@ -13,7 +13,7 @@
 void parseGpsOutput(char *line, int buf_len, gps_data_s *gps_dat) {
     switch (minmea_sentence_id(line, false)) {
         case MINMEA_SENTENCE_RMC: {
-            printf("[RMC] ");
+            // printf("[RMC] ");
             struct minmea_sentence_rmc frame;
             if (minmea_parse_rmc(&frame, line)) {
                 memcpy(gps_dat->lastGpsBuffer[GPS_RMC], line, buf_len);
@@ -27,9 +27,21 @@ void parseGpsOutput(char *line, int buf_len, gps_data_s *gps_dat) {
                     gps_dat->latlon[GPS_RMC][1] = longitude;
                     gps_dat->gpsReadFlags[GPS_RMC] = 1;
                     gps_dat->posCheck = true;
+                    gps_dat->inDominica = inDominica(latitude);
                 }
                 gps_dat->acs[1] = minmea_rescale(&frame.course, 3);
                 gps_dat->acs[2] = minmea_rescale(&frame.speed, 1);
+
+                gps_dat->dtCheck = frame.time.hours > 0;
+                // seed with a fake date
+                datetime_t t = {.year = 2020,
+                                .month = 8,
+                                .day = 19,
+                                .dotw = 5,
+                                .hour = frame.time.hours + UTC_OFFSET,
+                                .min = frame.time.minutes,
+                                .sec = frame.time.seconds};
+                gps_dat->dt = t;
                 /* printf("[PARSED]: %d | %f, %f, %d, %d\n", gps_dat->posCheck,
                  */
                 /* 			 minmea_tocoord(&frame.latitude), */
@@ -48,13 +60,22 @@ void parseGpsOutput(char *line, int buf_len, gps_data_s *gps_dat) {
             if (minmea_parse_zda(&frame, line)) {
                 memcpy(gps_dat->lastDtBuffer, line, buf_len);
                 // todo add a better datatime check to make sure if valid
-                gps_dat->datCheck = true;
+                gps_dat->dtCheck = frame.date.year > 0;
+                datetime_t t = {.year = frame.date.year,
+                                .month = frame.date.month,
+                                .day = frame.date.day,
+                                .hour = frame.time.hours + UTC_OFFSET,
+                                .min = frame.time.minutes,
+                                .sec = frame.time.seconds};
+                t.dotw = getDayOfWeek(&t);
+                gps_dat->dt = t;
             }
-            // printf("[DT] %s\n", gps_dat->lastDtBuffer);
+            printf("[DT] %s : check %s\n", gps_dat->lastDtBuffer,
+                   gps_dat->dtCheck ? "true" : "false");
             break;
         }
         case MINMEA_SENTENCE_GLL: {
-            printf("[GLL] ");
+            // printf("[GLL] ");
             struct minmea_sentence_gll frame;
             if (minmea_parse_gll(&frame, line)) {
                 memcpy(gps_dat->lastGpsBuffer[GPS_GLL], line, buf_len);
@@ -68,12 +89,13 @@ void parseGpsOutput(char *line, int buf_len, gps_data_s *gps_dat) {
                     gps_dat->latlon[GPS_GLL][1] = longitude;
                     gps_dat->gpsReadFlags[GPS_GLL] = 1;
                     gps_dat->posCheck = true;
+                    gps_dat->inDominica = inDominica(latitude);
                 }
             }
             break;
         }
         case MINMEA_SENTENCE_GGA: {
-            printf("[GGA] ");
+            // printf("[GGA] ");
             struct minmea_sentence_gga frame;
             if (minmea_parse_gga(&frame, line)) {
                 memcpy(gps_dat->lastGpsBuffer[GPS_GGA], line, buf_len);
@@ -87,6 +109,7 @@ void parseGpsOutput(char *line, int buf_len, gps_data_s *gps_dat) {
                     gps_dat->latlon[GPS_GGA][1] = longitude;
                     gps_dat->gpsReadFlags[GPS_GGA] = 1;
                     gps_dat->posCheck = true;
+                    gps_dat->inDominica = inDominica(latitude);
                 }
             }
             break;
@@ -103,12 +126,11 @@ bool readFromGps(const gps_config_s *gps_cfg, gps_data_s *gps_dat) {
     char gps_rd_buf[MAX_GPS_MSG_LEN];
     int gps_rd_buf_pos = 0;
     int gps_buf_len = 0;
-    gps_dat->posCheck = false;
-    gps_dat->datCheck = false;
+    // gps_dat->posCheck = false; // todo don't want to reset on just zda
+    // datetime messages
     while (uart_is_readable(gps_cfg->uart)) {
         inChar = uart_getc(gps_cfg->uart);
         if (inChar == '$') {
-            gps_dat->datCheck = true;
             gps_rd_buf[gps_rd_buf_pos++] = inChar;
             while (inChar != '\r') {
                 inChar = uart_getc(gps_cfg->uart);
@@ -126,17 +148,20 @@ bool readFromGps(const gps_config_s *gps_cfg, gps_data_s *gps_dat) {
 }
 
 void gps_get_lock(const gps_config_s *gps_cfg, gps_data_s *gps_dat) {
+    bool lastCheck = gps_dat->posCheck;
     gps_dat->posCheck = false;
     uint32_t startTime = to_ms_since_boot(get_absolute_time());
     while (gps_dat->posCheck != true) {
         if (readFromGps(gps_cfg, gps_dat) ||
-            to_ms_since_boot(get_absolute_time()) - startTime > 500)
+            to_ms_since_boot(get_absolute_time()) - startTime > 1000)
             break;
     }
-    printf("\n[GPS LOCK] %s  GGA %.2f, %.2f  GLL %.2f, %.2f RMC %.2f, %.2f\n",
+    // if (lastCheck != gps_dat->posCheck) {
+    printf("[GPS LOCK] %s  GGA %.2f, %.2f  GLL %.2f, %.2f  RMC %.2f, %.2f\n",
            gps_dat->posCheck ? "true" : "false", gps_dat->latlon[0][0],
            gps_dat->latlon[0][1], gps_dat->latlon[1][0], gps_dat->latlon[1][1],
            gps_dat->latlon[2][0], gps_dat->latlon[2][1]);
+    //}
 }
 
 void getBestLatLon(gps_data_s *gps_data, gps_lat_lon_s *latlon) {
@@ -154,7 +179,6 @@ void getBestLatLon(gps_data_s *gps_data, gps_lat_lon_s *latlon) {
                 } else {
                     memcpy(latlon->type, "RMC", 4);
                 }
-
                 break;
             }
         }
@@ -164,6 +188,26 @@ void getBestLatLon(gps_data_s *gps_data, gps_lat_lon_s *latlon) {
         latlon->lon = DEFAULT_LON;
         memcpy(latlon->type, "NONE", 5);
     }
+}
+
+uint8_t getDayOfWeek(datetime_t *dt) {
+    uint8_t day = dt->day;
+    uint8_t month = dt->month;
+    uint16_t year = dt->year;
+
+    // adjust month year
+    if (month < 3) {
+        month += 12;
+        year -= 1;
+    }
+
+    // split year
+    uint32_t c = year / 100;
+    year = year % 100;
+
+    // Zeller's congruence
+    return (c / 4 - 2 * c + year + year / 4 + 13 * (month + 1) / 5 + day - 1) %
+           7;
 }
 
 void echoGpsOutput(char *line, int buf_len) {
@@ -182,6 +226,7 @@ uint32_t gpsInit(const gps_config_s *gps_cfg) {
     return baud;
 }
 
+bool inDominica(float lat) { return true; }  // lat < 17.71468; }
 /**
  * Calculates the checksum for the current byte stream using the 8-bit Fletcher
  * Algorithm. Requires that the given byte stream has the last two cells
@@ -205,7 +250,7 @@ void calculateUBXChecksum(uint8_t length, uint8_t *byte_stream) {
 
     byte_stream[length - 2] = CK_A;
     byte_stream[length - 1] = CK_B;
-    printf("check sum: %02x %02x\n", CK_A, CK_B);
+    // printf("check sum: %02x %02x\n", CK_A, CK_B);
 }
 
 bool writeAllConfigurationsToUblox(uart_inst_t *uart) {

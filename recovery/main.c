@@ -6,37 +6,40 @@
 #include "aprs.h"
 #include "constants.h"
 #include "gps.h"
+#include "hardware/clocks.h"
+#include "hardware/rosc.h"
+#include "hardware/structs/scb.h"
 #include "pico/binary_info.h"
 #include "pico/stdlib.h"
 #include "pico/time.h"
 #include "sleep.h"
 #include "tag.h"
+#include "ublox-config.h"
 #include "vhf.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "ublox-config.h"
 
-
-void set_bin_desc(void);
-void setLed(bool state);
-void initLed(void);
-bool txVHF(repeating_timer_t *rt);
-void startVHF(repeating_timer_t *vhfTimer);
-bool txAprsIRQ(repeating_timer_t *rt);
-bool txAprs(void);
-void startAPRS(const aprs_config_s *aprs_cfg, repeating_timer_t *aprsTimer);
-void startTag(const tag_config_s *tag_cfg, repeating_timer_t *tagTimer);
-bool txTag(repeating_timer_t *rt);
-void initAll(const gps_config_s *gps_cfg, const tag_config_s *tag_cfg);
-void gps_callback();
+#define TAG_CONNECTED 0
+#define FLOATER 1
+static bool deep_sleep = false;
+#if TAG_CONNECTED
+#define APRS_RETRANSMIT 3
+#define APRS_DELAY 15000
+#else
+#define APRS_RETRANSMIT 1
+#define APRS_DELAY 3000
+#endif
 
 /** @struct Defines unchanging configuration parameters for APRS.
  * callsign, ssid
  * dest, digi, digissid, comment
  * interval, debug, debug style
  */
-const aprs_config_s aprs_config = {
-    CALLSIGN, SSID, "APLIGA", "WIDE2", 2, "Ceti b1.2 4-S", 10000, false, 2};
+const aprs_config_s aprs_config = {CALLSIGN,        SSID,  "APLIGA", "WIDE2", 2,
+                                   "Ceti b1.2 4-S", 10000, false,    2};
+
+const aprs_config_s floater_aprs_config = {
+    CALLSIGN, SSID, "APLIGA", "WIDE2", 2, "Ceti b1.2 4-S", 0, false, 2};
 
 /** @struct Defines unchanging configuration parameters for GPS communication.
  * GPS_TX, GPS_RX, GPS_BAUD, UART_NUM, QINTERACTIVE
@@ -57,6 +60,30 @@ const struct vhf_config_t {
     const uint32_t interval;
 } vhf_config = {148.056, 5000};
 
+struct clock_config_t {
+    uint scb_orig;
+    uint clock0_orig;
+    uint clock1_orig;
+} clock_config;
+
+void set_bin_desc(void);
+void setLed(bool state);
+void initLed(void);
+bool txVHF(repeating_timer_t *rt);
+void startVHF(repeating_timer_t *vhfTimer);
+bool txAprsIRQ(repeating_timer_t *rt);
+bool txAprs(void);
+void startAPRS(const aprs_config_s *aprs_cfg, repeating_timer_t *aprsTimer);
+void startTag(const tag_config_s *tag_cfg, repeating_timer_t *tagTimer);
+bool txTag(repeating_timer_t *rt);
+void initAll(const gps_config_s *gps_cfg, const tag_config_s *tag_cfg);
+void gps_callback();
+static void rtc_sleep(datetime_t *start, uint32_t sleepTime);
+void recover_from_sleep();
+static void sleepCallback();
+float getVin();
+void startupBroadcasting();
+
 void set_bin_desc(void) {
     bi_decl(bi_program_description(
         "Recovery process binary for standalone recovery board 2-#"));
@@ -75,7 +102,97 @@ void initLed(void) {
     gpio_set_dir(LED_PIN, GPIO_OUT);
 }
 
+void recover_from_sleep() {
+    // Re-enable ring Oscillator control
+    rosc_write(&rosc_hw->ctrl, ROSC_CTRL_ENABLE_BITS);
+    printf("Recover step 1 \n");
+    // reset procs back to default
+    scb_hw->scr = clock_config.scb_orig;
+    clocks_hw->sleep_en0 = clock_config.clock0_orig;
+    clocks_hw->sleep_en1 = clock_config.clock1_orig;
+    printf("Recover step 2 \n");
+
+    // reset clocks
+    clocks_init();
+    stdio_init_all();
+    printf("Recover step 3 \n");
+
+    initLed();
+    setLed(true);
+
+    return;
+}
+
+static void sleep_callback() { printf("Waking from sleep\n"); }
+
+static void rtc_sleep(datetime_t *start, uint32_t sleepTime) {
+    // Do calculations first
+    datetime_t end = gps_data.dt;
+
+    uint16_t hours = sleepTime / (1000 * 60 * 60);
+    uint16_t minutes = (sleepTime % (1000 * 60 * 60)) / (1000 * 60);
+    uint16_t seconds = (sleepTime % (1000 * 60 * 60)) % (1000 * 60) / 1000;
+
+    printf("sleeping for %d ms:  %d hours and %d minutes and %d seconds\n",
+           sleepTime, hours, minutes, seconds);
+    if (end.sec + seconds >= 60) {
+        end.sec = end.sec + seconds - 60;
+        end.min += 1;
+    } else {
+        end.sec += seconds;
+    }
+    if (end.min + minutes >= 60) {
+        end.min = end.min + minutes - 60;
+        end.hour += 1;
+    } else {
+        end.min += minutes;
+    }
+    if (end.hour + hours >= 24) {
+        end.hour = end.hour + hours - 24;
+        end.day += 1;
+    } else {
+        end.sec += hours;
+    }
+    // todo do i need to do month rollover?
+    printf("starting %d: %d-%d-%d %d:%d:%d \tending %d: %d-%d-%d %d:%d:%d\n",
+           start->dotw, start->year, start->month, start->day, start->hour,
+           start->min, start->sec, end.dotw, end.year, end.month, end.day,
+           end.hour, end.min, end.sec);
+    // transmission!
+    txAprs();
+    // sleepy time
+    sleepVHF();
+
+    // Start the RTC
+    rtc_init();
+    rtc_set_datetime(start);
+    rec_sleep_run_from_xosc();
+    // start sleep, wake after RTC time interval
+    rec_sleep_goto_sleep_until(&end, &sleep_callback);
+}
+
 // APRS //
+void startupBroadcasting() {
+    printf("Initial APRS broadcasting\n");
+    for (int i = 0; i < 10; i++) {
+        //  wakeVHF();
+        gps_get_lock(&gps_config, &gps_data);
+        if (gps_data.posCheck) {
+            struct gps_lat_lon_t latlon;
+            getBestLatLon(&gps_data, &latlon);
+            printf("[APRS TX:%s] %s-%d @ %.6f, %.6f \n", latlon.type, CALLSIGN,
+                   SSID, latlon.lat, latlon.lon);
+            setLed(true);
+            sendPacket(&aprs_config, (float[]){latlon.lat, latlon.lon},
+                       gps_data.acs);
+            setLed(false);
+
+            sleep_ms(APRS_DELAY);
+        }
+
+        sleep_ms(60000 - APRS_DELAY);
+    }
+}
 
 void startAPRS(const aprs_config_s *aprs_cfg, repeating_timer_t *aprsTimer) {
     // configureAPRS_TX(DEFAULT_FREQ);
@@ -85,7 +202,7 @@ void startAPRS(const aprs_config_s *aprs_cfg, repeating_timer_t *aprsTimer) {
 bool txAprsIRQ(repeating_timer_t *rt) { return txAprs(); }
 
 bool txAprs(void) {
-    gps_get_lock(&gps_config, &gps_data);
+    // gps_get_lock(&gps_config, &gps_data);
 
     // wake up the VHF since we're going to transmit APRS
     if (aprs_config.debug)
@@ -98,9 +215,11 @@ bool txAprs(void) {
 
         for (uint8_t retrans = 0; retrans < APRS_RETRANSMIT; retrans++) {
             setLed(true);
-            sendPacket(&aprs_config, (float []){latlon.lat, latlon.lon}, gps_data.acs);
+            sendPacket(&aprs_config, (float[]){latlon.lat, latlon.lon},
+                       gps_data.acs);
             setLed(false);
-            sleep_ms(3000);
+
+            sleep_ms(APRS_DELAY);
         }
     }
 
@@ -120,9 +239,14 @@ bool txTag(repeating_timer_t *rt) {
     return true;
 }
 
-void gps_callback() {
-    gps_get_lock(&gps_config, &gps_data);
-}
+// float getVin(){
+//     uint16_t adcVal = analogRead(vinPin);
+//     float vinVal = float(adcVal) / maxAdcVal * adcRefVoltage;
+//     float voltage = vinVal * (r1 + r2) / r2;
+//     return voltage;
+//     }
+
+void gps_callback() { gps_get_lock(&gps_config, &gps_data); }
 
 void initAll(const gps_config_s *gps_cfg, const tag_config_s *tag_cfg) {
     set_bin_desc();
@@ -146,6 +270,10 @@ int main() {
     initAll(&gps_config, &tag_config);
     printf("[MAIN INIT] %s-%d \n", CALLSIGN, SSID);
 
+    clock_config.scb_orig = scb_hw->scr;
+    clock_config.clock0_orig = clocks_hw->sleep_en0;
+    clock_config.clock1_orig = clocks_hw->sleep_en1;
+
     // // APRS comms interrupt setup
     // repeating_timer_t aprsTimer;
     // startAPRS(&aprs_config, &aprsTimer);
@@ -153,40 +281,43 @@ int main() {
     int gpsIRQ = gps_config.uart == uart0 ? UART0_IRQ : UART1_IRQ;
 
     // // And set up and enable the interrupt handlers
-    irq_set_exclusive_handler(gpsIRQ, gps_callback);
-    irq_set_enabled(gpsIRQ, true);
+    // irq_set_exclusive_handler(gpsIRQ, gps_callback);
+    // irq_set_enabled(gpsIRQ, true);
 
-    // // Now enable the UART to send interrupts - RX only
-    uart_set_irq_enables(gps_config.uart, true, false);
+    // // // Now enable the UART to send interrupts - RX only
+    // uart_set_irq_enables(gps_config.uart, true, false);
+    wakeVHF();  // wake here so there's enough time to fully wake up
+    sleep_ms(VHF_WAKE_TIME_MS);
 
     int32_t rand_modifier = 0;
 // Tag comms interrupt setup
 #if TAG_CONNECTED
+    startupBroadcasting();
     repeating_timer_t tagTimer;
     startTag(&tag_config, &tagTimer);
-    rand_modifier = rand() % 60000;
+    rand_modifier = rand() % TAG_VARIANCE;
+#elif FLOATER
+    rand_modifier = rand() % FLOATER_VARIANCE;
 #endif
-
-    // wakeVHF();  // wake here so there's enough time to fully wake up
-
-    // sleep_ms(VHF_WAKE_TIME_MS);
 
     // Loop
     while (true) {
         while (deep_sleep) {
-            irq_remove_handler(gpsIRQ,gps_callback);
+            irq_remove_handler(gpsIRQ, gps_callback);
             uart_deinit(uart0);
             uart_deinit(uart1);
             sleepVHF();
             calculateUBXChecksum(16, sleep);
             writeSingleConfiguration(gps_config.uart, sleep, 16);
+            // Sets the dormant clock to the crystal oscillator
             rec_sleep_run_from_xosc();
             rec_sleep_goto_dormant_until_edge_high(8);
         }
 #if TAG_CONNECTED
         txAprs();
         sleepVHF();
-        rand_modifier = rand_modifier <= 30000 ? rand_modifier : -rand_modifier;
+        rand_modifier = rand_modifier <= (TAG_VARIANCE / 2) ? rand_modifier
+                                                            : -rand_modifier;
         sleep_ms(
             ((aprs_config.interval + rand_modifier) > VHF_WAKE_TIME_MS)
                 ? ((aprs_config.interval + rand_modifier) - VHF_WAKE_TIME_MS)
@@ -196,7 +327,35 @@ int main() {
 
         sleep_ms(VHF_WAKE_TIME_MS);
 #elif FLOATER
-        
+        gps_get_lock(&gps_config, &gps_data);
+
+        if (gps_data.inDominica && gps_data.posCheck && gps_data.dtCheck) {
+            printf("[DOMINICA] ");
+
+            printf("DT: %d %d %d\n", gps_data.dt.hour, gps_data.dt.min,
+                   gps_data.dt.sec);
+            if (gps_data.dt.hour > NIGHT_DAY_ROLLOVER &&
+                gps_data.dt.hour < DAY_NIGHT_ROLLOVER) {
+                printf("[DAYTIME]\n");
+                rtc_sleep(&gps_data.dt, DAY_SLEEP);
+                recover_from_sleep();
+
+                wakeVHF();
+                printf("Here\n");
+                sleep_ms(1000);
+            } else {
+                printf("[NIGHTTIME]\n");
+                rtc_sleep(&gps_data.dt, NIGHT_SLEEP);
+            }
+        } else if (gps_data.posCheck && gps_data.dtCheck) {
+            printf("[NOT DOMINICA]\n");
+
+            rtc_sleep(&gps_data.dt, GEOFENCE_SLEEP);
+        } else {
+            // printf("Waiting...\n");
+            sleep_ms(2000);
+        }
+        wakeVHF();
 #endif
     }
     return 0;

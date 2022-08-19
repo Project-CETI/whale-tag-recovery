@@ -1,41 +1,33 @@
 #ifndef _RECOVERY_CONSTANTS_H_
 #define _RECOVERY_CONSTANTS_H_
 
-#include "stdint.h"
+#include "aprs.h"
+#include "gps.h"
 #include "stdbool.h"
+#include "stdint.h"
+#include "tag.h"
 
 // Callsign and SSIS configuration
-#define CALLSIGN "J75Z"
-#define SSID 1
+#define CALLSIGN "J75Y"
+#define SSID 14
 #define DEFAULT_FREQ 144.39
 #define DEFAULT_LAT 15.31383
 #define DEFAULT_LON -61.30075
 
 // Pre-processor flags
-/// Turns on communications with the main tag (only for fully CONNected tags)
-#define TAG_CONNECTED 0
-#define FLOATER 1
-static bool deep_sleep = true;
-
-
 /// Number of values in the sinValues DAC output array
 #define NUM_SINS 32
 
 #define MAX_TAG_MSG_LEN 20
 
-#if TAG_CONNECTED
-    #define APRS_RETRANSMIT 3
-#else 
-    #define APRS_RETRANSMIT 1
-#endif
-
-static const uint32_t DAY_SLEEP = 1200000; // 20 minutes in milliseconds
-static const uint32_t NIGHT_SLEEP = 3600000; // 60 minutes in milliseconds
-static const uint32_t GEOFENCE_SLEEP = 72000000; // 20 hours in milliseconds
-static const uint32_t FLOATER_VARIANCE = 120000; // 2 minutes in milliseconds
-static const uint32_t TAG_VARIANCE = 120000; // 2 minutes in milliseconds
-static const uint16_t DAY_NIGHT_ROLLOVER = 500; // 5am
-static const uint16_t NIGHT_DAY_ROLLOVER = 1900; // 7pm
+static const uint32_t DAY_SLEEP = 10000;//1200000;        // 20 minutes in milliseconds
+static const uint32_t NIGHT_SLEEP = 30000;//3600000;      // 60 minutes in milliseconds
+static const uint32_t GEOFENCE_SLEEP = 1000; //72000000;  // 20 hours in milliseconds
+static const uint32_t FLOATER_VARIANCE = 120000;  // 2 minutes in milliseconds
+static const uint32_t TAG_VARIANCE = 120000;      // 2 minutes in milliseconds
+static const uint8_t DAY_NIGHT_ROLLOVER = 19;      // 7pm
+static const uint8_t NIGHT_DAY_ROLLOVER = 5;     // 5am
+static const int8_t UTC_OFFSET = -4;
 
 // Static constants
 /// Location of the LED pin
