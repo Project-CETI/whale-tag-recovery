@@ -32,16 +32,7 @@ void parseGpsOutput(char *line, int buf_len, gps_data_s *gps_dat) {
                 gps_dat->acs[1] = minmea_rescale(&frame.course, 3);
                 gps_dat->acs[2] = minmea_rescale(&frame.speed, 1);
 
-                gps_dat->dtCheck = frame.time.hours > 0;
-                // seed with a fake date
-                datetime_t t = {.year = 2020,
-                                .month = 8,
-                                .day = 19,
-                                .dotw = 5,
-                                .hour = frame.time.hours + UTC_OFFSET,
-                                .min = frame.time.minutes,
-                                .sec = frame.time.seconds};
-                gps_dat->dt = t;
+                
                 /* printf("[PARSED]: %d | %f, %f, %d, %d\n", gps_dat->posCheck,
                  */
                 /* 			 minmea_tocoord(&frame.latitude), */
@@ -142,6 +133,7 @@ bool readFromGps(const gps_config_s *gps_cfg, gps_data_s *gps_dat) {
             gps_rd_buf[gps_rd_buf_pos - 1] = '\0';
             gps_buf_len = gps_rd_buf_pos - 1;
             parseGpsOutput(gps_rd_buf, gps_buf_len, gps_dat);
+            printf("%s\n", gps_rd_buf);
         }
     }
     return gps_dat->posCheck;
@@ -266,14 +258,17 @@ bool writeAllConfigurationsToUblox(uart_inst_t *uart) {
 
 void writeSingleConfiguration(uart_inst_t *uart, uint8_t *byte_stream,
                               uint8_t len) {
-    // printf("Writing Configuration: %x %x\n", byte_stream[2], byte_stream[3]);
+    printf("Writing Configuration: %x %x\n", byte_stream[2], byte_stream[3]);
     if (!uart_is_writable(uart)) uart_tx_wait_blocking(uart);
     for (uint8_t i = 0; i < len; i++) {
         uart_putc_raw(uart, byte_stream[i]);
         // printf("%02x ", byte_stream[i]);
     }
     // uart_puts(uart, (char *)byte_stream);
-    sleep_ms(500);
+    sleep_ms(1000);
+    // while (uart_is_readable(uart)) {
+    //     uart_getc(uart);
+    // }
     // TODO: fix this to have check for ACKs
     // char inChar;
     // char ack_rd_buf[MAX_GPS_ACK_LENGTH];

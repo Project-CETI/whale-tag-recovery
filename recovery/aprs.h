@@ -9,7 +9,7 @@ typedef struct aprs_config_t {
     char callsign[8];
     int ssid;
     char dest[8];
-    char digi[8];
+    char digi[16];
     int dssid;
     char comment[128];
     uint32_t interval;

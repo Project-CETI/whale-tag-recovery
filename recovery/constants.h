@@ -8,8 +8,8 @@
 #include "tag.h"
 
 // Callsign and SSIS configuration
-#define CALLSIGN "J75Y"
-#define SSID 14
+#define CALLSIGN "KC1QXQ"
+#define SSID 8
 #define DEFAULT_FREQ 144.39
 #define DEFAULT_LAT 15.31383
 #define DEFAULT_LON -61.30075

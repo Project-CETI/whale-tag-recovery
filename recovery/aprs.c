@@ -26,7 +26,7 @@ const struct aprs_pc_s {
         _DT_POS;  ///< APRS character, defines transmissions as real-time.
     const char sym_ovl;  ///< Symbol Table ID. \ for the Alternative symbols.
     const char sym_tab;  ///< Symbol Code.
-} aprs_pc = {0x7e, 0x03, 0xf0, '!', '\\', '-'};
+} aprs_pc = {0x7e, 0x03, 0xf0, '!', '1', 's'};
 
 struct aprs_cc_s {
     bool nada;
@@ -269,6 +269,17 @@ static void sendHeader(const aprs_config_s *aprs_cfg) {
     sendCharNRZI((aprs_cfg->ssid + '0') << 1, true);
 
     //  /********* DIGI ***********/
+    // char digi2[8] = "WIDE1-";
+    // int dssid_2 = 1;
+    // temp = strlen(digi2);
+    // for (int j = 0; j < temp; j++) sendCharNRZI(digi2[j] << 1, true);
+    // if (temp < 6) {
+    //     for (int j = temp; j < 6; j++) sendCharNRZI(' ' << 1, true);
+    // }
+    // sendCharNRZI((dssid_2 + '0') << 1, true);
+    
+    // sendCharNRZI(' ', true);
+
     temp = strlen(aprs_cfg->digi);
     for (int j = 0; j < temp; j++) sendCharNRZI(aprs_cfg->digi[j] << 1, true);
     if (temp < 6) {
