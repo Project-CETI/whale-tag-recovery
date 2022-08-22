@@ -45,7 +45,7 @@ const aprs_config_s floater_aprs_config = {
     CALLSIGN, SSID, "APLIGA", "WIDE2", 2, "Ceti b1.2 4-S", 0, false, 2};
 
 const aprs_config_s testing_aprs_config = {
-    CALLSIGN, SSID, "APRS", "WIDE1-1WIDE2-", 1, "", TESTING_TIME, false, 2};
+    CALLSIGN, SSID, "APLIGA", "WIDE2-", 1, "Ceti b1.2 4-S", TESTING_TIME, false, 2};
 
 /** @struct Defines unchanging configuration parameters for GPS communication.
  * GPS_TX, GPS_RX, GPS_BAUD, UART_NUM, QINTERACTIVE

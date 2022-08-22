@@ -87,14 +87,14 @@ static const uint32_t vhfEnableDelay = 1000;
 /** Array of sin values for the DAC output.
  * Corresponds to one whole 8-bit sine output.
  */
-/*static const uint8_t sinValues[NUM_SINS] = {
+static const uint8_t sinValues[NUM_SINS] = {
     152, 176, 198, 217, 233, 245, 252, 255, 252, 245, 233,
     217, 198, 176, 152, 127, 103, 79,  57,  38,  22,  10,
     3,   1,   3,   10,  22,  38,  57,  79,  103, 128};
-    */
-static const uint8_t sinValues[NUM_SINS] = {
-    128, 152, 176, 198, 218, 234, 245, 253, 255, 253, 245,
-    234, 218, 198, 176, 152, 128, 103, 79,  57,  37,  21,
-    10,  2,   0,   2,   10,  21,  37,  57,  79,  103};
+    
+// static const uint8_t sinValues[NUM_SINS] = {
+//     128, 152, 176, 198, 218, 234, 245, 253, 255, 253, 245,
+//     234, 218, 198, 176, 152, 128, 103, 79,  57,  37,  21,
+//     10,  2,   0,   2,   10,  21,  37,  57,  79,  103};
 
 #endif  // _RECOVERY_CONSTANTS_H_

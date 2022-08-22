@@ -317,8 +317,13 @@ void sendPacket(const aprs_config_s *aprs_cfg, float *latlon, uint16_t *acs) {
     //     configureDra818v(DEFAULT_FREQ, DEFAULT_FREQ, 8, false, false, false);
     //     shouldBe145 = false;
     // }
-    setPttState(true);
+     setPttState(true);
     sleep_ms(100);
+
+    aprs_cc.currOutput = 0;
+    setNextSin();
+    busy_wait_us_32(750);
+
     setPayload(latlon, acs);
     // TODO TEST IF THIS IMPROVES RECEPTION
     // Send initialize sequence for receiver
@@ -341,6 +346,7 @@ void sendPacket(const aprs_config_s *aprs_cfg, float *latlon, uint16_t *acs) {
     sendCrc();
     sendFlag(3);
     setPttState(false);
+    setOutput(0x00);
     // sleepVHF();
 }
 
