@@ -8,8 +8,8 @@
 #include "tag.h"
 
 // Callsign and SSIS configuration
-#define CALLSIGN "KC1QXQ"
-#define SSID 8
+#define CALLSIGN "J75Y"
+#define SSID 3
 #define DEFAULT_FREQ 144.39
 #define DEFAULT_LAT 15.31383
 #define DEFAULT_LON -61.30075
@@ -20,14 +20,21 @@
 
 #define MAX_TAG_MSG_LEN 20
 
-static const uint32_t DAY_SLEEP = 10000;//1200000;        // 20 minutes in milliseconds
-static const uint32_t NIGHT_SLEEP = 30000;//3600000;      // 60 minutes in milliseconds
-static const uint32_t GEOFENCE_SLEEP = 1000; //72000000;  // 20 hours in milliseconds
+static const uint32_t DAY_SLEEP =
+    10000;  // 1200000;        // 20 minutes in milliseconds
+static const uint32_t NIGHT_SLEEP =
+    30000;  // 3600000;      // 60 minutes in milliseconds
+static const uint32_t GEOFENCE_SLEEP =
+    1000;  // 72000000;  // 20 hours in milliseconds
 static const uint32_t FLOATER_VARIANCE = 120000;  // 2 minutes in milliseconds
 static const uint32_t TAG_VARIANCE = 120000;      // 2 minutes in milliseconds
-static const uint8_t DAY_NIGHT_ROLLOVER = 19;      // 7pm
-static const uint8_t NIGHT_DAY_ROLLOVER = 5;     // 5am
+static const uint32_t TESTING_VARIANCE = 10000;   // 2 minutes in milliseconds
+static const uint32_t TESTING_TIME = 30000;
+static const uint8_t DAY_NIGHT_ROLLOVER = 19;  // 7pm
+static const uint8_t NIGHT_DAY_ROLLOVER = 5;   // 5am
 static const int8_t UTC_OFFSET = -4;
+
+static const uint8_t VHF_PIN = 6;
 
 // Static constants
 /// Location of the LED pin
@@ -80,9 +87,14 @@ static const uint32_t vhfEnableDelay = 1000;
 /** Array of sin values for the DAC output.
  * Corresponds to one whole 8-bit sine output.
  */
-static const uint8_t sinValues[NUM_SINS] = {
+/*static const uint8_t sinValues[NUM_SINS] = {
     152, 176, 198, 217, 233, 245, 252, 255, 252, 245, 233,
     217, 198, 176, 152, 127, 103, 79,  57,  38,  22,  10,
     3,   1,   3,   10,  22,  38,  57,  79,  103, 128};
+    */
+static const uint8_t sinValues[NUM_SINS] = {
+    128, 152, 176, 198, 218, 234, 245, 253, 255, 253, 245,
+    234, 218, 198, 176, 152, 128, 103, 79,  57,  37,  21,
+    10,  2,   0,   2,   10,  21,  37,  57,  79,  103};
 
 #endif  // _RECOVERY_CONSTANTS_H_

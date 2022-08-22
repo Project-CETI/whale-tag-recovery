@@ -17,6 +17,7 @@
 #define PICO_TIME_DEFAULT_ALARM_POOL_DISABLED 0
 // APRS VARS [START] ----------------------------------------------------
 
+static bool vhf_clk = false;
 /// APRS protocol config (don't change)
 const struct aprs_pc_s {
     const uint16_t _FLAG;     ///< Flag for APRS transmissions. Must be 0x7e.
@@ -40,7 +41,7 @@ const struct aprs_sig_s {
     const uint64_t bitPeriod;  ///< Total length of signal period per bit.
     const uint32_t delay1200;  ///< Delay for 1200Hz signal.
     const uint32_t delay2200;  ///< Delay for 2200Hz signal.
-} aprs_sig = {832, 23, 15};
+} aprs_sig = {832, 26, 14};
 
 uint64_t endTimeAPRS;  ///< us counter on how long to hold steps in DAC output.
 /// APRS payload arrays
@@ -83,7 +84,7 @@ static void setNada2400(void) {
     endTimeAPRS = to_us_since_boot(get_absolute_time()) + aprs_sig.bitPeriod;
     while (to_us_since_boot(get_absolute_time()) < endTimeAPRS) {
         setNextSin();
-        busy_wait_us(aprs_sig.delay2200);
+        busy_wait_us_32(aprs_sig.delay2200);
     }
 }
 
@@ -144,6 +145,9 @@ static void sendCharNRZI(unsigned char in_byte, bool enBitStuff) {
     bool bits;
 
     for (int i = 0; i < 8; i++) {
+        vhf_clk = !vhf_clk;
+        gpio_put(VHF_PIN, vhf_clk);
+
         bits = in_byte & 0x01;
 
         calc_crc(bits);
@@ -269,15 +273,15 @@ static void sendHeader(const aprs_config_s *aprs_cfg) {
     sendCharNRZI((aprs_cfg->ssid + '0') << 1, true);
 
     //  /********* DIGI ***********/
-    // char digi2[8] = "WIDE1-";
-    // int dssid_2 = 1;
-    // temp = strlen(digi2);
-    // for (int j = 0; j < temp; j++) sendCharNRZI(digi2[j] << 1, true);
-    // if (temp < 6) {
-    //     for (int j = temp; j < 6; j++) sendCharNRZI(' ' << 1, true);
-    // }
-    // sendCharNRZI((dssid_2 + '0') << 1, true);
-    
+    char digi2[8] = "WIDE1-";
+    int dssid_2 = 1;
+    temp = strlen(digi2);
+    for (int j = 0; j < temp; j++) sendCharNRZI(digi2[j] << 1, true);
+    if (temp < 6) {
+        for (int j = temp; j < 6; j++) sendCharNRZI(' ' << 1, true);
+    }
+    sendCharNRZI((dssid_2 + '0') << 1, true);
+
     // sendCharNRZI(' ', true);
 
     temp = strlen(aprs_cfg->digi);
@@ -306,14 +310,15 @@ static void sendHeader(const aprs_config_s *aprs_cfg) {
  */
 void sendPacket(const aprs_config_s *aprs_cfg, float *latlon, uint16_t *acs) {
     // Only reconfigure if out of range
-    if (latlon[0] < 17.71468 && !shouldBe145) {
-        configureDra818v(145.05, 145.05, 8, false, false, false);
-        shouldBe145 = true;
-    } else if (latlon[0] >= 17.71468 && shouldBe145) {
-        configureDra818v(DEFAULT_FREQ, DEFAULT_FREQ, 8, false, false, false);
-        shouldBe145 = false;
-    }
+    // if (latlon[0] < 17.71468 && !shouldBe145) {
+    //     configureDra818v(145.05, 145.05, 8, false, false, false);
+    //     shouldBe145 = true;
+    // } else if (latlon[0] >= 17.71468 && shouldBe145) {
+    //     configureDra818v(DEFAULT_FREQ, DEFAULT_FREQ, 8, false, false, false);
+    //     shouldBe145 = false;
+    // }
     setPttState(true);
+    sleep_ms(100);
     setPayload(latlon, acs);
     // TODO TEST IF THIS IMPROVES RECEPTION
     // Send initialize sequence for receiver

@@ -32,7 +32,6 @@ void parseGpsOutput(char *line, int buf_len, gps_data_s *gps_dat) {
                 gps_dat->acs[1] = minmea_rescale(&frame.course, 3);
                 gps_dat->acs[2] = minmea_rescale(&frame.speed, 1);
 
-                
                 /* printf("[PARSED]: %d | %f, %f, %d, %d\n", gps_dat->posCheck,
                  */
                 /* 			 minmea_tocoord(&frame.latitude), */
@@ -75,6 +74,8 @@ void parseGpsOutput(char *line, int buf_len, gps_data_s *gps_dat) {
                 if (isnan(latitude) || isnan(longitude)) {
                     gps_dat->latlon[GPS_GLL][0] = DEFAULT_LAT;
                     gps_dat->latlon[GPS_GLL][1] = DEFAULT_LON;
+                    gps_dat->gpsReadFlags[GPS_GLL] = 1;
+                    gps_dat->posCheck = true;
                 } else {
                     gps_dat->latlon[GPS_GLL][0] = latitude;
                     gps_dat->latlon[GPS_GLL][1] = longitude;
@@ -133,19 +134,20 @@ bool readFromGps(const gps_config_s *gps_cfg, gps_data_s *gps_dat) {
             gps_rd_buf[gps_rd_buf_pos - 1] = '\0';
             gps_buf_len = gps_rd_buf_pos - 1;
             parseGpsOutput(gps_rd_buf, gps_buf_len, gps_dat);
-            printf("%s\n", gps_rd_buf);
+            // printf("%s\n", gps_rd_buf);
         }
     }
     return gps_dat->posCheck;
 }
 
-void gps_get_lock(const gps_config_s *gps_cfg, gps_data_s *gps_dat) {
+void gps_get_lock(const gps_config_s *gps_cfg, gps_data_s *gps_dat,
+                  uint32_t timeout) {
     bool lastCheck = gps_dat->posCheck;
     gps_dat->posCheck = false;
     uint32_t startTime = to_ms_since_boot(get_absolute_time());
     while (gps_dat->posCheck != true) {
         if (readFromGps(gps_cfg, gps_dat) ||
-            to_ms_since_boot(get_absolute_time()) - startTime > 1000)
+            to_ms_since_boot(get_absolute_time()) - startTime > timeout)
             break;
     }
     // if (lastCheck != gps_dat->posCheck) {

@@ -49,8 +49,8 @@ bool vhf_pulse_callback(void) {
     setPttState(true);
     uint32_t stepLen = VHF_HZ * NUM_SINS;
     int numSteps = stepLen * VHF_TX_LEN / 1000;
-    printf("[VHF/CB] steps: %d * %d * %d / 1000 = %d\n", VHF_HZ, NUM_SINS,
-           VHF_TX_LEN, numSteps);
+    // printf("[VHF/CB] steps: %d * %d * %d / 1000 = %d\n", VHF_HZ, NUM_SINS,
+        //    VHF_TX_LEN, numSteps);
     stepLen = (int)1000000 / stepLen;
     for (int i = 0; i < numSteps; i++) {
         setOutput(sinValues[i % NUM_SINS]);

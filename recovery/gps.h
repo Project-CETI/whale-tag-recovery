@@ -50,7 +50,7 @@ enum GPSDataBufferOrder{
 // RX functions from NEO-M8N
 void parseGpsOutput(char *line, int buf_len, gps_data_s *gps_dat);
 bool readFromGps(const gps_config_s *gps_cfg, gps_data_s *gps_dat);
-void gps_get_lock(const gps_config_s *gps_cfg, gps_data_s *gps_dat);
+void gps_get_lock(const gps_config_s *gps_cfg, gps_data_s *gps_dat, uint32_t timeout);
 void echoGpsOutput(char *line, int buf_len);
 void getBestLatLon(gps_data_s *gps_dat, gps_lat_lon_s *latlon);
 uint8_t getDayOfWeek(datetime_t *dt);

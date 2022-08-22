@@ -152,4 +152,6 @@ void rec_sleep_goto_dormant_until_pin(uint gpio_pin, bool edge, bool high) {
 
     // Clear the irq so we can go back to dormant mode again if we want
     gpio_acknowledge_irq(gpio_pin, event);
+    gpio_set_dormant_irq_enabled(gpio_pin, event, false);
+
 }
