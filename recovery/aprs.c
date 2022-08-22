@@ -146,7 +146,7 @@ static void sendCharNRZI(unsigned char in_byte, bool enBitStuff) {
 
     for (int i = 0; i < 8; i++) {
         vhf_clk = !vhf_clk;
-        gpio_put(VHF_PIN, vhf_clk);
+        // gpio_put(VHF_PIN, vhf_clk);
 
         bits = in_byte & 0x01;
 
@@ -317,12 +317,13 @@ void sendPacket(const aprs_config_s *aprs_cfg, float *latlon, uint16_t *acs) {
     //     configureDra818v(DEFAULT_FREQ, DEFAULT_FREQ, 8, false, false, false);
     //     shouldBe145 = false;
     // }
-     setPttState(true);
-    sleep_ms(100);
+    wakeVHF();
+    setPttState(true);
+    // sleep_ms(100);
 
-    aprs_cc.currOutput = 0;
-    setNextSin();
-    busy_wait_us_32(750);
+    // aprs_cc.currOutput = 0;
+    // setNextSin();
+    // busy_wait_us_32(750);
 
     setPayload(latlon, acs);
     // TODO TEST IF THIS IMPROVES RECEPTION
@@ -346,8 +347,8 @@ void sendPacket(const aprs_config_s *aprs_cfg, float *latlon, uint16_t *acs) {
     sendCrc();
     sendFlag(3);
     setPttState(false);
-    setOutput(0x00);
-    // sleepVHF();
+    // setOutput(0x00);
+    sleepVHF();
 }
 
 // Debug TX functions
@@ -404,7 +405,7 @@ void sendTestPackets(const aprs_config_s *aprs_cfg) {
  * @param dgssid Digipeater SSID (0-2) (default: 1)
  * @param cmt Comment to append to end of APRS packet (default: Ceti b1.0 2-S)
  * @see sendHeader
- */
+ */     
 void initializeAPRS(void) {
     initializeVHF();
     shouldBe145 = false;

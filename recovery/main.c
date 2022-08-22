@@ -38,14 +38,15 @@ static bool deep_sleep = false;
  */
 static aprs_config_s aprs_config;
 
-const aprs_config_s tag_aprs_config = {CALLSIGN, SSID,   "APATAR", "WIDE2-", 1,
-                                       "",       120000, false,    2};
+const aprs_config_s tag_aprs_config = {
+    CALLSIGN, SSID, "APLIGA", "WIDE2-", 1, "Ceti b1.2 4-S", 120000, false, 2};
 
 const aprs_config_s floater_aprs_config = {
     CALLSIGN, SSID, "APLIGA", "WIDE2", 2, "Ceti b1.2 4-S", 0, false, 2};
 
-const aprs_config_s testing_aprs_config = {
-    CALLSIGN, SSID, "APLIGA", "WIDE2-", 1, "Ceti b1.2 4-S", TESTING_TIME, false, 2};
+const aprs_config_s testing_aprs_config = {CALLSIGN,     SSID,  "APLIGA",
+                                           "WIDE2",      1,     "Ceti b1.2 4-S",
+                                           TESTING_TIME, false, 2};
 
 /** @struct Defines unchanging configuration parameters for GPS communication.
  * GPS_TX, GPS_RX, GPS_BAUD, UART_NUM, QINTERACTIVE
@@ -214,7 +215,7 @@ void startupBroadcasting() {
 void pauseForLock() { gps_get_lock(&gps_config, &gps_data, 300000); }
 
 void startAPRS(const aprs_config_s *aprs_cfg, repeating_timer_t *aprsTimer) {
-    // configureAPRS_TX(DEFAULT_FREQ);
+    configureAPRS_TX(DEFAULT_FREQ);
     add_repeating_timer_ms(-aprs_cfg->interval, txAprsIRQ, NULL, aprsTimer);
 }
 
@@ -233,14 +234,14 @@ bool txAprs(void) {
                SSID, latlon.lat, latlon.lon);
         // printPacket(&aprs_config);
 
-        for (uint8_t retrans = 0; retrans < APRS_RETRANSMIT; retrans++) {
+        // for (uint8_t retrans = 0; retrans < APRS_RETRANSMIT; retrans++) {
             setLed(true);
             sendPacket(&aprs_config, (float[]){latlon.lat, latlon.lon},
                        gps_data.acs);
             setLed(false);
 
-            sleep_ms(APRS_DELAY);
-        }
+            // sleep_ms(APRS_DELAY);
+        // }
     }
 
     return gps_data.posCheck;
@@ -340,21 +341,22 @@ int main() {
         gps_get_lock(&gps_config, &gps_data, 1000);
 
         txAprs();
-        sleepVHF();
-        rand_modifier = rand() % variance;
+        sleep_ms(aprs_config.interval);
+        // sleepVHF();
+        // rand_modifier = rand() % variance;
 
-        rand_modifier =
-            rand_modifier <= (variance / 2) ? rand_modifier : -rand_modifier;
-        printf("Sleeping for %d milliseconds\n",
-               rand_modifier + aprs_config.interval);
-        sleep_ms(
-            ((aprs_config.interval + rand_modifier) > VHF_WAKE_TIME_MS)
-                ? ((aprs_config.interval + rand_modifier) - VHF_WAKE_TIME_MS)
-                : VHF_WAKE_TIME_MS);
+        // rand_modifier =
+        //     rand_modifier <= (variance / 2) ? rand_modifier : -rand_modifier;
+        // printf("Sleeping for %d milliseconds\n",
+        //        rand_modifier + aprs_config.interval);
+        // sleep_ms(
+        //     ((aprs_config.interval + rand_modifier) > VHF_WAKE_TIME_MS)
+        //         ? ((aprs_config.interval + rand_modifier) - VHF_WAKE_TIME_MS)
+        //         : VHF_WAKE_TIME_MS);
 
-        wakeVHF();  // wake here so there's enough time to fully wake up
+        // wakeVHF();  // wake here so there's enough time to fully wake up
 
-        sleep_ms(VHF_WAKE_TIME_MS);
+        // sleep_ms(VHF_WAKE_TIME_MS);
 #elif FLOATER
         // Floater deep sleep shutoff
         while (deep_sleep) {
