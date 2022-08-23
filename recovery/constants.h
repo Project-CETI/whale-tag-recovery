@@ -70,7 +70,7 @@ static const uint32_t VHF_DACMASK = 0x3fc0000;
 static const uint8_t VHF_DACSHIFT = 18;
 
 /// Set how long the pure VHF pulse should be
-static const uint8_t VHF_TX_LEN = 800;
+static const uint16_t VHF_TX_LEN = 800;
 
 // VHF control pins
 static const uint8_t VHF_POWER_LEVEL =

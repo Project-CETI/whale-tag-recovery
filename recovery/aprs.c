@@ -273,14 +273,14 @@ static void sendHeader(const aprs_config_s *aprs_cfg) {
     sendCharNRZI((aprs_cfg->ssid + '0') << 1, true);
 
     //  /********* DIGI ***********/
-    char digi2[8] = "WIDE1-";
-    int dssid_2 = 1;
-    temp = strlen(digi2);
-    for (int j = 0; j < temp; j++) sendCharNRZI(digi2[j] << 1, true);
-    if (temp < 6) {
-        for (int j = temp; j < 6; j++) sendCharNRZI(' ' << 1, true);
-    }
-    sendCharNRZI((dssid_2 + '0') << 1, true);
+    // char digi2[8] = "WIDE1-";
+    // int dssid_2 = 1;
+    // temp = strlen(digi2);
+    // for (int j = 0; j < temp; j++) sendCharNRZI(digi2[j] << 1, true);
+    // if (temp < 6) {
+    //     for (int j = temp; j < 6; j++) sendCharNRZI(' ' << 1, true);
+    // }
+    // sendCharNRZI((dssid_2 + '0') << 1, true);
 
     // sendCharNRZI(' ', true);
 
@@ -310,13 +310,13 @@ static void sendHeader(const aprs_config_s *aprs_cfg) {
  */
 void sendPacket(const aprs_config_s *aprs_cfg, float *latlon, uint16_t *acs) {
     // Only reconfigure if out of range
-    // if (latlon[0] < 17.71468 && !shouldBe145) {
-    //     configureDra818v(145.05, 145.05, 8, false, false, false);
-    //     shouldBe145 = true;
-    // } else if (latlon[0] >= 17.71468 && shouldBe145) {
-    //     configureDra818v(DEFAULT_FREQ, DEFAULT_FREQ, 8, false, false, false);
-    //     shouldBe145 = false;
-    // }
+    if (latlon[0] < 17.71468 && !shouldBe145) {
+        configureDra818v(145.05, 145.05, 8, false, false, false);
+        shouldBe145 = true;
+    } else if (latlon[0] >= 17.71468 && shouldBe145) {
+        configureDra818v(DEFAULT_FREQ, DEFAULT_FREQ, 8, false, false, false);
+        shouldBe145 = false;
+    }
     wakeVHF();
     setPttState(true);
     // sleep_ms(100);
@@ -413,7 +413,11 @@ void initializeAPRS(void) {
 
 void configureAPRS_TX(float txFrequency) {
     configureDra818v(txFrequency, txFrequency, 4, false, false, false);
-    shouldBe145 = txFrequency >= 145.0;
+    
+    if (txFrequency < 145.0)
+		shouldBe145 = false;
+	else
+		shouldBe145 = true;
 }
 
 /** Adds any relevant information to the compiled binary.

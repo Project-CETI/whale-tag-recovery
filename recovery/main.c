@@ -36,7 +36,8 @@ static bool deep_sleep = false;
  * dest, digi, digissid, comment
  * interval, debug, debug style
  */
-static aprs_config_s aprs_config;
+static aprs_config_s aprs_config = {
+    "J73Y", 3, "APLIGA", "WIDE2", 1, "Ceti b1.2 4-S", 30000, false, 2};
 
 const aprs_config_s tag_aprs_config = {
     CALLSIGN, SSID, "APLIGA", "WIDE2-", 1, "Ceti b1.2 4-S", 120000, false, 2};
@@ -67,11 +68,11 @@ const struct vhf_config_t {
     const uint32_t interval;
 } vhf_config = {148.056, 5000};
 
-struct clock_config_t {
-    uint scb_orig;
-    uint clock0_orig;
-    uint clock1_orig;
-} clock_config;
+// struct clock_config_t {
+//     uint scb_orig;
+//     uint clock0_orig;
+//     uint clock1_orig;
+// } clock_config;
 
 void set_bin_desc(void);
 void setLed(bool state);
@@ -84,13 +85,13 @@ void startAPRS(const aprs_config_s *aprs_cfg, repeating_timer_t *aprsTimer);
 void startTag(const tag_config_s *tag_cfg, repeating_timer_t *tagTimer);
 bool txTag(repeating_timer_t *rt);
 void initAll(const gps_config_s *gps_cfg, const tag_config_s *tag_cfg);
-void gps_callback();
-static void rtc_sleep(uint32_t sleepTime);
-void recover_from_sleep();
-static void sleepCallback();
-float getVin();
-void startupBroadcasting();
-void pauseForLock();
+// void gps_callback();
+// static void rtc_sleep(uint32_t sleepTime);
+// void recover_from_sleep();
+// static void sleepCallback();
+// float getVin();
+// void startupBroadcasting();
+// void pauseForLock();
 
 void set_bin_desc(void) {
     bi_decl(bi_program_description(
@@ -110,109 +111,113 @@ void initLed(void) {
     gpio_set_dir(LED_PIN, GPIO_OUT);
 }
 
-void recover_from_sleep() {
-    printf("Recover from sleep \n");
+// void recover_from_sleep() {
+//     printf("Recover from sleep \n");
 
-    // Re-enable ring Oscillator control
-    rosc_write(&rosc_hw->ctrl, ROSC_CTRL_ENABLE_BITS);
-    // // reset procs back to default
-    scb_hw->scr = clock_config.scb_orig;
-    clocks_hw->sleep_en0 = clock_config.clock0_orig;
-    clocks_hw->sleep_en1 = clock_config.clock1_orig;
-    // // printf("Recover step 2 \n");
+//     // Re-enable ring Oscillator control
+//     rosc_write(&rosc_hw->ctrl, ROSC_CTRL_ENABLE_BITS);
+//     // // reset procs back to default
+//     scb_hw->scr = clock_config.scb_orig;
+//     clocks_hw->sleep_en0 = clock_config.clock0_orig;
+//     clocks_hw->sleep_en1 = clock_config.clock1_orig;
+//     // // printf("Recover step 2 \n");
 
-    // // reset clocks
-    clocks_init();
+//     // // reset clocks
+//     clocks_init();
 
-    set_bin_desc();
+//     set_bin_desc();
 
-    stdio_init_all();
-    // printf("Recover step 3 \n");
+//     stdio_init_all();
+//     // printf("Recover step 3 \n");
 
-    initLed();
-    gpsInit(&gps_config);
-    initializeAPRS();
-    wakeVHF();
-    sleep_ms(1000);
-    printf("Recovered from sleep \n");
+//     initLed();
+//     gpsInit(&gps_config);
+//     initializeAPRS();
+//     wakeVHF();
+//     sleep_ms(1000);
+//     printf("Recovered from sleep \n");
 
-    return;
-}
+//     return;
+// }
 
-static void sleep_callback() { printf("Waking from sleep\n"); }
+// static void sleep_callback() { printf("Waking from sleep\n"); }
 
-static void rtc_sleep(uint32_t sleepTime) {
-    // Do calculations first
-    // datetime_t end = gps_data.dt;
+// static void rtc_sleep(uint32_t sleepTime) {
+//     // Do calculations first
+//     // datetime_t end = gps_data.dt;
 
-    // uint16_t hours = sleepTime / (1000 * 60 * 60);
-    // uint16_t minutes = (sleepTime % (1000 * 60 * 60)) / (1000 * 60);
-    // uint16_t seconds = (sleepTime % (1000 * 60 * 60)) % (1000 * 60) / 1000;
+//     // uint16_t hours = sleepTime / (1000 * 60 * 60);
+//     // uint16_t minutes = (sleepTime % (1000 * 60 * 60)) / (1000 * 60);
+//     // uint16_t seconds = (sleepTime % (1000 * 60 * 60)) % (1000 * 60) /
+//     1000;
 
-    // // printf("sleeping for %d ms:  %d hours and %d minutes and %d
-    // seconds\n",
-    // //        sleepTime, hours, minutes, seconds);
-    // if (end.sec + seconds >= 60) {
-    //     end.sec = end.sec + seconds - 60;
-    //     end.min += 1;
-    // } else {
-    //     end.sec += seconds;
-    // }
-    // if (end.min + minutes >= 60) {
-    //     end.min = end.min + minutes - 60;
-    //     end.hour += 1;
-    // } else {
-    //     end.min += minutes;
-    // }
-    // if (end.hour + hours >= 24) {
-    //     end.hour = end.hour + hours - 24;
-    //     end.day += 1;
-    // } else {
-    //     end.sec += hours;
-    // }
-    // // todo do i need to do month rollover?
-    // printf("starting %d: %d-%d-%d %d:%d:%d \tending %d: %d-%d-%d %d:%d:%d\n",
-    //        start->dotw, start->year, start->month, start->day, start->hour,
-    //        start->min, start->sec, end.dotw, end.year, end.month, end.day,
-    //        end.hour, end.min, end.sec);
-    // transmission!
-    txAprs();
-    // sleepy time
-    sleepVHF();
-    calculateUBXChecksum(16, day_sleep);
-    writeSingleConfiguration(gps_config.uart, day_sleep, 16);
-    printf("Sleeping....%d ms\n", sleepTime);
-    rec_sleep_run_from_xosc();
+//     // // printf("sleeping for %d ms:  %d hours and %d minutes and %d
+//     // seconds\n",
+//     // //        sleepTime, hours, minutes, seconds);
+//     // if (end.sec + seconds >= 60) {
+//     //     end.sec = end.sec + seconds - 60;
+//     //     end.min += 1;
+//     // } else {
+//     //     end.sec += seconds;
+//     // }
+//     // if (end.min + minutes >= 60) {
+//     //     end.min = end.min + minutes - 60;
+//     //     end.hour += 1;
+//     // } else {
+//     //     end.min += minutes;
+//     // }
+//     // if (end.hour + hours >= 24) {
+//     //     end.hour = end.hour + hours - 24;
+//     //     end.day += 1;
+//     // } else {
+//     //     end.sec += hours;
+//     // }
+//     // // todo do i need to do month rollover?
+//     // printf("starting %d: %d-%d-%d %d:%d:%d \tending %d: %d-%d-%d
+//     %d:%d:%d\n",
+//     //        start->dotw, start->year, start->month, start->day,
+//     start->hour,
+//     //        start->min, start->sec, end.dotw, end.year, end.month, end.day,
+//     //        end.hour, end.min, end.sec);
+//     // transmission!
+//     txAprs();
+//     // sleepy time
+//     sleepVHF();
+//     calculateUBXChecksum(16, day_sleep);
+//     writeSingleConfiguration(gps_config.uart, day_sleep, 16);
+//     printf("Sleeping....%d ms\n", sleepTime);
+//     rec_sleep_run_from_xosc();
 
-    rec_sleep_goto_dormant_until_edge_high(1);
-}
+//     rec_sleep_goto_dormant_until_edge_high(1);
+// }
 
 // APRS //
-void startupBroadcasting() {
-    // printf("Initial APRS broadcasting\n");
-    for (int i = 0; i < 10; i++) {
-        //  wakeVHF();
-        gps_get_lock(&gps_config, &gps_data, 1000);
-        if (gps_data.posCheck) {
-            struct gps_lat_lon_t latlon;
-            getBestLatLon(&gps_data, &latlon);
-            printf("[APRS TX:%s] %s-%d @ %.6f, %.6f \n", latlon.type, CALLSIGN,
-                   SSID, latlon.lat, latlon.lon);
-            // printPacket(&aprs_config);
+// void startupBroadcasting() {
+//     // printf("Initial APRS broadcasting\n");
+//     for (int i = 0; i < 10; i++) {
+//         //  wakeVHF();
+//         gps_get_lock(&gps_config, &gps_data, 1000);
+//         if (gps_data.posCheck) {
+//             struct gps_lat_lon_t latlon;
+//             getBestLatLon(&gps_data, &latlon);
+//             printf("[APRS TX:%s] %s-%d @ %.6f, %.6f \n", latlon.type,
+//             CALLSIGN,
+//                    SSID, latlon.lat, latlon.lon);
+//             // printPacket(&aprs_config);
 
-            setLed(true);
-            sendPacket(&aprs_config, (float[]){latlon.lat, latlon.lon},
-                       gps_data.acs);
-            setLed(false);
+//             setLed(true);
+//             sendPacket(&aprs_config, (float[]){latlon.lat, latlon.lon},
+//                        gps_data.acs);
+//             setLed(false);
 
-            sleep_ms(APRS_DELAY);
-        }
+//             sleep_ms(APRS_DELAY);
+//         }
 
-        sleep_ms(60000 - APRS_DELAY);
-    }
-}
+//         sleep_ms(60000 - APRS_DELAY);
+//     }
+// }
 
-void pauseForLock() { gps_get_lock(&gps_config, &gps_data, 300000); }
+// void pauseForLock() { gps_get_lock(&gps_config, &gps_data, 300000); }
 
 void startAPRS(const aprs_config_s *aprs_cfg, repeating_timer_t *aprsTimer) {
     configureAPRS_TX(DEFAULT_FREQ);
@@ -235,12 +240,12 @@ bool txAprs(void) {
         // printPacket(&aprs_config);
 
         // for (uint8_t retrans = 0; retrans < APRS_RETRANSMIT; retrans++) {
-            setLed(true);
-            sendPacket(&aprs_config, (float[]){latlon.lat, latlon.lon},
-                       gps_data.acs);
-            setLed(false);
+        setLed(true);
+        sendPacket(&aprs_config, (float[]){latlon.lat, latlon.lon},
+                   gps_data.acs);
+        setLed(false);
 
-            // sleep_ms(APRS_DELAY);
+        // sleep_ms(APRS_DELAY);
         // }
     }
 
@@ -268,13 +273,13 @@ bool txTag(repeating_timer_t *rt) {
 //     return voltage;
 //     }
 
-void gps_callback() { gps_get_lock(&gps_config, &gps_data, 1000); }
+// void gps_callback() { gps_get_lock(&gps_config, &gps_data, 1000); }
 
 void initAll(const gps_config_s *gps_cfg, const tag_config_s *tag_cfg) {
     set_bin_desc();
     stdio_init_all();
     // Start the RTC
-    rtc_init();
+    // rtc_init();
 
     initLed();
     setLed(true);
@@ -283,15 +288,15 @@ void initAll(const gps_config_s *gps_cfg, const tag_config_s *tag_cfg) {
 
     // Initialize APRS and the VHF
     initializeAPRS();
-    wakeVHF();  // wake here so there's enough time to fully wake up
-    sleep_ms(VHF_WAKE_TIME_MS * 2);
+    // wakeVHF();  // wake here so there's enough time to fully wake up
+    // sleep_ms(VHF_WAKE_TIME_MS * 2);
 
     uint32_t tagBaud = initTagComm(tag_cfg);
     setLed(false);
-    srand(get_absolute_time());
+    // srand(get_absolute_time());
 
-    gpio_init(VHF_PIN);
-    gpio_set_dir(VHF_PIN, GPIO_OUT);
+    // gpio_init(VHF_PIN);
+    // gpio_set_dir(VHF_PIN, GPIO_OUT);
 }
 
 int main() {
@@ -299,15 +304,15 @@ int main() {
     initAll(&gps_config, &tag_config);
     printf("[MAIN INIT] %s-%d \n", CALLSIGN, SSID);
 
-    clock_config.scb_orig = scb_hw->scr;
-    clock_config.clock0_orig = clocks_hw->sleep_en0;
-    clock_config.clock1_orig = clocks_hw->sleep_en1;
+    // clock_config.scb_orig = scb_hw->scr;
+    // clock_config.clock0_orig = clocks_hw->sleep_en0;
+    // clock_config.clock1_orig = clocks_hw->sleep_en1;
 
     // // APRS comms interrupt setup
     // repeating_timer_t aprsTimer;
     // startAPRS(&aprs_config, &aprsTimer);
 
-    int gpsIRQ = gps_config.uart == uart0 ? UART0_IRQ : UART1_IRQ;
+    // int gpsIRQ = gps_config.uart == uart0 ? UART0_IRQ : UART1_IRQ;
 
     // // And set up and enable the interrupt handlers
     // irq_set_exclusive_handler(gpsIRQ, gps_callback);
@@ -318,21 +323,21 @@ int main() {
 
     uint32_t variance = 0;
     int32_t rand_modifier = 0;
-// Tag comms interrupt setup
-#if TAG_CONNECTED
-    aprs_config = tag_aprs_config;
-    startupBroadcasting();
-    repeating_timer_t tagTimer;
-    startTag(&tag_config, &tagTimer);
-    variance = TAG_VARIANCE;
-#elif FLOATER
-    aprs_config = floater_aprs_config;
-    variance = FLOATER_VARIANCE;
-#elif APRS_TESTING
-    aprs_config = testing_aprs_config;
-    variance = TESTING_VARIANCE;
-    pauseForLock();
-#endif
+    // Tag comms interrupt setup
+    // #if TAG_CONNECTED
+    //     aprs_config = tag_aprs_config;
+    //     startupBroadcasting();
+    //     repeating_timer_t tagTimer;
+    //     startTag(&tag_config, &tagTimer);
+    //     variance = TAG_VARIANCE;
+    // #elif FLOATER
+    //     aprs_config = floater_aprs_config;
+    //     variance = FLOATER_VARIANCE;
+    // #elif APRS_TESTING
+    //     aprs_config = testing_aprs_config;
+    //     variance = TESTING_VARIANCE;
+    //     pauseForLock();
+    // #endif
 
     // Loop
     while (true) {
