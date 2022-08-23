@@ -1,6 +1,7 @@
 #ifndef APRS_H
 #define APRS_H
 #include "stdint.h"
+#include "stdbool.h"
 
 typedef struct aprs_config_t {
 	char callsign[8];

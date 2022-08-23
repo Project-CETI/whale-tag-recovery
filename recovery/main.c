@@ -40,9 +40,9 @@ void initAll(const gps_config_s * gps_cfg, const tag_config_s * tag_cfg);
  * interval, debug, debug style
  */
 const aprs_config_s aprs_config = {
-	"J73MAB", 1,
+	"J75Y", 4,
 	"APLIGA", "WIDE2", 1, "Ceti b1.2 4-S",
-	120000, false, 2
+	300000, false, 2
 };
 
 /** @struct Defines unchanging configuration parameters for GPS communication.
