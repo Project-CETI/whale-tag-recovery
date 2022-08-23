@@ -37,7 +37,7 @@ static bool deep_sleep = false;
  * interval, debug, debug style
  */
 static aprs_config_s aprs_config = {
-    CALLSIGN, SSID, "APLIGA", "WIDE2", 1, "Ceti b1.2 4-S", 120000, false, 2};
+    CALLSIGN, SSID, "APRS", "WIDE2", 1, "Ceti b1.2 4-S", 60000, false, 2};
 
 const aprs_config_s tag_aprs_config = {
     CALLSIGN, SSID, "APLIGA", "WIDE2-", 1, "Ceti b1.2 4-S", 120000, false, 2};
@@ -352,17 +352,17 @@ int main() {
 
         rand_modifier =
             rand_modifier <= (variance / 2) ? rand_modifier : -rand_modifier;
-        sleep_ms(aprs_config.interval + rand_modifier);
+        // sleep_ms(aprs_config.interval + rand_modifier);
         // printf("Sleeping for %d milliseconds\n",
         //        rand_modifier + aprs_config.interval);
-        // sleep_ms(
-        //     ((aprs_config.interval + rand_modifier) > VHF_WAKE_TIME_MS)
-        //         ? ((aprs_config.interval + rand_modifier) - VHF_WAKE_TIME_MS)
-        //         : VHF_WAKE_TIME_MS);
+        sleep_ms(
+            ((aprs_config.interval + rand_modifier) > VHF_WAKE_TIME_MS)
+                ? ((aprs_config.interval + rand_modifier) - VHF_WAKE_TIME_MS)
+                : VHF_WAKE_TIME_MS);
 
-        // wakeVHF();  // wake here so there's enough time to fully wake up
+        wakeVHF();  // wake here so there's enough time to fully wake up
 
-        // sleep_ms(VHF_WAKE_TIME_MS);
+        sleep_ms(VHF_WAKE_TIME_MS);
 #elif FLOATER
         // Floater deep sleep shutoff
         while (deep_sleep) {

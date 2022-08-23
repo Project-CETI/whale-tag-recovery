@@ -40,9 +40,10 @@ void sendPacket(const aprs_config_s *, float *latlon, uint16_t *acs);
 // Debug TX functions
 void printPacket(const aprs_config_s *);
 void sendTestPackets(const aprs_config_s *);
+void printRawPacket(char *buffer);
 
 // Configuration functions
 void initializeAPRS(void);
-void configureAPRS_TX(float txFrequency);
+void configureAPRS_TX(const char *txFrequency);
 void describeConfig(void);
 #endif  //_RECOVERY_APRS_H_

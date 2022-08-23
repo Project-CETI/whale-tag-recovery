@@ -11,12 +11,12 @@ static void initializeOutput(void);
 void setOutput(uint8_t state);
 
 // Fish tracker functions
-void prepFishTx(float txFreq);
+void prepFishTx(const char *txFreq);
 bool vhf_pulse_callback(void);
 
 static void initializeDra818v(bool highPower);
-void configureDra818v(float txFrequency, float rxFrequency, uint8_t volume,
-                      bool emphasis, bool hpf, bool lpf);
+void configureDra818v(const char *txFrequency, const char *rxFrequency,
+                      uint8_t volume, bool emphasis, bool hpf, bool lpf);
 void setPttState(bool state);
 static void setVhfState(bool state);
 void wakeVHF();

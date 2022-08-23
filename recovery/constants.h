@@ -9,8 +9,7 @@
 
 // Callsign and SSIS configuration
 #define CALLSIGN "J75Y"
-#define SSID 3
-#define DEFAULT_FREQ 144.39
+#define SSID 5
 #define DEFAULT_LAT 15.31383
 #define DEFAULT_LON -61.30075
 
@@ -19,6 +18,9 @@
 #define NUM_SINS 32
 
 #define MAX_TAG_MSG_LEN 20
+
+static const char DEFAULT_FREQ[9] = "144.3900";
+
 
 static const uint32_t DAY_SLEEP =
     10000;  // 1200000;        // 20 minutes in milliseconds

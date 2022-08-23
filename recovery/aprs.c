@@ -18,6 +18,9 @@
 // APRS VARS [START] ----------------------------------------------------
 
 static bool vhf_clk = false;
+unsigned char buffer[256];
+uint8_t buffer_index = 0;
+
 /// APRS protocol config (don't change)
 const struct aprs_pc_s {
     const uint16_t _FLAG;     ///< Flag for APRS transmissions. Must be 0x7e.
@@ -27,21 +30,21 @@ const struct aprs_pc_s {
         _DT_POS;  ///< APRS character, defines transmissions as real-time.
     const char sym_ovl;  ///< Symbol Table ID. \ for the Alternative symbols.
     const char sym_tab;  ///< Symbol Code.
-} aprs_pc = {0x7e, 0x03, 0xf0, '!', '1', 's'};
+} aprs_pc = {0x7E, 0x03, 0xF0, '!', '1', 's'};
 
 struct aprs_cc_s {
     bool nada;
     char bitStuff;       ///< Tracks the bit position in byte being transmitted.
     uint16_t crc;        ///< CRC-16 CCITT value. Initialize at 0xffff.
     uint8_t currOutput;  ///< Tracks location in FSK wave output. Range 0-31.
-} aprs_cc = {0, 0, 0xffff, 0};
+} aprs_cc = {0, 0, 0xFFFF, 0};
 
 /// APRS signal TX config
 const struct aprs_sig_s {
     const uint64_t bitPeriod;  ///< Total length of signal period per bit.
     const uint32_t delay1200;  ///< Delay for 1200Hz signal.
     const uint32_t delay2200;  ///< Delay for 2200Hz signal.
-} aprs_sig = {832, 25, 15};
+} aprs_sig = {832, 26, 15};
 
 uint64_t endTimeAPRS;  ///< us counter on how long to hold steps in DAC output.
 /// APRS payload arrays
@@ -123,7 +126,7 @@ static void calc_crc(bool inBit) {
  * @see calc_crc
  */
 static void sendCrc(void) {
-    uint8_t crcLo = aprs_cc.crc ^ 0xff;
+    uint8_t crcLo = (aprs_cc.crc & 0xff) ^ 0xff;
     uint8_t crcHi = (aprs_cc.crc >> 8) ^ 0xff;
 
     sendCharNRZI(crcLo, true);
@@ -142,10 +145,11 @@ static void sendCrc(void) {
  * @see calc_crc
  */
 static void sendCharNRZI(unsigned char in_byte, bool enBitStuff) {
+    buffer[buffer_index++] = in_byte;
     bool bits;
 
     for (int i = 0; i < 8; i++) {
-        vhf_clk = !vhf_clk;
+        // vhf_clk = !vhf_clk;
         // gpio_put(VHF_PIN, vhf_clk);
 
         bits = in_byte & 0x01;
@@ -314,16 +318,18 @@ void sendPacket(const aprs_config_s *aprs_cfg, float *latlon, uint16_t *acs) {
     //     configureDra818v(145.05, 145.05, 8, false, false, false);
     //     shouldBe145 = true;
     // } else if (latlon[0] >= 17.71468 && shouldBe145) {
-        configureDra818v(DEFAULT_FREQ, DEFAULT_FREQ, 8, false, false, false);
-        shouldBe145 = false;
+        // configureDra818v(DEFAULT_FREQ, DEFAULT_FREQ, 8, false, false, false);
+        // shouldBe145 = false;
     // }
-    wakeVHF();
+    // wakeVHF();
+    buffer_index = 0;
+    memset(buffer, 0x00, 255);
     setPttState(true);
     // sleep_ms(100);
 
-    // aprs_cc.currOutput = 0;
-    // setNextSin();
-    // busy_wait_us_32(750);
+    aprs_cc.currOutput = 0;
+    setNextSin();
+    busy_wait_us_32(750);
 
     setPayload(latlon, acs);
     // TODO TEST IF THIS IMPROVES RECEPTION
@@ -347,10 +353,15 @@ void sendPacket(const aprs_config_s *aprs_cfg, float *latlon, uint16_t *acs) {
     sendCrc();
     sendFlag(3);
     setPttState(false);
-    // setOutput(0x00);
+    setOutput(0x00);
     sleepVHF();
+    printRawPacket(buffer);
 }
 
+
+void printRawPacket(char *buffer) {
+    printf("RAW: %s\n", buffer);
+}
 // Debug TX functions
 void printPacket(const aprs_config_s *aprs_cfg) {
     printf("%s0%s%d%s%d%x%x%c%s%c%s%c%s%s\n", aprs_cfg->dest,
@@ -411,13 +422,13 @@ void initializeAPRS(void) {
     shouldBe145 = false;
 }
 
-void configureAPRS_TX(float txFrequency) {
+void configureAPRS_TX(const char *txFrequency) {
     configureDra818v(txFrequency, txFrequency, 4, false, false, false);
     
-    if (txFrequency < 145.0)
+    // if (txFrequency < 145.0)
 		shouldBe145 = false;
-	else
-		shouldBe145 = true;
+	// else
+		// shouldBe145 = true;
 }
 
 /** Adds any relevant information to the compiled binary.

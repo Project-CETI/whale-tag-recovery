@@ -21,7 +21,7 @@ typedef struct gps_config_t {
 
 typedef struct gps_data_t {
     float latlon[MAX_GPS_DATA_BUFFER][2];
-    uint16_t acs[3];
+    uint16_t acs[3]; // 0 is altitude, 1 is course, 2 is speed
     char lastGpsBuffer[MAX_GPS_DATA_BUFFER][MAX_GPS_MSG_LEN];
     char lastDtBuffer[MAX_GPS_MSG_LEN];
     uint8_t gpsReadFlags[MAX_GPS_DATA_BUFFER];

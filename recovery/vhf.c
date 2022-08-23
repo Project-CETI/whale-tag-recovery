@@ -38,7 +38,7 @@ void setOutput(uint8_t state) {
 
 /** @brief Re-configure the VHF module to tracker transmission frequency
  * @see configureDra818v */
-void prepFishTx(float txFreq) {
+void prepFishTx(const char *txFreq) {
     configureDra818v(txFreq, txFreq, 8, false, false, false);
 }
 
@@ -98,7 +98,7 @@ static void initializeDra818v(bool highPower) {
  * See http://www.dorji.com/docs/data/DRA818V.pdf for more information about
  * configuration.
  */
-void configureDra818v(float txFrequency, float rxFrequency, uint8_t volume,
+void configureDra818v(const char *txFrequency, const char *rxFrequency, uint8_t volume,
                       bool emphasis, bool hpf, bool lpf) {
     // Setup PIO UART
     PIO pio = pio0;
@@ -110,7 +110,7 @@ void configureDra818v(float txFrequency, float rxFrequency, uint8_t volume,
     busy_wait_ms(vhfEnableDelay);
     char temp[100];
     // Set group parameters - TX and RX frequencies, TX CTCSS, squelch, RX CTCSS
-    sprintf(temp, "AT+DMOSETGROUP=0,%.04f,%.04f,0000,0,0000\r\n", txFrequency,
+    sprintf(temp, "AT+DMOSETGROUP=0,%s,%s,0000,0,0000\r\n", txFrequency,
             rxFrequency);
     uart_tx_program_puts(pio, sm, temp);
     busy_wait_ms(vhfEnableDelay);
