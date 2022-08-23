@@ -37,7 +37,7 @@ static bool deep_sleep = false;
  * interval, debug, debug style
  */
 static aprs_config_s aprs_config = {
-    "J73Y", 3, "APLIGA", "WIDE2", 1, "Ceti b1.2 4-S", 30000, false, 2};
+    CALLSIGN, SSID, "APLIGA", "WIDE2", 1, "Ceti b1.2 4-S", 300000, false, 2};
 
 const aprs_config_s tag_aprs_config = {
     CALLSIGN, SSID, "APLIGA", "WIDE2-", 1, "Ceti b1.2 4-S", 120000, false, 2};
@@ -91,7 +91,7 @@ void initAll(const gps_config_s *gps_cfg, const tag_config_s *tag_cfg);
 // static void sleepCallback();
 // float getVin();
 // void startupBroadcasting();
-// void pauseForLock();
+void pauseForLock();
 
 void set_bin_desc(void) {
     bi_decl(bi_program_description(
@@ -217,7 +217,7 @@ void initLed(void) {
 //     }
 // }
 
-// void pauseForLock() { gps_get_lock(&gps_config, &gps_data, 300000); }
+void pauseForLock() { gps_get_lock(&gps_config, &gps_data, 300000); }
 
 void startAPRS(const aprs_config_s *aprs_cfg, repeating_timer_t *aprsTimer) {
     configureAPRS_TX(DEFAULT_FREQ);
@@ -336,7 +336,7 @@ int main() {
     // #elif APRS_TESTING
     //     aprs_config = testing_aprs_config;
     //     variance = TESTING_VARIANCE;
-    //     pauseForLock();
+        pauseForLock();
     // #endif
 
     // Loop

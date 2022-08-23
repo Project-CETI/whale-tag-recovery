@@ -74,8 +74,8 @@ void parseGpsOutput(char *line, int buf_len, gps_data_s *gps_dat) {
                 if (isnan(latitude) || isnan(longitude)) {
                     gps_dat->latlon[GPS_GLL][0] = DEFAULT_LAT;
                     gps_dat->latlon[GPS_GLL][1] = DEFAULT_LON;
-                    gps_dat->gpsReadFlags[GPS_GLL] = 1;
-                    gps_dat->posCheck = true;
+                    // gps_dat->gpsReadFlags[GPS_GLL] = 1;
+                    // gps_dat->posCheck = true;
                 } else {
                     gps_dat->latlon[GPS_GLL][0] = latitude;
                     gps_dat->latlon[GPS_GLL][1] = longitude;

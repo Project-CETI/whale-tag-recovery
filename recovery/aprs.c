@@ -41,7 +41,7 @@ const struct aprs_sig_s {
     const uint64_t bitPeriod;  ///< Total length of signal period per bit.
     const uint32_t delay1200;  ///< Delay for 1200Hz signal.
     const uint32_t delay2200;  ///< Delay for 2200Hz signal.
-} aprs_sig = {832, 26, 14};
+} aprs_sig = {832, 25, 15};
 
 uint64_t endTimeAPRS;  ///< us counter on how long to hold steps in DAC output.
 /// APRS payload arrays
@@ -310,13 +310,13 @@ static void sendHeader(const aprs_config_s *aprs_cfg) {
  */
 void sendPacket(const aprs_config_s *aprs_cfg, float *latlon, uint16_t *acs) {
     // Only reconfigure if out of range
-    if (latlon[0] < 17.71468 && !shouldBe145) {
-        configureDra818v(145.05, 145.05, 8, false, false, false);
-        shouldBe145 = true;
-    } else if (latlon[0] >= 17.71468 && shouldBe145) {
+    // if (latlon[0] < 17.71468 && !shouldBe145) {
+    //     configureDra818v(145.05, 145.05, 8, false, false, false);
+    //     shouldBe145 = true;
+    // } else if (latlon[0] >= 17.71468 && shouldBe145) {
         configureDra818v(DEFAULT_FREQ, DEFAULT_FREQ, 8, false, false, false);
         shouldBe145 = false;
-    }
+    // }
     wakeVHF();
     setPttState(true);
     // sleep_ms(100);
