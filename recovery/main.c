@@ -37,7 +37,7 @@ static bool deep_sleep = false;
  * interval, debug, debug style
  */
 static aprs_config_s aprs_config = {
-    CALLSIGN, SSID, "APLIGA", "WIDE2", 1, "Ceti b1.2 4-S", 300000, false, 2};
+    CALLSIGN, SSID, "APLIGA", "WIDE2", 1, "Ceti b1.2 4-S", 120000, false, 2};
 
 const aprs_config_s tag_aprs_config = {
     CALLSIGN, SSID, "APLIGA", "WIDE2-", 1, "Ceti b1.2 4-S", 120000, false, 2};
@@ -335,8 +335,8 @@ int main() {
     //     variance = FLOATER_VARIANCE;
     // #elif APRS_TESTING
     //     aprs_config = testing_aprs_config;
-    //     variance = TESTING_VARIANCE;
-        pauseForLock();
+    variance = TESTING_VARIANCE;
+    pauseForLock();
     // #endif
 
     // Loop
@@ -346,12 +346,13 @@ int main() {
         gps_get_lock(&gps_config, &gps_data, 1000);
 
         txAprs();
-        sleep_ms(aprs_config.interval);
+        // sleep_ms(aprs_config.interval);
         // sleepVHF();
-        // rand_modifier = rand() % variance;
+        rand_modifier = rand() % variance;
 
-        // rand_modifier =
-        //     rand_modifier <= (variance / 2) ? rand_modifier : -rand_modifier;
+        rand_modifier =
+            rand_modifier <= (variance / 2) ? rand_modifier : -rand_modifier;
+        sleep_ms(aprs_config.interval + rand_modifier);
         // printf("Sleeping for %d milliseconds\n",
         //        rand_modifier + aprs_config.interval);
         // sleep_ms(

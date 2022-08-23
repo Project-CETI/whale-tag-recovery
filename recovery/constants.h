@@ -28,7 +28,7 @@ static const uint32_t GEOFENCE_SLEEP =
     1000;  // 72000000;  // 20 hours in milliseconds
 static const uint32_t FLOATER_VARIANCE = 120000;  // 2 minutes in milliseconds
 static const uint32_t TAG_VARIANCE = 120000;      // 2 minutes in milliseconds
-static const uint32_t TESTING_VARIANCE = 10000;   // 2 minutes in milliseconds
+static const uint32_t TESTING_VARIANCE = 30000;   // 2 minutes in milliseconds
 static const uint32_t TESTING_TIME = 30000;
 static const uint8_t DAY_NIGHT_ROLLOVER = 19;  // 7pm
 static const uint8_t NIGHT_DAY_ROLLOVER = 5;   // 5am
