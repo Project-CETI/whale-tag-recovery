@@ -37,7 +37,7 @@ static bool deep_sleep = false;
  * interval, debug, debug style
  */
 static aprs_config_s aprs_config = {
-    CALLSIGN, SSID, "APRS", "WIDE2", 1, "CetiTagHeard", 60000, false, 2};
+    CALLSIGN, SSID, "APRS", "WIDE2", 2, "CetiTagHeard", 60000, false, 2};
 
 const aprs_config_s tag_aprs_config = {
     CALLSIGN, SSID, "APLIGA", "WIDE2-", 1, "Ceti b1.2 4-S", 120000, false, 2};

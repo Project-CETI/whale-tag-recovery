@@ -318,8 +318,8 @@ void sendPacket(const aprs_config_s *aprs_cfg, float *latlon, uint16_t *acs) {
     //     configureDra818v(145.05, 145.05, 8, false, false, false);
     //     shouldBe145 = true;
     // } else if (latlon[0] >= 17.71468 && shouldBe145) {
-        // configureDra818v(DEFAULT_FREQ, DEFAULT_FREQ, 8, false, false, false);
-        // shouldBe145 = false;
+    // configureDra818v(DEFAULT_FREQ, DEFAULT_FREQ, 8, false, false, false);
+    // shouldBe145 = false;
     // }
     // wakeVHF();
     buffer_index = 0;
@@ -358,10 +358,7 @@ void sendPacket(const aprs_config_s *aprs_cfg, float *latlon, uint16_t *acs) {
     printRawPacket(buffer);
 }
 
-
-void printRawPacket(char *buffer) {
-    printf("RAW: %s\n", buffer);
-}
+void printRawPacket(char *buffer) { printf("RAW: %s\n", buffer); }
 // Debug TX functions
 void printPacket(const aprs_config_s *aprs_cfg) {
     printf("%s0%s%d%s%d%x%x%c%s%c%s%c%s%s\n", aprs_cfg->dest,
@@ -416,7 +413,7 @@ void sendTestPackets(const aprs_config_s *aprs_cfg) {
  * @param dgssid Digipeater SSID (0-2) (default: 1)
  * @param cmt Comment to append to end of APRS packet (default: Ceti b1.0 2-S)
  * @see sendHeader
- */     
+ */
 void initializeAPRS(void) {
     initializeVHF();
     shouldBe145 = false;
@@ -424,11 +421,11 @@ void initializeAPRS(void) {
 
 void configureAPRS_TX(const char *txFrequency) {
     configureDra818v(txFrequency, txFrequency, 4, false, false, false);
-    
+
     // if (txFrequency < 145.0)
-		shouldBe145 = false;
-	// else
-		// shouldBe145 = true;
+    shouldBe145 = false;
+    // else
+    // shouldBe145 = true;
 }
 
 /** Adds any relevant information to the compiled binary.
