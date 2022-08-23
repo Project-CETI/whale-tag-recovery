@@ -30,7 +30,7 @@ const struct aprs_pc_s {
         _DT_POS;  ///< APRS character, defines transmissions as real-time.
     const char sym_ovl;  ///< Symbol Table ID. \ for the Alternative symbols.
     const char sym_tab;  ///< Symbol Code.
-} aprs_pc = {0x7E, 0x03, 0xF0, '!', '1', 's'};
+} aprs_pc = {0x7E, 0x03, 0xF0, '!', '/', 'p'};
 
 struct aprs_cc_s {
     bool nada;

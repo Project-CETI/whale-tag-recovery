@@ -21,7 +21,7 @@ typedef struct gps_config_t {
 
 typedef struct gps_data_t {
     float latlon[MAX_GPS_DATA_BUFFER][2];
-    uint16_t acs[3]; // 0 is altitude, 1 is course, 2 is speed
+    uint16_t acs[3];  // 0 is altitude, 1 is course, 2 is speed
     char lastGpsBuffer[MAX_GPS_DATA_BUFFER][MAX_GPS_MSG_LEN];
     char lastDtBuffer[MAX_GPS_MSG_LEN];
     uint8_t gpsReadFlags[MAX_GPS_DATA_BUFFER];
@@ -41,16 +41,13 @@ typedef struct gps_lat_lon_t {
     bool notAvail;
 } gps_lat_lon_s;
 
-enum GPSDataBufferOrder{
-    GPS_GGA = 0,
-    GPS_GLL = 1,
-    GPS_RMC = 2
-};
+enum GPSDataBufferOrder { GPS_GLL = 0, GPS_GGA = 1, GPS_RMC = 2 };
 
 // RX functions from NEO-M8N
 void parseGpsOutput(char *line, int buf_len, gps_data_s *gps_dat);
 bool readFromGps(const gps_config_s *gps_cfg, gps_data_s *gps_dat);
-void gps_get_lock(const gps_config_s *gps_cfg, gps_data_s *gps_dat, uint32_t timeout);
+void gps_get_lock(const gps_config_s *gps_cfg, gps_data_s *gps_dat,
+                  uint32_t timeout);
 void echoGpsOutput(char *line, int buf_len);
 void getBestLatLon(gps_data_s *gps_dat, gps_lat_lon_s *latlon);
 uint8_t getDayOfWeek(datetime_t *dt);
@@ -60,9 +57,9 @@ bool inDominica(float lat);
 uint32_t gpsInit(const gps_config_s *);
 
 // Ublox configuration functions
-void calculateUBXChecksum(uint8_t length, uint8_t* byte_stream);
-bool writeAllConfigurationsToUblox(uart_inst_t* uart);
-void writeSingleConfiguration(uart_inst_t* uart, uint8_t* byte_stream, uint8_t len);
-
+void calculateUBXChecksum(uint8_t length, uint8_t *byte_stream);
+bool writeAllConfigurationsToUblox(uart_inst_t *uart);
+void writeSingleConfiguration(uart_inst_t *uart, uint8_t *byte_stream,
+                              uint8_t len);
 
 #endif
