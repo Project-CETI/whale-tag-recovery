@@ -6,7 +6,6 @@ set(SOURCES
 	gps.c
 	tag.c
 	minmea.c
-	sleep.c
 	)
 
 add_executable(${BIN_NAME})

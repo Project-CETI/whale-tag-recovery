@@ -4,14 +4,14 @@
             "name": "Mac",
             "includePath": [
                 "${workspaceFolder}/**",
-                "/Users/silvara/CETI/pi-sdk/pico-sdk/src/common/pico_stdlib/include",
+                "/Users/silvara/CETI/pi-sdk/pico-sdk/src/common/pico_stdlib/include/**",
                 "/Users/silvara/CETI/pi-sdk/pico-sdk/src/rp2_common/hardware_uart/include/**",
                 "/Users/silvara/CETI/pi-sdk/pico-sdk/src/common/**",
-                "/Users/silvara/CETI/pi-sdk/pico-sdk/src/rp2_common/hardware_uart/include",
+                "/Users/silvara/CETI/pi-sdk/pico-sdk/src/rp2_common/hardware_uart/include/**",
                 "/Users/silvara/CETI/pi-sdk/pico-extras/src/rp2_common/pico_sleep/include/**"
             ],
             "defines": [],
-            "macFrameworkPath": [],
+            "macFrameworkPath": ["/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks"],
             "compilerPath": "/opt/homebrew/bin/arm-none-eabi-gcc",
             "cStandard": "gnu17",
             "cppStandard": "gnu++17",

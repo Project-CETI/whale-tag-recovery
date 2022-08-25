@@ -12,7 +12,7 @@
 #include "pico/binary_info.h"
 #include "pico/stdlib.h"
 #include "pico/time.h"
-#include "sleep.h"
+#include "pico_sleep/sleep.h"
 #include "tag.h"
 #include "ublox-config.h"
 #include "vhf.h"
@@ -68,11 +68,11 @@ const struct vhf_config_t {
     const uint32_t interval;
 } vhf_config = {148.056, 5000};
 
-// struct clock_config_t {
-//     uint scb_orig;
-//     uint clock0_orig;
-//     uint clock1_orig;
-// } clock_config;
+struct clock_config_t {
+    uint scb_orig;
+    uint clock0_orig;
+    uint clock1_orig;
+} clock_config;
 
 void set_bin_desc(void);
 void setLed(bool state);
@@ -86,7 +86,7 @@ void startTag(const tag_config_s *tag_cfg, repeating_timer_t *tagTimer);
 bool txTag(repeating_timer_t *rt);
 void initAll(const gps_config_s *gps_cfg, const tag_config_s *tag_cfg);
 void gps_callback();
-static void rtc_sleep(uint32_t sleepTime);
+static void rtc_sleep();
 void recover_from_sleep();
 static void sleepCallback();
 float getVin();
@@ -148,7 +148,6 @@ static void rtc_sleep() {
     sleepVHF();
     calculateUBXChecksum(16, day_sleep);
     writeSingleConfiguration(gps_config.uart, day_sleep, 16);
-    printf("Sleeping....%d ms\n", sleepTime);
     rec_sleep_run_from_xosc();
 
     rec_sleep_goto_dormant_until_edge_high(1);
@@ -251,8 +250,7 @@ void initAll(const gps_config_s *gps_cfg, const tag_config_s *tag_cfg) {
 
     uint32_t tagBaud = initTagComm(tag_cfg);
     setLed(false);
-    srand(get_absolute_time());
-
+    srand(to_ms_since_boot(get_absolute_time()));
 }
 
 int main() {
@@ -260,9 +258,9 @@ int main() {
     initAll(&gps_config, &tag_config);
     printf("[MAIN INIT] %s-%d \n", CALLSIGN, SSID);
 
-    // clock_config.scb_orig = scb_hw->scr;
-    // clock_config.clock0_orig = clocks_hw->sleep_en0;
-    // clock_config.clock1_orig = clocks_hw->sleep_en1;
+    clock_config.scb_orig = scb_hw->scr;
+    clock_config.clock0_orig = clocks_hw->sleep_en0;
+    clock_config.clock1_orig = clocks_hw->sleep_en1;
 
     // int gpsIRQ = gps_config.uart == uart0 ? UART0_IRQ : UART1_IRQ;
 

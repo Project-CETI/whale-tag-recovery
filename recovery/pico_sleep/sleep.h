@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#ifndef _REC_PICO_SLEEP_H_
-#define _REC_PICO_SLEEP_H_
+#ifndef _REC_PICO_SLEEP_SLEEP_H_
+#define _REC_PICO_SLEEP_SLEEP_H_
 
 #include "pico.h"
 #include "hardware/rtc.h"
