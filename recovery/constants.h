@@ -9,7 +9,7 @@
 
 // Callsign and SSIS configuration
 #define CALLSIGN "J75Y"
-#define SSID 5
+#define SSID 9
 #define DEFAULT_LAT 15.31383
 #define DEFAULT_LON -61.30075
 
@@ -20,6 +20,7 @@
 #define MAX_TAG_MSG_LEN 20
 
 static const char DEFAULT_FREQ[9] = "144.3900";
+static const char DOMINICA_FREQ[9] = "145.0500";
 
 
 static const uint32_t DAY_SLEEP =
@@ -31,7 +32,7 @@ static const uint32_t GEOFENCE_SLEEP =
 static const uint32_t FLOATER_VARIANCE = 120000;  // 2 minutes in milliseconds
 static const uint32_t TAG_VARIANCE = 120000;      // 2 minutes in milliseconds
 static const uint32_t TESTING_VARIANCE = 30000;   // 2 minutes in milliseconds
-static const uint32_t TESTING_TIME = 30000;
+static const uint32_t TESTING_TIME = 1000;
 static const uint8_t DAY_NIGHT_ROLLOVER = 19;  // 7pm
 static const uint8_t NIGHT_DAY_ROLLOVER = 5;   // 5am
 static const int8_t UTC_OFFSET = -4;
@@ -93,10 +94,9 @@ static const uint8_t sinValues[NUM_SINS] = {
     152, 176, 198, 217, 233, 245, 252, 255, 252, 245, 233,
     217, 198, 176, 152, 127, 103, 79,  57,  38,  22,  10,
     3,   1,   3,   10,  22,  38,  57,  79,  103, 128};
-    
+
 // static const uint8_t sinValues[NUM_SINS] = {
-//     128, 152, 176, 198, 218, 234, 245, 253, 255, 253, 245,
-//     234, 218, 198, 176, 152, 128, 103, 79,  57,  37,  21,
-//     10,  2,   0,   2,   10,  21,  37,  57,  79,  103};
+//     63, 75, 87, 98, 108, 116, 122, 125, 127, 125, 122, 116, 108, 98, 87, 75,
+//     63, 51, 39, 28, 18,  10,  4,   1,   0,   1,   4,   10,  18,  28, 39, 51};
 
 #endif  // _RECOVERY_CONSTANTS_H_

@@ -36,8 +36,8 @@ static bool deep_sleep = false;
  * dest, digi, digissid, comment
  * interval, debug, debug style
  */
-static aprs_config_s aprs_config = {
-    CALLSIGN, SSID, "APRS", "WIDE2", 2, "CetiTagHeard", 60000, false, 2};
+static aprs_config_s aprs_config = {CALLSIGN,        SSID,  "APRS", "WIDE2", 2,
+                                    "CETI-TagHeard", 40000, false,  2};
 
 const aprs_config_s tag_aprs_config = {
     CALLSIGN, SSID, "APLIGA", "WIDE2-", 1, "Ceti b1.2 4-S", 120000, false, 2};
@@ -217,7 +217,7 @@ void initLed(void) {
 //     }
 // }
 
-void pauseForLock() { gps_get_lock(&gps_config, &gps_data, 300000); }
+void pauseForLock(void) { gps_get_lock(&gps_config, &gps_data, 300000); }
 
 void startAPRS(const aprs_config_s *aprs_cfg, repeating_timer_t *aprsTimer) {
     configureAPRS_TX(DEFAULT_FREQ);
@@ -245,11 +245,11 @@ bool txAprs(void) {
                    gps_data.acs);
         setLed(false);
 
-        // sleep_ms(APRS_DELAY);
+        sleep_ms(APRS_DELAY);
         // }
     }
 
-    return gps_data.posCheck;
+    // return gps_data.posCheck;
 }
 
 void startTag(const tag_config_s *tag_cfg, repeating_timer_t *tagTimer) {
@@ -336,22 +336,27 @@ int main() {
     // #elif APRS_TESTING
     //     aprs_config = testing_aprs_config;
     variance = TESTING_VARIANCE;
-    pauseForLock();
+    // pauseForLock();
     // #endif
 
     // Loop
     while (true) {
 #if TAG_CONNECTED || APRS_TESTING
+        rand_modifier = rand() % variance;
+		rand_modifier =
+            rand_modifier <= (variance / 2) ? rand_modifier : -rand_modifier;
         // printf("Testing aprs\n");
         gps_get_lock(&gps_config, &gps_data, 1000);
+        gps_data.latlon[0][0] = 42.3648 + ((float)(rand_modifier % 100) / 10000);
+        gps_data.latlon[0][1] = -71.1247 + ((float)(rand_modifier % 100) / 10000);
+        gps_data.gpsReadFlags[0] = 1;
 
         txAprs();
+
         // sleep_ms(aprs_config.interval);
         // sleepVHF();
-        rand_modifier = rand() % variance;
 
-        rand_modifier =
-            rand_modifier <= (variance / 2) ? rand_modifier : -rand_modifier;
+        
         // sleep_ms(aprs_config.interval + rand_modifier);
         // printf("Sleeping for %d milliseconds\n",
         //        rand_modifier + aprs_config.interval);

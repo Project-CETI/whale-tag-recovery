@@ -30,7 +30,7 @@ const struct aprs_pc_s {
         _DT_POS;  ///< APRS character, defines transmissions as real-time.
     const char sym_ovl;  ///< Symbol Table ID. \ for the Alternative symbols.
     const char sym_tab;  ///< Symbol Code.
-} aprs_pc = {0x7E, 0x03, 0xF0, '!', '/', 'p'};
+} aprs_pc = {0x7E, 0x03, 0xF0, '!', '1', 's'};
 
 struct aprs_cc_s {
     bool nada;
@@ -56,7 +56,7 @@ struct aprs_pyld_s {
 } aprs_pyld;
 
 ///< Boolean for selecting 144.39MHz or 145.05MHz transmission.
-bool shouldBe145 = false;
+bool freqInDominica = false;
 
 // Low-level TX functions
 /** Sets the DAC output during each stage of DAC sine wave output.
@@ -314,18 +314,18 @@ static void sendHeader(const aprs_config_s *aprs_cfg) {
  */
 void sendPacket(const aprs_config_s *aprs_cfg, float *latlon, uint16_t *acs) {
     // Only reconfigure if out of range
-    // if (latlon[0] < 17.71468 && !shouldBe145) {
-    //     configureDra818v(145.05, 145.05, 8, false, false, false);
-    //     shouldBe145 = true;
-    // } else if (latlon[0] >= 17.71468 && shouldBe145) {
-    // configureDra818v(DEFAULT_FREQ, DEFAULT_FREQ, 8, false, false, false);
-    // shouldBe145 = false;
+    // if (latlon[0] < 17.71468 && !freqInDominica) {
+    //     configureDra818v("145.05", "145.05", 8, false, false, false);
+    //     freqInDominica = true;
+    // } else if (latlon[0] >= 17.71468 && freqInDominica) {
+    //     configureDra818v(DEFAULT_FREQ, DEFAULT_FREQ, 8, false, false, false);
+    //     freqInDominica = false;
     // }
+    // return;
     // wakeVHF();
     buffer_index = 0;
     memset(buffer, 0x00, 255);
     setPttState(true);
-    // sleep_ms(100);
 
     aprs_cc.currOutput = 0;
     setNextSin();
@@ -355,7 +355,7 @@ void sendPacket(const aprs_config_s *aprs_cfg, float *latlon, uint16_t *acs) {
     setPttState(false);
     setOutput(0x00);
     sleepVHF();
-    printRawPacket(buffer);
+    // printRawPacket(buffer);
 }
 
 void printRawPacket(char *buffer) { printf("RAW: %s\n", buffer); }
@@ -416,16 +416,11 @@ void sendTestPackets(const aprs_config_s *aprs_cfg) {
  */
 void initializeAPRS(void) {
     initializeVHF();
-    shouldBe145 = false;
 }
 
 void configureAPRS_TX(const char *txFrequency) {
     configureDra818v(txFrequency, txFrequency, 4, false, false, false);
-
-    // if (txFrequency < 145.0)
-    shouldBe145 = false;
-    // else
-    // shouldBe145 = true;
+    freqInDominica = (txFrequency[2] == '5');
 }
 
 /** Adds any relevant information to the compiled binary.

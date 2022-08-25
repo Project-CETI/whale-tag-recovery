@@ -50,7 +50,7 @@ bool vhf_pulse_callback(void) {
     uint32_t stepLen = VHF_HZ * NUM_SINS;
     int numSteps = stepLen * VHF_TX_LEN / 1000;
     // printf("[VHF/CB] steps: %d * %d * %d / 1000 = %d\n", VHF_HZ, NUM_SINS,
-        //    VHF_TX_LEN, numSteps);
+    //    VHF_TX_LEN, numSteps);
     stepLen = (int)1000000 / stepLen;
     for (int i = 0; i < numSteps; i++) {
         setOutput(sinValues[i % NUM_SINS]);
@@ -98,8 +98,10 @@ static void initializeDra818v(bool highPower) {
  * See http://www.dorji.com/docs/data/DRA818V.pdf for more information about
  * configuration.
  */
-void configureDra818v(const char *txFrequency, const char *rxFrequency, uint8_t volume,
-                      bool emphasis, bool hpf, bool lpf) {
+void configureDra818v(const char *txFrequency, const char *rxFrequency,
+                      uint8_t volume, bool emphasis, bool hpf, bool lpf) {
+    printf("[DRA818V] Configuring to receiving %s Hz and transmit %s Hz\n",
+           txFrequency, rxFrequency);
     // Setup PIO UART
     PIO pio = pio0;
     uint sm = pio_claim_unused_sm(pio, true);
@@ -151,16 +153,12 @@ void sleepVHF() { setVhfState(false); }
  * initializeOutput. */
 void initializeVHF(void) {
     sleep_ms(600);
-    // printf("Configuring DRA818V...\n");
     initializeDra818v(true);
     configureDra818v(DEFAULT_FREQ, DEFAULT_FREQ, 4, false, false, false);
     setPttState(false);
     setVhfState(true);
-    //  printf("DRA818V configured.\n");
 
-    // printf("Configuring DAC...\n");
     initializeOutput();
-    // printf("DAC configured.\n");
 }
 // VHF HEADERS [END] ----------------------------------------------------
 

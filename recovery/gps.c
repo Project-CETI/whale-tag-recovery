@@ -150,6 +150,10 @@ void gps_get_lock(const gps_config_s *gps_cfg, gps_data_s *gps_dat,
             to_ms_since_boot(get_absolute_time()) - startTime > timeout)
             break;
     }
+    // TODO delete later
+    
+    gps_dat->posCheck = true;
+
     // if (lastCheck != gps_dat->posCheck) {
     printf("[GPS LOCK] %s  GGA %.2f, %.2f  GLL %.2f, %.2f  RMC %.2f, %.2f\n",
            gps_dat->posCheck ? "true" : "false", gps_dat->latlon[0][0],
