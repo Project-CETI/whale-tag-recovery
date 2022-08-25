@@ -1,5 +1,6 @@
-#ifndef SWARM_H
-#define SWARM_H
+#ifndef _RECOVERY_GPS_GPS_H_
+#define _RECOVERY_GPS_GPS_H_
+
 #include "pico/stdlib.h"
 #include "stdint.h"
 

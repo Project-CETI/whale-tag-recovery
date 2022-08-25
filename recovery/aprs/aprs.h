@@ -1,7 +1,6 @@
 #ifndef _RECOVERY_APRS_H_
 #define _RECOVERY_APRS_H_
 
-#include "constants.h"
 #include "stdbool.h"
 #include "stdint.h"
 

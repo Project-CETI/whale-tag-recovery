@@ -1,7 +1,6 @@
-#ifndef _RECOVERY_VHF_H_
-#define _RECOVERY_VHF_H_
+#ifndef _RECOVERY_APRS_VHF_H_
+#define _RECOVERY_APRS_HF_H_
 
-#include "constants.h"
 #include "stdbool.h"
 #include "stdint.h"
 

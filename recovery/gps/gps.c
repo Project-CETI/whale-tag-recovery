@@ -1,5 +1,5 @@
 #include "gps.h"
-#include "constants.h"
+#include "../constants.h"
 #include "minmea.h"
 #include "ublox-config.h"
 #include <math.h>

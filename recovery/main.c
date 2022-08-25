@@ -3,9 +3,9 @@
  * Core file for the recovery board. Defines all configurations, initializes all
  * modules, and runs appropriate timers/interrupts based on received data.
  */
-#include "aprs.h"
+#include "aprs/aprs.h"
 #include "constants.h"
-#include "gps.h"
+#include "gps/gps.h"
 #include "hardware/clocks.h"
 #include "hardware/rosc.h"
 #include "hardware/structs/scb.h"
@@ -14,8 +14,8 @@
 #include "pico/time.h"
 #include "pico_sleep/sleep.h"
 #include "tag.h"
-#include "ublox-config.h"
-#include "vhf.h"
+#include "gps/ublox-config.h"
+#include "aprs/vhf.h"
 #include <stdio.h>
 #include <stdlib.h>
 

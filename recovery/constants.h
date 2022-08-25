@@ -1,8 +1,8 @@
 #ifndef _RECOVERY_CONSTANTS_H_
 #define _RECOVERY_CONSTANTS_H_
 
-#include "aprs.h"
-#include "gps.h"
+#include "aprs/aprs.h"
+#include "gps/gps.h"
 #include "stdbool.h"
 #include "stdint.h"
 #include "tag.h"

@@ -39,7 +39,7 @@ bool rec_dormant_source_valid(dormant_source_t dormant_source) {
 // either the xosc or rosc with no PLLs running. This means we disable the USB and ADC clocks
 // and all PLLs
 void rec_sleep_run_from_dormant_source(dormant_source_t dormant_source) {
-    assert(dormant_source_valid(dormant_source));
+    assert(rec_dormant_source_valid(dormant_source));
     _dormant_source = dormant_source;
 
     // FIXME: Just defining average rosc freq here.
@@ -105,7 +105,7 @@ void rec_sleep_run_from_dormant_source(dormant_source_t dormant_source) {
 // Go to sleep until woken up by the RTC
 void rec_sleep_goto_sleep_until(datetime_t *t, rtc_callback_t callback) {
     // We should have already called the sleep_run_from_dormant_source function
-    assert(dormant_source_valid(_dormant_source));
+    assert(rec_dormant_source_valid(_dormant_source));
 
     // Turn off all clocks when in sleep mode except for RTC
     clocks_hw->sleep_en0 = CLOCKS_SLEEP_EN0_CLK_RTC_RTC_BITS;
@@ -122,7 +122,7 @@ void rec_sleep_goto_sleep_until(datetime_t *t, rtc_callback_t callback) {
 }
 
 static void _go_dormant(void) {
-    assert(dormant_source_valid(_dormant_source));
+    assert(rec_dormant_source_valid(_dormant_source));
 
     if (_dormant_source == DORMANT_SOURCE_XOSC) {
         xosc_dormant();
