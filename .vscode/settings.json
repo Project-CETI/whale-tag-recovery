@@ -1,4 +1,8 @@
 {
+    "cmake.environment": {
+        "PICO_SDK_PATH":"/Users/silvara/CETI/pi-sdk/pico-sdk",
+        "PICO_EXTRAS_PATH":"/Users/silvara/CETI/pi-sdk/pico-extras"
+    },
     "files.associations": {
         "string.h": "c",
         "stdint.h": "c",
@@ -8,7 +12,10 @@
         "uart_tx.pio.h": "c",
         "gps.h": "c",
         "stdlib.h": "c",
-        "stdio.h": "c"
+        "stdio.h": "c",
+        "sleep.h": "c",
+        "aprs.h": "c",
+        "stdbool.h": "c"
     },
     "C_Cpp.errorSquiggles": "Enabled"
 }
