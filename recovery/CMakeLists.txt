@@ -13,7 +13,6 @@ set(SOURCES
 
 add_executable(${BIN_NAME})
 
-add_definitions("-Dtimegm=mktime")
 
 # add_library(minmea SHARED IMPORTED) # or STATIC instead of SHARED
 # set_target_properties(minmea PROPERTIES
@@ -26,12 +25,11 @@ target_sources(${BIN_NAME} PRIVATE ${SOURCES})
 
 add_subdirectory("gps")
 add_subdirectory("aprs")
-add_subdirectory("pico_sleep")
 
 pico_enable_stdio_usb(${BIN_NAME} 1) # Need this to enable picotool via USB connection
 pico_enable_stdio_uart(${BIN_NAME} 0) # Need this so that swarm isn't in bad shape
 
 pico_add_extra_outputs(${BIN_NAME})
 
-target_link_libraries(${BIN_NAME} PRIVATE pico_stdlib pico_time hardware_pio hardware_clocks hardware_rosc hardware_rtc hardware_sleep aprs gps pico_sleep)
+target_link_libraries(${BIN_NAME} PRIVATE pico_stdlib pico_time hardware_pio hardware_clocks hardware_rosc hardware_rtc hardware_sleep aprs gps)
 

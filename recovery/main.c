@@ -12,7 +12,7 @@
 #include "pico/binary_info.h"
 #include "pico/stdlib.h"
 #include "pico/time.h"
-#include "pico_sleep/sleep.h"
+#include "pico/sleep.h"
 #include "tag.h"
 #include "gps/ublox-config.h"
 #include "aprs/vhf.h"
@@ -148,9 +148,9 @@ static void rtc_sleep() {
     sleepVHF();
     calculateUBXChecksum(16, day_sleep);
     writeSingleConfiguration(gps_config.uart, day_sleep, 16);
-    rec_sleep_run_from_xosc();
+    sleep_run_from_xosc();
 
-    rec_sleep_goto_dormant_until_edge_high(1);
+    sleep_goto_dormant_until_edge_high(1);
 }
 
 // APRS //
