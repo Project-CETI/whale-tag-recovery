@@ -277,17 +277,6 @@ static void sendHeader(const aprs_config_s *aprs_cfg) {
     sendCharNRZI((aprs_cfg->ssid + '0') << 1, true);
 
     //  /********* DIGI ***********/
-    // char digi2[8] = "WIDE1-";
-    // int dssid_2 = 1;
-    // temp = strlen(digi2);
-    // for (int j = 0; j < temp; j++) sendCharNRZI(digi2[j] << 1, true);
-    // if (temp < 6) {
-    //     for (int j = temp; j < 6; j++) sendCharNRZI(' ' << 1, true);
-    // }
-    // sendCharNRZI((dssid_2 + '0') << 1, true);
-
-    // sendCharNRZI(' ', true);
-
     temp = strlen(aprs_cfg->digi);
     for (int j = 0; j < temp; j++) sendCharNRZI(aprs_cfg->digi[j] << 1, true);
     if (temp < 6) {
@@ -321,8 +310,7 @@ void sendPacket(const aprs_config_s *aprs_cfg, float *latlon, uint16_t *acs) {
     //     configureDra818v(DEFAULT_FREQ, DEFAULT_FREQ, 8, false, false, false);
     //     freqInDominica = false;
     // }
-    // return;
-    // wakeVHF();
+ 
     buffer_index = 0;
     memset(buffer, 0x00, 255);
     setPttState(true);
@@ -355,7 +343,6 @@ void sendPacket(const aprs_config_s *aprs_cfg, float *latlon, uint16_t *acs) {
     setPttState(false);
     setOutput(0x00);
     sleepVHF();
-    // printRawPacket(buffer);
 }
 
 void printRawPacket(char *buffer) { printf("RAW: %s\n", buffer); }

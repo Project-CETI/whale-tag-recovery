@@ -156,7 +156,7 @@ void initializeVHF(void) {
     initializeDra818v(true);
     configureDra818v(DEFAULT_FREQ, DEFAULT_FREQ, 4, false, false, false);
     setPttState(false);
-    setVhfState(true);
+    wakeVHF();
 
     initializeOutput();
 }
