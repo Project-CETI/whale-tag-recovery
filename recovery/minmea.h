@@ -13,12 +13,12 @@
 extern "C" {
 #endif
 
-#include <stdio.h>
-#include <stdint.h>
-#include <stdbool.h>
 #include <errno.h>
-#include <time.h>
 #include <math.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <time.h>
 #ifdef MINMEA_INCLUDE_COMPAT
 #include <minmea_compat.h>
 #endif
@@ -88,8 +88,10 @@ struct minmea_sentence_gga {
     int fix_quality;
     int satellites_tracked;
     struct minmea_float hdop;
-    struct minmea_float altitude; char altitude_units;
-    struct minmea_float height; char height_units;
+    struct minmea_float altitude;
+    char altitude_units;
+    struct minmea_float height;
+    char height_units;
     struct minmea_float dgps_age;
 };
 
@@ -226,54 +228,50 @@ bool minmea_parse_zda(struct minmea_sentence_zda *frame, const char *sentence);
 /**
  * Convert GPS UTC date/time representation to a UNIX calendar time.
  */
-int minmea_getdatetime(struct tm *tm, const struct minmea_date *date, const struct minmea_time *time_);
+int minmea_getdatetime(struct tm *tm, const struct minmea_date *date,
+                       const struct minmea_time *time_);
 
 /**
  * Convert GPS UTC date/time representation to a UNIX timestamp.
  */
-int minmea_gettime(struct timespec *ts, const struct minmea_date *date, const struct minmea_time *time_);
+int minmea_gettime(struct timespec *ts, const struct minmea_date *date,
+                   const struct minmea_time *time_);
 
 /**
  * Rescale a fixed-point value to a different scale. Rounds towards zero.
  */
-static inline int_least32_t minmea_rescale(const struct minmea_float *f, int_least32_t new_scale)
-{
-    if (f->scale == 0)
-        return 0;
-    if (f->scale == new_scale)
-        return f->value;
+static inline int_least32_t minmea_rescale(const struct minmea_float *f,
+                                           int_least32_t new_scale) {
+    if (f->scale == 0) return 0;
+    if (f->scale == new_scale) return f->value;
     if (f->scale > new_scale)
-        return (f->value + ((f->value > 0) - (f->value < 0)) * f->scale/new_scale/2) / (f->scale/new_scale);
+        return (f->value +
+                ((f->value > 0) - (f->value < 0)) * f->scale / new_scale / 2) /
+               (f->scale / new_scale);
     else
-        return f->value * (new_scale/f->scale);
+        return f->value * (new_scale / f->scale);
 }
 
 /**
  * Convert a fixed-point value to a floating-point value.
  * Returns NaN for "unknown" values.
  */
-static inline float minmea_tofloat(const struct minmea_float *f)
-{
-    if (f->scale == 0)
-        return NAN;
-    return (float) f->value / (float) f->scale;
+static inline float minmea_tofloat(const struct minmea_float *f) {
+    if (f->scale == 0) return NAN;
+    return (float)f->value / (float)f->scale;
 }
 
 /**
  * Convert a raw coordinate to a floating point DD.DDD... value.
  * Returns NaN for "unknown" values.
  */
-static inline float minmea_tocoord(const struct minmea_float *f)
-{
-    if (f->scale == 0)
-        return NAN;
-    if (f->scale  > (INT_LEAST32_MAX / 100))
-        return NAN;
-    if (f->scale < (INT_LEAST32_MIN / 100))
-        return NAN;
+static inline float minmea_tocoord(const struct minmea_float *f) {
+    if (f->scale == 0) return NAN;
+    if (f->scale > (INT_LEAST32_MAX / 100)) return NAN;
+    if (f->scale < (INT_LEAST32_MIN / 100)) return NAN;
     int_least32_t degrees = f->value / (f->scale * 100);
     int_least32_t minutes = f->value % (f->scale * 100);
-    return (float) degrees + (float) minutes / (60 * f->scale);
+    return (float)degrees + (float)minutes / (60 * f->scale);
 }
 
 #ifdef __cplusplus

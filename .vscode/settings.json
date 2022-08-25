@@ -1,0 +1,14 @@
+{
+    "files.associations": {
+        "string.h": "c",
+        "stdint.h": "c",
+        "tag.h": "c",
+        "constants.h": "c",
+        "ublox-config.h": "c",
+        "uart_tx.pio.h": "c",
+        "gps.h": "c",
+        "stdlib.h": "c",
+        "stdio.h": "c"
+    },
+    "C_Cpp.errorSquiggles": "Enabled"
+}
