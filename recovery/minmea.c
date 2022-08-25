@@ -69,7 +69,6 @@ bool minmea_check(const char *sentence, bool strict) {
     while (*sentence == '\r' || *sentence == '\n') {
         sentence++;
     }
-
     if (*sentence) {
         return false;
     }

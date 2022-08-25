@@ -270,41 +270,8 @@ void writeSingleConfiguration(uart_inst_t *uart, uint8_t *byte_stream,
         uart_putc_raw(uart, byte_stream[i]);
         // printf("%02x ", byte_stream[i]);
     }
-    // uart_puts(uart, (char *)byte_stream);
     sleep_ms(1000);
-    // while (uart_is_readable(uart)) {
-    //     uart_getc(uart);
-    // }
-    // TODO: fix this to have check for ACKs
-    // char inChar;
-    // char ack_rd_buf[MAX_GPS_ACK_LENGTH];
-    // uint8_t ack_rd_buf_pos = 0;
-    // uint8_t ack_buf_len = 0;
-    // bool ack = true;
-    // uint32_t startTime = to_ms_since_boot(get_absolute_time());
-    // while (uart_is_readable(uart) &&
-    //        to_ms_since_boot(get_absolute_time()) - startTime > 1000) {
-    //     char inChar = uart_getc(uart);
-    //     printf("%02x ", inChar);
-    // }
-    // printf("\n");
-
-    //   if (uart_is_readable(uart)) {
-    //   // uart_read_blocking(uart, ack_rd_buf, MAX_GPS_ACK_LENGTH);
-    //   inChar = uart_getc(uart);
-    //   int i = 0;
-    //   ack_rd_buf[i] = inChar;
-    //   ack = ack && (inChar == ack_header[i++]);
-    //   while (inChar != '\r' && i < 100) {
-    //     inChar = uart_getc(uart);
-    //     ack_rd_buf[i] = inChar;
-    //     ack = ack && (inChar == ack_header[i++]);
-    //     // printf("0x%x ", inChar);
-    //   }
-    //   ack_rd_buf[i-1] = '\0';
-    //   ack_buf_len = i-1;
-    //   // printf("\nAck: %s: %s\r\n", ack_rd_buf, ack ? "true" : "false");
-    // }
+    
 }
 
 // GPS FUNCTIONS [END] ------------------------------------------------
