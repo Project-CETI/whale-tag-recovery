@@ -14,6 +14,7 @@
 #include "uart_tx.pio.h"
 #include <stdio.h>
 #include <string.h>
+#include "../constants.h"
 
 // VHF HEADERS [START] --------------------------------------------------
 /** Initializes the GPIO pins that drive the VHF input's DAC.

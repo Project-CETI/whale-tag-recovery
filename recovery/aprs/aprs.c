@@ -12,6 +12,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
+#include "../constants.h"
 
 /// Re-define as 1 to make every sleep a busy wait
 #define PICO_TIME_DEFAULT_ALARM_POOL_DISABLED 0

@@ -10,4 +10,3 @@ set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 
 pico_sdk_init()
 add_subdirectory("recovery")
-#add_subdirectory("swarm")
