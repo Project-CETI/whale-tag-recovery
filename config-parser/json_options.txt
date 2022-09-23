@@ -1,0 +1,35 @@
+{
+
+    "type": "floater, tag, dev",
+    "debug": "true, false",
+    "startup": {
+        "flag": "true, false",
+        "gps_lock_time": "float: in seconds",
+        "aprs_max_time": "int: number of broadcasts with transmission once/30sec"
+    },
+    "aprs": {
+        "callsign": "alphanumeric string",
+        "ssid": "integer", 
+        "symbol": "alphanumeric string of length 2, ie '1s', '/p', '/c', etc",
+        "dest": "aprs destination address, ie 'APRS', 'APLIGA', etc",
+        "comment": "string, comment in aprs message",
+        "comp_format": "true, false",
+        "timing": "float: in seconds",
+        "variance": "float: in seconds",
+        "freq_lock": "float: aprs freq to lock to, 0 is want it to be gps based"
+    },
+    // day night timing overrides the aprs timing
+    "timing": {
+        "day_trigger": "integer military time, -1 means no switch",
+        "night_trigger": "integer military time, -1 means no switch",
+        "day_timing": "float in seconds, -1 means no switch",
+        "night_timing": "float in seconds, -1 means no switch", 
+        "deep_sleep_trigger": "true, false"
+    },
+    "simulation": {
+        "sim_loc": ["float", "float"],
+        "sim_move": "true, false",
+        "sim_aprs_tx": "true, false",
+        "sim_tag_tx": "true, false"
+    }
+}

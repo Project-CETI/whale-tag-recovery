@@ -3,56 +3,35 @@
  * Core file for the recovery board. Defines all configurations, initializes all
  * modules, and runs appropriate timers/interrupts based on received data.
  */
+#include "../generated/generated.h"
 #include "aprs/aprs.h"
+#include "aprs/vhf.h"
 #include "constants.h"
 #include "gps/gps.h"
+#include "gps/ublox-config.h"
 #include "hardware/clocks.h"
+#include "hardware/regs/io_bank0.h"
 #include "hardware/rosc.h"
 #include "hardware/structs/scb.h"
 #include "pico/binary_info.h"
+#include "pico/sleep.h"
 #include "pico/stdlib.h"
 #include "pico/time.h"
-#include "pico/sleep.h"
 #include "tag.h"
-#include "gps/ublox-config.h"
-#include "aprs/vhf.h"
 #include <stdio.h>
 #include <stdlib.h>
 
-#define APRS_TESTING 1
-#define TAG_CONNECTED 0
-#define FLOATER 0
-static bool deep_sleep = false;
-#if TAG_CONNECTED
-#define APRS_RETRANSMIT 3
-#define APRS_DELAY 15000
-#else
-#define APRS_RETRANSMIT 1
-#define APRS_DELAY 3000
-#endif
-
-/** @struct Defines unchanging configuration parameters for APRS.
- * callsign, ssid
- * dest, digi, digissid, comment
- * interval, debug, debug style
- */
-static aprs_config_s aprs_config = {CALLSIGN,        SSID,  "APRS", "WIDE2", 2,
-                                    "CETI-TagHeard", 40000, false,  2};
-
-const aprs_config_s tag_aprs_config = {
-    CALLSIGN, SSID, "APLIGA", "WIDE2-", 1, "Ceti b1.2 4-S", 120000, false, 2};
-
-const aprs_config_s floater_aprs_config = {
-    CALLSIGN, SSID, "APLIGA", "WIDE2", 2, "Ceti b1.2 4-S", 0, false, 2};
-
-const aprs_config_s testing_aprs_config = {CALLSIGN,     SSID,  "APLIGA",
-                                           "WIDE2",      1,     "Ceti b1.2 4-S",
-                                           TESTING_TIME, false, 2};
+// #ifdef DEBUG
+// # define DEBUG_PRINT(x) printf x
+// #else
+// # define DEBUG_PRINT(x) do {} while (0)
+// #endif
 
 /** @struct Defines unchanging configuration parameters for GPS communication.
  * GPS_TX, GPS_RX, GPS_BAUD, UART_NUM, QINTERACTIVE
  */
 const gps_config_s gps_config = {0, 1, 9600, uart0, false};
+
 gps_data_s gps_data = {
     {DEFAULT_LAT, DEFAULT_LON}, {0, 0, 0}, "$GN 15.31383, -61.30075,0,360,0*19",
     "$DT 20190408195123,V*41",  false,     false};
@@ -63,35 +42,23 @@ gps_data_s gps_data = {
  */
 const tag_config_s tag_config = {4, 5, 115200, uart1, 10000, 1000, 1000, 3};
 
-const struct vhf_config_t {
-    float txFreq;
-    const uint32_t interval;
-} vhf_config = {148.056, 5000};
-
 struct clock_config_t {
     uint scb_orig;
     uint clock0_orig;
     uint clock1_orig;
 } clock_config;
 
+void initAll(const gps_config_s *gps_cfg, const tag_config_s *tag_cfg);
 void set_bin_desc(void);
 void setLed(bool state);
 void initLed(void);
-bool txVHF(repeating_timer_t *rt);
-void startVHF(repeating_timer_t *vhfTimer);
-bool txAprsIRQ(repeating_timer_t *rt);
 bool txAprs(void);
-void startAPRS(const aprs_config_s *aprs_cfg, repeating_timer_t *aprsTimer);
 void startTag(const tag_config_s *tag_cfg, repeating_timer_t *tagTimer);
 bool txTag(repeating_timer_t *rt);
-void initAll(const gps_config_s *gps_cfg, const tag_config_s *tag_cfg);
-void gps_callback();
-static void rtc_sleep();
+static void rtc_sleep(uint32_t sleep_time);
 void recover_from_sleep();
-static void sleepCallback();
 float getVin();
 void startupBroadcasting();
-void pauseForLock();
 
 void set_bin_desc(void) {
     bi_decl(bi_program_description(
@@ -112,7 +79,10 @@ void initLed(void) {
 }
 
 void recover_from_sleep() {
-    printf("Recover from sleep \n");
+    // uint32_t event = IO_BANK0_DORMANT_WAKE_INTE0_GPIO0_EDGE_HIGH_BITS;
+    // // Clear the irq so we can go back to dormant mode again if we want
+    // gpio_acknowledge_irq(6, event);
+    printf("Recovering...\n");
 
     // Re-enable ring Oscillator control
     rosc_write(&rosc_hw->ctrl, ROSC_CTRL_ENABLE_BITS);
@@ -128,91 +98,92 @@ void recover_from_sleep() {
     set_bin_desc();
 
     stdio_init_all();
-    // printf("Recover step 3 \n");
 
     initLed();
-    gpsInit(&gps_config);
-    initializeAPRS();
-    wakeVHF();
-    sleep_ms(1000);
+    setLed(true);  
+    printf("Re-init GPS and APRS \n");
+  
+    // gpsInit(&gps_config);
+    // initializeAPRS();
+    // wakeVHF();
+    // sleep_ms(1000);
     printf("Recovered from sleep \n");
-
+    setLed(false);
     return;
 }
 
-static void sleep_callback() { printf("Waking from sleep\n"); }
+static void rtc_sleep(uint32_t sleep_time) {
+    ubx_cfg_t sleep[16];
+    createUBXSleepPacket(sleep_time, sleep);
+    writeSingleConfiguration(gps_config.uart, sleep, 16);
+    // uart_deinit(uart0);
 
-static void rtc_sleep() {
-    txAprs();
-    // sleepy time
-    sleepVHF();
-    calculateUBXChecksum(16, day_sleep);
-    writeSingleConfiguration(gps_config.uart, day_sleep, 16);
+    // sleep_ms(100);
     sleep_run_from_xosc();
 
-    sleep_goto_dormant_until_edge_high(1);
+    datetime_t t = {
+            .year  = 2020,
+            .month = 06,
+            .day   = 05,
+            .dotw  = 5, // 0 is Sunday, so 5 is Friday
+            .hour  = 1,
+            .min   = 01,
+            .sec   = 00
+    };
+
+    // Alarm 10 seconds later
+    datetime_t t_alarm = {
+            .year  = 2020,
+            .month = 06,
+            .day   = 05,
+            .dotw  = 5, // 0 is Sunday, so 5 is Friday
+            .hour  = 1,
+            .min   = 01,
+            .sec   = 10
+    };
+
+    // Start the RTC
+    rtc_init();
+    rtc_set_datetime(&t);
+
+    // uart_default_tx_wait_blocking();
+
+    sleep_goto_sleep_until(&t_alarm, &recover_from_sleep);
+    // sleep_goto_dormant_until_edge_high(6);
 }
 
 // APRS //
 void startupBroadcasting() {
-    // printf("Initial APRS broadcasting\n");
-    for (int i = 0; i < 10; i++) {
-        //  wakeVHF();
+    printf("[BROADCAST] Starting broadcast, waiting for gps lock\n");
+    gps_get_lock(&gps_config, &gps_data, startup_.gps_wait);
+
+    for (int i = 0; i < startup_.transmissions; i++) {
         gps_get_lock(&gps_config, &gps_data, 1000);
-        if (gps_data.posCheck) {
-            struct gps_lat_lon_t latlon;
-            getBestLatLon(&gps_data, &latlon);
-            printf("[APRS TX:%s] %s-%d @ %.6f, %.6f \n", latlon.type, CALLSIGN,
-                   SSID, latlon.lat, latlon.lon);
-            // printPacket(&aprs_config);
-
-            setLed(true);
-            sendPacket(&aprs_config, (float[]){latlon.lat, latlon.lon},
-                       gps_data.acs);
-            setLed(false);
-
-            sleep_ms(APRS_DELAY);
-        }
-
-        sleep_ms(60000 - APRS_DELAY);
+        txAprs();
+        sleep_ms(aprs_timing_startup);
     }
+    printf("[BROADCAST] Ending broadcast\n");
 }
-
-void pauseForLock(void) { gps_get_lock(&gps_config, &gps_data, 300000); }
-
-void startAPRS(const aprs_config_s *aprs_cfg, repeating_timer_t *aprsTimer) {
-    configureAPRS_TX(DEFAULT_FREQ);
-    add_repeating_timer_ms(-aprs_cfg->interval, txAprsIRQ, NULL, aprsTimer);
-}
-
-bool txAprsIRQ(repeating_timer_t *rt) { return txAprs(); }
 
 bool txAprs(void) {
-    // gps_get_lock(&gps_config, &gps_data);
-
-    // wake up the VHF since we're going to transmit APRS
-    if (aprs_config.debug)
-        sendTestPackets(&aprs_config);
-    else if (gps_data.posCheck) {
+    if (gps_data.posCheck) {
         struct gps_lat_lon_t latlon;
         getBestLatLon(&gps_data, &latlon);
-        printf("[APRS TX:%s] %s-%d @ %.6f, %.6f \n", latlon.type, CALLSIGN,
-               SSID, latlon.lat, latlon.lon);
-        // for (uint8_t retrans = 0; retrans < APRS_RETRANSMIT; retrans++) {
+        printf("[APRS TX:%s] %s-%d @ %.6f, %.6f \n", latlon.type,
+               aprs_config.callsign, aprs_config.ssid, latlon.lat, latlon.lon);
         setLed(true);
         sendPacket(&aprs_config, (float[]){latlon.lat, latlon.lon},
                    gps_data.acs);
         setLed(false);
 
-        sleep_ms(APRS_DELAY);
-        // }
+        sleep_ms(aprs_timing_delay);
     }
 
     return gps_data.posCheck;
 }
 
 void startTag(const tag_config_s *tag_cfg, repeating_timer_t *tagTimer) {
-    // printf("[TAG INIT]\n");
+    printf("[TAG TX INIT]\n");
     add_repeating_timer_ms(-tag_cfg->interval, txTag, NULL, tagTimer);
 }
 
@@ -221,18 +192,26 @@ bool txTag(repeating_timer_t *rt) {
     struct gps_lat_lon_t latlon;
     getBestLatLon(&gps_data, &latlon);
     writeGpsToTag(&tag_config, latlon.msg, gps_data.lastDtBuffer);
+    if (gps_data.posCheck) {
+        setLed(true);
+        sendPacket(&aprs_config, (float[]){latlon.lat, latlon.lon},
+                   gps_data.acs);
+
+        setLed(false);
+    }
     return true;
 }
 
-// float getVin(){
-//     float maxAdcVal, adcRefVolatge = 0;
-//     uint16_t adcVal = analogRead(vinPin);
-//     float vinVal = float(adcVal) / maxAdcVal * adcRefVoltage;
-//     float voltage = vinVal * (r1 + r2) / r2;
-//     return voltage;
-//     }
-
-// void gps_callback() { gps_get_lock(&gps_config, &gps_data, 1000); }
+float getVin() {
+    uint16_t r1 = 10000;
+    uint16_t r2 = 10000;
+    float maxAdcVal = pow(2, 13) - 1; 
+    float adcRefVoltage = 3.3;
+    uint16_t adcVal = analogRead(26);
+    float vinVal = (((float)adcVal) / maxAdcVal) * adcRefVoltage;
+    float voltage = vinVal * (r1 + r2) / r2;
+    return voltage;
+}
 
 void initAll(const gps_config_s *gps_cfg, const tag_config_s *tag_cfg) {
     set_bin_desc();
@@ -256,113 +235,149 @@ void initAll(const gps_config_s *gps_cfg, const tag_config_s *tag_cfg) {
 int main() {
     // Setup
     initAll(&gps_config, &tag_config);
-    printf("[MAIN INIT] %s-%d \n", CALLSIGN, SSID);
-
+    printf("[MAIN INIT] %s-%d \n", aprs_config.callsign, aprs_config.ssid);
     clock_config.scb_orig = scb_hw->scr;
     clock_config.clock0_orig = clocks_hw->sleep_en0;
     clock_config.clock1_orig = clocks_hw->sleep_en1;
 
-    // int gpsIRQ = gps_config.uart == uart0 ? UART0_IRQ : UART1_IRQ;
+    // setLed(true);
+   
+    // wakeVHF();
 
-    // // And set up and enable the interrupt handlers
-    // irq_set_exclusive_handler(gpsIRQ, gps_callback);
-    // irq_set_enabled(gpsIRQ, true);
+    // setPttState(true);
 
-    // // // Now enable the UART to send interrupts - RX only
-    // uart_set_irq_enables(gps_config.uart, true, false);
+    // while(true) {
+    //     // nothing
+    // }
 
-    uint32_t variance = 0;
+    enum SleepType sleep_type;
+    if (timing_.day_trigger > 0 && timing_.night_trigger > 0 &&
+        timing_.day_interval > 0 && timing_.night_interval > 0) {
+        sleep_type = DAY_NIGHT_SLEEP;
+    } else {
+        sleep_type = BUSY_SLEEP;
+    }
+
+    // APRS STARTUP
+    if (startup_.flag) {
+        startupBroadcasting();
+    }
+
+    // TAG INITIALIZATION
+    // Start tag transmission is the board type is a tag, or if the dev
+    // simulation has tag tx enabled.
+    if (board_ == TAG || simulation_.tag_tx) {
+        repeating_timer_t tagTimer;
+        startTag(&tag_config, &tagTimer);
+    }
+
+    // Trackers for various things during the main loop
+    // Includes the random modifier, successful tx transmission flag, and
+    // counter for attempts at TX
     int32_t rand_modifier = 0;
-    // Tag comms interrupt setup
-    // #if TAG_CONNECTED
-    //     aprs_config = tag_aprs_config;
-    //     startupBroadcasting();
-    //     repeating_timer_t tagTimer;
-    //     startTag(&tag_config, &tagTimer);
-    //     variance = TAG_VARIANCE;
-    // #elif FLOATER
-    //     aprs_config = floater_aprs_config;
-    //     variance = FLOATER_VARIANCE;
-    // #elif APRS_TESTING
-    //     aprs_config = testing_aprs_config;
-    variance = TESTING_VARIANCE;
-    // pauseForLock();
-    // #endif
-
+    bool successfulTX = false;
+    uint8_t txAttempt = 0;
     // Loop
     while (true) {
-#if TAG_CONNECTED || APRS_TESTING
-        rand_modifier = rand() % variance;
-        rand_modifier =
-            rand_modifier <= (variance / 2) ? rand_modifier : -rand_modifier;
-        // printf("Testing aprs\n");
+        // calculate a random value between 0 and the variance to add/subtract
+        // to the aprs timing. This ensures that aprs messages aren't being sent
+        // at the same time by accident
+        rand_modifier = rand() % aprs_config.variance;
+        rand_modifier = rand_modifier <= (aprs_config.variance / 2)
+                            ? rand_modifier
+                            : -rand_modifier;
+        // Get the GPS lock for this cycle
         gps_get_lock(&gps_config, &gps_data, 1000);
-        gps_data.latlon[0][0] =
-            42.3648 + ((float)(rand_modifier % 100) / 10000);
-        gps_data.latlon[0][1] =
-            -71.1247 + ((float)(rand_modifier % 100) / 10000);
-        gps_data.gpsReadFlags[0] = 1;
 
-        txAprs();
-
-        sleep_ms(
-            ((aprs_config.interval + rand_modifier) > VHF_WAKE_TIME_MS)
-                ? ((aprs_config.interval + rand_modifier) - VHF_WAKE_TIME_MS)
-                : VHF_WAKE_TIME_MS);
-
-        wakeVHF();  // wake here so there's enough time to fully wake up
-
-        sleep_ms(VHF_WAKE_TIME_MS);
-#elif FLOATER
-        // Floater deep sleep shutoff
-        while (deep_sleep) {
-            // irq_remove_handler(gpsIRQ, gps_callback);
-            uart_deinit(uart0);
-            uart_deinit(uart1);
-            sleepVHF();
-            calculateUBXChecksum(16, sleep);
-            writeSingleConfiguration(gps_config.uart, sleep, 16);
-            // Sets the dormant clock to the crystal oscillator
-            rec_sleep_run_from_xosc();
-            rec_sleep_goto_dormant_until_edge_high(8);
-        }
-
-        gps_get_lock(&gps_config, &gps_data);
-
-        rtc_sleep(DAY_SLEEP);
-        recover_from_sleep();
-
-        if (gps_data.inDominica && gps_data.posCheck) {
-            // printf("[DOMINICA] ");
-
-            printf("DT: %d %d %d\n", gps_data.dt.hour, gps_data.dt.min,
-                   gps_data.dt.sec);
-            if (gps_data.dt.hour > NIGHT_DAY_ROLLOVER &&
-                gps_data.dt.hour < DAY_NIGHT_ROLLOVER) {
-                printf("[DAYTIME]\n");
-                rtc_sleep(DAY_SLEEP);
-                recover_from_sleep();
-
-                // wakeVHF();
-                // printf("Here\n");
-                // sleep_ms(1000);
-            } else {
-                printf("[NIGHTTIME]\n");
-                rtc_sleep(NIGHT_SLEEP);
-                recover_from_sleep();
+        // if we want to simulation gps coordinates, then seed them with the
+        // simulation values. Also check to see if the coordinates should
+        // randomly move around or not
+        if (simulation_.latlon[0] > 0 && simulation_.latlon[1] > 0) {
+            float sim_gps_variance = 0;
+            if (simulation_.sim_move) {
+                sim_gps_variance = ((float)(rand_modifier % 100) / 10000);
+                sim_gps_variance = (((uint32_t)sim_gps_variance * 10) % 2)
+                                       ? sim_gps_variance
+                                       : -sim_gps_variance;
             }
-        } else if (gps_data.posCheck && gps_data.dtCheck) {
-            printf("[NOT DOMINICA]\n");
 
-            rtc_sleep(GEOFENCE_SLEEP);
-            recover_from_sleep();
-
-        } else {
-            // printf("Waiting...\n");
-            // sleep_ms(2000);
+            gps_data.latlon[GPS_SIM][0] =
+                simulation_.latlon[0] + sim_gps_variance;
+            gps_data.latlon[GPS_SIM][1] =
+                simulation_.latlon[1] + sim_gps_variance;
+            gps_data.gpsReadFlags[GPS_SIM] = 1;  // todo change this to sim one
+            gps_data.posCheck = true;
         }
-        // wakeVHF();
-#endif
+
+        // Check to see the current battery voltage and if it needs to go to
+        // sleep
+        if (timing_.deep_sleep && getVin() < VIN_SLEEP_LIMIT) {
+            sleep_type = DEAD_SLEEP;
+        }
+
+        // Sending aprs tx when not connected to a tag
+        // Basically send if: floater, or dev board with aprs enabled
+        if (board_ == FLOATER || (board_ == DEV && simulation_.aprs_tx) ||
+            board_ == TAG) {
+            // APRS won't send if there's a valid gps/position lock
+            // Try to send the APRS message the max number of attempts, before
+            // trying to sleep If after 5 attempts there's still no position
+            // lock, and no APRS transmission, go into the sleep pattern and try
+            // again when woken up
+            successfulTX = txAprs();
+            if (!successfulTX && txAttempt <= MAX_APRS_TX_ATTEMPTS) {
+                txAttempt++;
+                continue;
+            }
+
+            switch (sleep_type) {
+                case BUSY_SLEEP:
+                    printf("[BUSY SLEEP]\n");
+                    sleep_ms(((aprs_config.interval + rand_modifier) >
+                              VHF_WAKE_TIME_MS)
+                                 ? ((aprs_config.interval + rand_modifier) -
+                                    VHF_WAKE_TIME_MS)
+                                 : VHF_WAKE_TIME_MS);
+
+                    wakeVHF();  // wake here so there's enough time to fully
+                                // wake up
+
+                    sleep_ms(VHF_WAKE_TIME_MS);
+                    break;
+                case DAY_NIGHT_SLEEP:
+                    printf("[DAY/NIGHT SLEEP]\n");
+
+                    if (gps_data.timestamp[0] > timing_.day_trigger &&
+                        gps_data.timestamp[0] < timing_.night_trigger) {
+                        printf("[DAYTIME]: %d:%d:%d sleeping for %d\n", gps_data.timestamp[0],
+                               gps_data.timestamp[1], gps_data.timestamp[2], timing_.day_interval);
+                        rtc_sleep(timing_.day_interval);
+                        // recover_from_sleep();
+                    } else {
+                        printf("[NIGHTTIME]: %d:%d:%d sleeping for %d\n", gps_data.timestamp[0],
+                               gps_data.timestamp[1], gps_data.timestamp[2], timing_.night_interval);
+                        rtc_sleep(timing_.night_interval);
+                        // recover_from_sleep();
+                    }
+                    break;
+                case DEAD_SLEEP:
+                    printf("[DEAD SLEEP]\n");
+                    sleepVHF();
+                    writeSingleConfiguration(gps_config.uart, sleep_temp, 16);
+                    // Sets the dormant clock to the crystal oscillator
+                    sleep_run_from_xosc();
+                    // unused GPIO pin 8
+                    sleep_goto_dormant_until_edge_high(8);
+                    break;
+                default:
+                    printf("[NO SLEEP]\n");
+                    break;
+                    // no sleep
+            }
+            // Reset trackers and flags
+            successfulTX = false;
+            txAttempt = 0;
+        }
     }
     return 0;
 }

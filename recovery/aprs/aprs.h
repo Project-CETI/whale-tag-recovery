@@ -3,20 +3,22 @@
 
 #include "stdbool.h"
 #include "stdint.h"
+#include "../../generated/generated.h"
 
-typedef struct aprs_config_t {
-    char callsign[8];
-    int ssid;
-    char dest[8];
-    char digi[16];
-    int dssid;
-    char comment[128];
-    uint32_t interval;
-    bool debug;
-    int style;
-} aprs_config_s;
+// typedef struct aprs_config_t {
+//     char callsign[8];
+//     uint8_t ssid;
+//     char symbol[3];
+//     char dest[8];
+//     char digi[16];
+//     int dssid;
+//     char comment[128];
+//     bool compressed;
+//     uint32_t interval;
+//     uint16_t variance;
+// } aprs_config_s;
 
-typedef struct aprs_data_t aprs_data_s;
+// typedef struct aprs_data_t aprs_data_s;
 
 // Low-level TX functions
 static void setNextSin(void);

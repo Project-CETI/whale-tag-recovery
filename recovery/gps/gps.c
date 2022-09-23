@@ -1,6 +1,6 @@
 #include "gps.h"
-#include "../constants.h"
 #include "../../lib/minmea.h"
+#include "../constants.h"
 #include "ublox-config.h"
 #include <math.h>
 #include <stdio.h>
@@ -28,6 +28,13 @@ void parseGpsOutput(char *line, int buf_len, gps_data_s *gps_dat) {
                     gps_dat->gpsReadFlags[GPS_RMC] = 1;
                     gps_dat->posCheck = true;
                     gps_dat->inDominica = inDominica(latitude);
+                    gps_dat->timeCheck = true;
+                    // Multiple hours by 100 to get the time in military time
+                    // printf("RMC time: %d:%d:%d\n", frame.time.hours,
+                    //        frame.time.minutes, frame.time.seconds);
+                    uint16_t t[3] = {frame.time.hours, frame.time.minutes,
+                                    frame.time.seconds};
+                    memcpy(gps_dat->timestamp, t, 3);
                 }
                 gps_dat->acs[1] = minmea_rescale(&frame.course, 3);
                 gps_dat->acs[2] = minmea_rescale(&frame.speed, 1);
@@ -45,23 +52,18 @@ void parseGpsOutput(char *line, int buf_len, gps_data_s *gps_dat) {
             break;
         }
         case MINMEA_SENTENCE_ZDA: {
-            printf("[ZDA] ");
             struct minmea_sentence_zda frame;
             if (minmea_parse_zda(&frame, line)) {
                 memcpy(gps_dat->lastDtBuffer, line, buf_len);
                 // todo add a better datatime check to make sure if valid
-                gps_dat->dtCheck = frame.date.year > 0;
-                datetime_t t = {.year = frame.date.year,
-                                .month = frame.date.month,
-                                .day = frame.date.day,
-                                .hour = frame.time.hours + UTC_OFFSET,
-                                .min = frame.time.minutes,
-                                .sec = frame.time.seconds};
-                t.dotw = getDayOfWeek(&t);
-                gps_dat->dt = t;
+                gps_dat->dateCheck = frame.date.year > 0;
+                gps_dat->timeCheck = true;
+                // Multiple hours by 100 to get the time in military time
+                uint16_t t[3] = {frame.time.hours * 100, frame.time.minutes,
+                                 frame.time.seconds};
+                memcpy(gps_dat->timestamp, t, 3);
             }
-            printf("[DT] %s : check %s\n", gps_dat->lastDtBuffer,
-                   gps_dat->dtCheck ? "true" : "false");
+
             break;
         }
         case MINMEA_SENTENCE_GLL: {
@@ -74,14 +76,20 @@ void parseGpsOutput(char *line, int buf_len, gps_data_s *gps_dat) {
                 if (isnan(latitude) || isnan(longitude)) {
                     gps_dat->latlon[GPS_GLL][0] = DEFAULT_LAT;
                     gps_dat->latlon[GPS_GLL][1] = DEFAULT_LON;
-                    // gps_dat->gpsReadFlags[GPS_GLL] = 1;
-                    // gps_dat->posCheck = true;
                 } else {
                     gps_dat->latlon[GPS_GLL][0] = latitude;
                     gps_dat->latlon[GPS_GLL][1] = longitude;
                     gps_dat->gpsReadFlags[GPS_GLL] = 1;
                     gps_dat->posCheck = true;
                     gps_dat->inDominica = inDominica(latitude);
+                    gps_dat->timeCheck = true;
+                    // Multiple hours by 100 to get the time in military time
+                    // printf("GLL time: %d:%d:%d\n", frame.time.hours,
+                    //        frame.time.minutes, frame.time.seconds);
+
+                    uint16_t t[3] = {frame.time.hours, frame.time.minutes,
+                                    frame.time.seconds};
+                    memcpy(gps_dat->timestamp, t, 3);
                 }
             }
             break;
@@ -102,6 +110,15 @@ void parseGpsOutput(char *line, int buf_len, gps_data_s *gps_dat) {
                     gps_dat->gpsReadFlags[GPS_GGA] = 1;
                     gps_dat->posCheck = true;
                     gps_dat->inDominica = inDominica(latitude);
+
+                    gps_dat->timeCheck = true;
+                    // Multiple hours by 100 to get the time in military time
+                    // printf("RMC time: %d:%d:%d\n", frame.time.hours,
+                    //        frame.time.minutes, frame.time.seconds);
+
+                    uint16_t t[3] = {frame.time.hours, frame.time.minutes,
+                                    frame.time.seconds};
+                    memcpy(gps_dat->timestamp, t, 3);
                 }
             }
             break;
@@ -151,9 +168,6 @@ void gps_get_lock(const gps_config_s *gps_cfg, gps_data_s *gps_dat,
             break;
     }
     // TODO delete later
-    
-    gps_dat->posCheck = true;
-
     // if (lastCheck != gps_dat->posCheck) {
     printf("[GPS LOCK] %s  GGA %.2f, %.2f  GLL %.2f, %.2f  RMC %.2f, %.2f\n",
            gps_dat->posCheck ? "true" : "false", gps_dat->latlon[0][0],
@@ -170,13 +184,16 @@ void getBestLatLon(gps_data_s *gps_data, gps_lat_lon_s *latlon) {
                 latlon->lat = gps_data->latlon[index][0];
                 latlon->lon = gps_data->latlon[index][1];
                 gps_data->gpsReadFlags[index] = 0;
-                if (index == GPS_GGA) {
+                if (index == GPS_SIM) {
+                    memcpy(latlon->type, "SIM", 4);
+                } else if (index == GPS_GGA) {
                     memcpy(latlon->type, "GGA", 4);
                 } else if (index == GPS_GLL) {
                     memcpy(latlon->type, "GLL", 4);
                 } else {
                     memcpy(latlon->type, "RMC", 4);
                 }
+                memcpy(latlon->msg, gps_data->lastGpsBuffer[index], MAX_GPS_MSG_LEN);
                 break;
             }
         }
@@ -206,14 +223,6 @@ uint8_t getDayOfWeek(datetime_t *dt) {
     // Zeller's congruence
     return (c / 4 - 2 * c + year + year / 4 + 13 * (month + 1) / 5 + day - 1) %
            7;
-}
-
-void echoGpsOutput(char *line, int buf_len) {
-    for (int i = 0; i < buf_len; i++) {
-        if (line[i] == '\r') puts_raw("\n[NEW]");
-        if (line[i] == '\n') printf("[%d]", i);
-        putchar_raw(line[i]);
-    }
 }
 
 // Init NEO-M8N functions
@@ -251,6 +260,21 @@ void calculateUBXChecksum(uint8_t length, uint8_t *byte_stream) {
     // printf("check sum: %02x %02x\n", CK_A, CK_B);
 }
 
+void createUBXSleepPacket(uint32_t time, ubx_cfg_t *sleep) {
+    uint32_t converted = 0;
+    converted |= ((0x000000ff & time) << 24);
+    converted |= ((0x0000ff00 & time) << 8);
+    converted |= ((0x00ff0000 & time) >> 8);
+    converted |= ((0xff000000 & time) >> 24);
+    // printf("[CREATE SLEEP] T: %d %x\tCON: %x\n", time, time, converted);
+    sleep_temp[6] |= converted >> 24;
+    sleep_temp[7] |= (converted << 8) >> 24;
+    sleep_temp[8] |= (converted << 16) >> 24;
+    sleep_temp[9] |= (converted << 24) >> 24;
+    calculateUBXChecksum(16, sleep_temp);
+    memcpy(sleep, sleep_temp, 16);
+}
+
 bool writeAllConfigurationsToUblox(uart_inst_t *uart) {
     for (uint8_t i = 0; i < NUM_UBLOX_CONFIGS; i++) {
         // do bit magic for the length
@@ -264,14 +288,15 @@ bool writeAllConfigurationsToUblox(uart_inst_t *uart) {
 
 void writeSingleConfiguration(uart_inst_t *uart, uint8_t *byte_stream,
                               uint8_t len) {
-    printf("Writing Configuration: %x %x\n", byte_stream[2], byte_stream[3]);
+    // printf("Writing Configuration: %x %x\n", byte_stream[2], byte_stream[3]);
     if (!uart_is_writable(uart)) uart_tx_wait_blocking(uart);
     for (uint8_t i = 0; i < len; i++) {
         uart_putc_raw(uart, byte_stream[i]);
         // printf("%02x ", byte_stream[i]);
     }
+    // printf("\n");
+
     sleep_ms(1000);
-    
 }
 
 // GPS FUNCTIONS [END] ------------------------------------------------
