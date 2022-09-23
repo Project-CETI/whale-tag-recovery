@@ -1,0 +1,38 @@
+{
+    "type": "board_type",
+    "debug": "t/f for debug prints",
+    "startup": {
+        "flag": "t/f for waiting for gps, then broadcasting aprs",
+        "gps_lock_time": "how long to wait for gps",
+        "aprs_max_time": "number of broadcasts with transmission once/30sec"
+    },
+    "aprs": {
+        "callsign": "callsign",
+        "ssid": "ssid",
+        "symbol": "symbol",
+        "dest": "destination address",
+        "digi_path": "digi path",
+        "digi_ssid": "digi ssid",
+        "comment": "comment",
+        "comp_format": "true: compressed message format, false: standard format",
+        "timing": "timing between messages in seconds",
+        "variance": "random +/- timing variance in seconds",
+        "freq_lock": "frequency to lock to, otherwise will be based on gps coords"
+    },
+    "timing": {
+        "day_trigger": "time that triggers the 'start' of a day(ie, 14 is 2pm): -1 means no day/night switch",
+        "night_trigger": "time that triggers the 'start' of night: -1 means no day/night switch",
+        "day_timing": "time between daytime messages: -1 means no day/night switch",
+        "night_timing": "time between nighttime messages: -1 means no day/night switch",
+        "deep_sleep_trigger": "t/f trigger to deep sleep when low battery"
+    },
+    "simulation": {
+        "sim_loc": [
+            "lat",
+            "lon"
+        ],
+        "sim_move": "whether or not to slightly move the sim gps location around",
+        "sim_aprs_tx": "t/f send aprs or not",
+        "sim_tag_tx": "t/f send tag messages or not"
+    }
+}

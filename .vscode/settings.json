@@ -13,9 +13,9 @@
         "gps.h": "c",
         "stdlib.h": "c",
         "stdio.h": "c",
-        "sleep.h": "c",
         "aprs.h": "c",
         "stdbool.h": "c"
     },
-    "C_Cpp.errorSquiggles": "Enabled"
+    "C_Cpp.errorSquiggles": "Enabled",
+    "python.formatting.provider": "yapf"
 }

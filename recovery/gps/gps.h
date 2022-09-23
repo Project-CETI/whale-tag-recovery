@@ -3,6 +3,7 @@
 
 #include "pico/stdlib.h"
 #include "stdint.h"
+#include "ublox-config.h"
 
 // GPS DEFS [START] ---------------------------------------------------
 #define MAX_GPS_MSG_LEN 255
@@ -28,10 +29,11 @@ typedef struct gps_data_t {
     uint8_t gpsReadFlags[MAX_GPS_DATA_BUFFER];
 
     uint32_t quality;
-    datetime_t dt;
+    uint16_t timestamp[3];  // 0 is hour, 1 is minute, 2 is second
     bool inDominica;
     bool posCheck;
-    bool dtCheck;
+    bool dateCheck;
+    bool timeCheck;
 } gps_data_s;
 
 typedef struct gps_lat_lon_t {
@@ -42,7 +44,7 @@ typedef struct gps_lat_lon_t {
     bool notAvail;
 } gps_lat_lon_s;
 
-enum GPSDataBufferOrder { GPS_GLL = 0, GPS_GGA = 1, GPS_RMC = 2 };
+enum GPSDataBufferOrder { GPS_SIM = 0, GPS_GLL = 1, GPS_GGA = 2, GPS_RMC = 3 };
 
 // RX functions from NEO-M8N
 void parseGpsOutput(char *line, int buf_len, gps_data_s *gps_dat);
@@ -58,6 +60,7 @@ bool inDominica(float lat);
 uint32_t gpsInit(const gps_config_s *);
 
 // Ublox configuration functions
+void createUBXSleepPacket(uint32_t time, ubx_cfg_t *sleep);
 void calculateUBXChecksum(uint8_t length, uint8_t *byte_stream);
 bool writeAllConfigurationsToUblox(uart_inst_t *uart);
 void writeSingleConfiguration(uart_inst_t *uart, uint8_t *byte_stream,

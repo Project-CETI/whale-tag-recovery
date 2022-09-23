@@ -2,32 +2,30 @@ set(BIN_NAME "recovery")
 set(SOURCES
 	main.c
 	tag.c
+
 	)
 
-# set(INCLUDES 
-#     gps/
-# 	aprs/
-# 	pico_sleep/
-#     ) 
+set(INCLUDES 
+    generated
+    ) 
 
 
 add_executable(${BIN_NAME})
 
-
-# add_library(minmea SHARED IMPORTED) # or STATIC instead of SHARED
-# set_target_properties(minmea PROPERTIES
-#   IMPORTED_LOCATION "${CMAKE_SOURCE_DIR}/../minmea/minmea.so"
-#   INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}/../include/minmea"
-# )
+add_custom_command(
+	TARGET ${BIN_NAME}
+	PRE_BUILD
+    COMMAND cd ${CMAKE_SOURCE_DIR}/config-parser/ && python3 -m json2header -i floater.json
+)
 
 target_sources(${BIN_NAME} PRIVATE ${SOURCES})
-# target_include_directories(${BIN_NAME} PUBLIC "${CMAKE_SOURCE_DIR}/${INCLUDES}")
+target_include_directories(${BIN_NAME} PUBLIC ${INCLUDES})
 
 add_subdirectory("gps")
 add_subdirectory("aprs")
 
 pico_enable_stdio_usb(${BIN_NAME} 1) # Need this to enable picotool via USB connection
-pico_enable_stdio_uart(${BIN_NAME} 0) # Need this so that swarm isn't in bad shape
+#pico_enable_stdio_uart(${BIN_NAME} 0) # Need this so that swarm isn't in bad shape
 
 pico_add_extra_outputs(${BIN_NAME})
 

@@ -6,13 +6,13 @@
  * https://github.com/handiko/Arduino-APRS/blob/master/Arduino-Sketches/Example/APRS_Mixed_Message/APRS_Mixed_Message.ino.
  */
 #include "aprs.h"
+#include "../constants.h"
 #include "pico/stdlib.h"
 #include "pico/time.h"
 #include "vhf.h"
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
-#include "../constants.h"
 
 /// Re-define as 1 to make every sleep a busy wait
 #define PICO_TIME_DEFAULT_ALARM_POOL_DISABLED 0
@@ -45,15 +45,14 @@ const struct aprs_sig_s {
     const uint64_t bitPeriod;  ///< Total length of signal period per bit.
     const uint32_t delay1200;  ///< Delay for 1200Hz signal.
     const uint32_t delay2200;  ///< Delay for 2200Hz signal.
-} aprs_sig = {832, 26, 15};
+} aprs_sig = {832, 26, 14};
 
 uint64_t endTimeAPRS;  ///< us counter on how long to hold steps in DAC output.
 /// APRS payload arrays
 struct aprs_pyld_s {
-    char lati[9];  ///< Character array to hold the latitude coordinate.
-    char lon[10];  ///< Character array to hold the longitude coordinate.
-    char
-        cogSpeed[8];  ///< Character array to hold the course/speed information.
+    char lati[9];      ///< Char array to hold the latitude coordinate.
+    char lon[10];      ///< Char array to hold the longitude coordinate.
+    char cogSpeed[8];  ///< Char array to hold the course/speed information.
 } aprs_pyld;
 
 ///< Boolean for selecting 144.39MHz or 145.05MHz transmission.
@@ -278,12 +277,13 @@ static void sendHeader(const aprs_config_s *aprs_cfg) {
     sendCharNRZI((aprs_cfg->ssid + '0') << 1, true);
 
     //  /********* DIGI ***********/
-    temp = strlen(aprs_cfg->digi);
-    for (int j = 0; j < temp; j++) sendCharNRZI(aprs_cfg->digi[j] << 1, true);
+    temp = strlen(aprs_cfg->digi_path);
+    for (int j = 0; j < temp; j++)
+        sendCharNRZI(aprs_cfg->digi_path[j] << 1, true);
     if (temp < 6) {
         for (int j = temp; j < 6; j++) sendCharNRZI(' ' << 1, true);
     }
-    sendCharNRZI(((aprs_cfg->dssid + '0') << 1) + 1, true);
+    sendCharNRZI(((aprs_cfg->digi_ssid + '0') << 1) + 1, true);
 
     /***** CTRL FLD & PID *****/
     sendCharNRZI(aprs_pc._CTRL_ID, true);
@@ -304,14 +304,14 @@ static void sendHeader(const aprs_config_s *aprs_cfg) {
  */
 void sendPacket(const aprs_config_s *aprs_cfg, float *latlon, uint16_t *acs) {
     // Only reconfigure if out of range
-    // if (latlon[0] < 17.71468 && !freqInDominica) {
-    //     configureDra818v("145.05", "145.05", 8, false, false, false);
-    //     freqInDominica = true;
-    // } else if (latlon[0] >= 17.71468 && freqInDominica) {
-    //     configureDra818v(DEFAULT_FREQ, DEFAULT_FREQ, 8, false, false, false);
-    //     freqInDominica = false;
-    // }
- 
+    if (latlon[0] < 17.71468 && !freqInDominica) {
+        configureDra818v(DOMINICA_FREQ, DOMINICA_FREQ, 8, false, false, false);
+        freqInDominica = true;
+    } else if (latlon[0] >= 17.71468 && freqInDominica) {
+        configureDra818v(DEFAULT_FREQ, DEFAULT_FREQ, 8, false, false, false);
+        freqInDominica = false;
+    }
+
     buffer_index = 0;
     memset(buffer, 0x00, 255);
     setPttState(true);
@@ -349,44 +349,12 @@ void sendPacket(const aprs_config_s *aprs_cfg, float *latlon, uint16_t *acs) {
 void printRawPacket(char *buffer) { printf("RAW: %s\n", buffer); }
 // Debug TX functions
 void printPacket(const aprs_config_s *aprs_cfg) {
-    printf("%s0%s%d%s%d%x%x%c%s%c%s%c%s%s\n", aprs_cfg->dest,
-           aprs_cfg->callsign, aprs_cfg->ssid, aprs_cfg->digi, aprs_cfg->dssid,
-           aprs_pc._CTRL_ID, aprs_pc._PID, aprs_pc._DT_POS, aprs_pyld.lati,
-           aprs_pc.sym_ovl, aprs_pyld.lon, aprs_pc.sym_tab, aprs_pyld.cogSpeed,
-           aprs_cfg->comment);
-}
-
-void sendTestPackets(const aprs_config_s *aprs_cfg) {
-    float latlon[2] = {0, 0};
-    uint16_t acs[3] = {0, 0, 0};
-    switch (aprs_cfg->style) {
-        case 1:
-            // printf("Style 1: My latlon is: %f %f\n",latlon[0],latlon[1]);
-            sendPacket(aprs_cfg, latlon, acs);
-            break;
-        case 2:
-            latlon[0] = 42.3648;
-            latlon[1] = -71.1247;
-            // printf("Style 2: My latlon is: %f %f\n",latlon[0],latlon[1]);
-            sendPacket(aprs_cfg, latlon, acs);
-            break;
-        case 3:
-            sendHeader(aprs_cfg);
-            sendStrLen(">...", strlen(">..."));
-            break;
-        case 4:
-            aprs_cc.crc = 0xffff;
-            sendStrLen("123456789", 9);
-            sendCrc();
-            aprs_cc.crc = 0xffff;
-            sendStrLen("A", 1);
-            sendCrc();
-            break;
-        default:
-            // printf("Style D: My latlon is: %f %f\n",latlon[0],latlon[1]);
-            sendPacket(aprs_cfg, latlon, acs);
-            break;
-    }
+    //     printf("%s0%s%d%s%d%x%x%c%s%c%s%c%s%s\n", aprs_cfg->dest,
+    //            aprs_cfg->callsign, aprs_cfg->ssid, aprs_cfg->digi,
+    //            aprs_cfg->dssid, aprs_pc._CTRL_ID, aprs_pc._PID,
+    //            aprs_pc._DT_POS, aprs_pyld.lati, aprs_pc.sym_ovl,
+    //            aprs_pyld.lon, aprs_pc.sym_tab, aprs_pyld.cogSpeed,
+    //            aprs_cfg->comment);
 }
 
 // Configuration functions
@@ -402,14 +370,12 @@ void sendTestPackets(const aprs_config_s *aprs_cfg) {
  * @param cmt Comment to append to end of APRS packet (default: Ceti b1.0 2-S)
  * @see sendHeader
  */
-void initializeAPRS(void) {
-    initializeVHF();
-}
+void initializeAPRS(void) { initializeVHF(); }
 
-void configureAPRS_TX(const char *txFrequency) {
-    configureDra818v(txFrequency, txFrequency, 4, false, false, false);
-    freqInDominica = (txFrequency[2] == '5');
-}
+// void configureAPRS_TX(const char *txFrequency) {
+//     configureDra818v(txFrequency, txFrequency, 4, false, false, false);
+//     freqInDominica = (txFrequency[2] == '5');
+// }
 
 /** Adds any relevant information to the compiled binary.
  * Currently, only adds the VHF module.

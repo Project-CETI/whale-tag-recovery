@@ -1,0 +1,37 @@
+{
+    "type": "floater",
+    "debug": false,
+    "startup": {
+        "flag": false,
+        "gps_lock_time": "60",
+        "aprs_max_time": "6"
+    },
+    "aprs": {
+        "callsign": "J75Y",
+        "ssid": 1,
+        "symbol": "/C",
+        "dest": "APRS",
+        "digi_path": "WIDE2",
+        "digi_ssid": 2,
+        "comment": "Hi Phil",
+        "comp_format": false,
+        "timing": 300,
+        "variance": 30,
+        "freq_lock": 144.39
+    },
+    "timing": {
+        "day_trigger": 7,
+        "night_trigger": 19,
+        "day_timing": 30,
+        "night_timing": 30,
+        "deep_sleep_trigger": false
+    },
+    "simulation": {
+        "sim_loc": [
+            42.363464, -71.125862
+        ],
+        "sim_move": true,
+        "sim_aprs_tx": true,
+        "sim_tag_tx": false
+    }
+}

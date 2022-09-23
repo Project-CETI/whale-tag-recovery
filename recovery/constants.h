@@ -8,8 +8,6 @@
 #include "tag.h"
 
 // Callsign and SSIS configuration
-#define CALLSIGN "J75Y"
-#define SSID 9
 #define DEFAULT_LAT 15.31383
 #define DEFAULT_LON -61.30075
 
@@ -22,29 +20,19 @@
 static const char DEFAULT_FREQ[9] = "144.3900";
 static const char DOMINICA_FREQ[9] = "145.0500";
 
+static const uint32_t aprs_timing_startup = 20000;  // in milliseconds
+static const uint16_t aprs_timing_delay = 10000;
 
-static const uint32_t DAY_SLEEP =
-    10000;  // 1200000;        // 20 minutes in milliseconds
-static const uint32_t NIGHT_SLEEP =
-    30000;  // 3600000;      // 60 minutes in milliseconds
-static const uint32_t GEOFENCE_SLEEP =
-    1000;  // 72000000;  // 20 hours in milliseconds
-static const uint32_t FLOATER_VARIANCE = 120000;  // 2 minutes in milliseconds
-static const uint32_t TAG_VARIANCE = 120000;      // 2 minutes in milliseconds
-static const uint32_t TESTING_VARIANCE = 30000;   // 2 minutes in milliseconds
-static const uint32_t TESTING_TIME = 1000;
-static const uint8_t DAY_NIGHT_ROLLOVER = 19;  // 7pm
-static const uint8_t NIGHT_DAY_ROLLOVER = 5;   // 5am
-static const int8_t UTC_OFFSET = -4;
-
-static const uint8_t VHF_PIN = 6;
-
+// BUSY_SLEEP = sleep_ms/busy wait sleep
+// DAY_NIGHT_SLEEP = sleep with ability to wake up on GPS trigger, but
+// alternates between different timing during the day vs night for sleeping
+// DEAD_SLEEP = sleep until woken up with power cycle
+enum SleepType { BUSY_SLEEP = 0, DAY_NIGHT_SLEEP = 1, DEAD_SLEEP = 2, TAG_SLEEP = 3 };
 // Static constants
 /// Location of the LED pin
 static const uint8_t LED_PIN = 29;
-
-// do any of these operations?
-static uint32_t tMsgSent = 0;
+static const float VIN_SLEEP_LIMIT = 0.75;
+static const uint8_t MAX_APRS_TX_ATTEMPTS = 3;
 
 // reading/writing from/to tag
 static char tag_rd_buf[MAX_TAG_MSG_LEN];
