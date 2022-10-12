@@ -1,5 +1,5 @@
 {
-    "type": "floater",
+    "type": "dev",
     "debug": false,
     "startup": {
         "flag": false,
@@ -13,24 +13,24 @@
         "dest": "APRS",
         "digi_path": "WIDE2",
         "digi_ssid": 2,
-        "comment": "Hi Phil",
+        "comment": "Localization Testing",
         "comp_format": false,
-        "timing": 300,
-        "variance": 30,
-        "freq_lock": 144.39
+        "timing": 0,
+        "variance": 0,
+        "freq_lock": 149.00
     },
     "timing": {
-        "day_trigger": 7,
-        "night_trigger": 19,
-        "day_timing": 30,
-        "night_timing": 30,
+        "day_trigger": -1,
+        "night_trigger": -1,
+        "day_timing": -1,
+        "night_timing": -1,
         "deep_sleep_trigger": false
     },
     "simulation": {
         "sim_loc": [
             42.363464, -71.125862
         ],
-        "sim_move": true,
+        "sim_move": false,
         "sim_aprs_tx": true,
         "sim_tag_tx": false
     }

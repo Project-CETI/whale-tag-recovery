@@ -100,9 +100,9 @@ void recover_from_sleep() {
     stdio_init_all();
 
     initLed();
-    setLed(true);  
+    setLed(true);
     printf("Re-init GPS and APRS \n");
-  
+
     // gpsInit(&gps_config);
     // initializeAPRS();
     // wakeVHF();
@@ -121,26 +121,22 @@ static void rtc_sleep(uint32_t sleep_time) {
     // sleep_ms(100);
     sleep_run_from_xosc();
 
-    datetime_t t = {
-            .year  = 2020,
-            .month = 06,
-            .day   = 05,
-            .dotw  = 5, // 0 is Sunday, so 5 is Friday
-            .hour  = 1,
-            .min   = 01,
-            .sec   = 00
-    };
+    datetime_t t = {.year = 2020,
+                    .month = 06,
+                    .day = 05,
+                    .dotw = 5,  // 0 is Sunday, so 5 is Friday
+                    .hour = 1,
+                    .min = 01,
+                    .sec = 00};
 
     // Alarm 10 seconds later
-    datetime_t t_alarm = {
-            .year  = 2020,
-            .month = 06,
-            .day   = 05,
-            .dotw  = 5, // 0 is Sunday, so 5 is Friday
-            .hour  = 1,
-            .min   = 01,
-            .sec   = 10
-    };
+    datetime_t t_alarm = {.year = 2020,
+                          .month = 06,
+                          .day = 05,
+                          .dotw = 5,  // 0 is Sunday, so 5 is Friday
+                          .hour = 1,
+                          .min = 01,
+                          .sec = 10};
 
     // Start the RTC
     rtc_init();
@@ -203,14 +199,15 @@ bool txTag(repeating_timer_t *rt) {
 }
 
 float getVin() {
-    uint16_t r1 = 10000;
-    uint16_t r2 = 10000;
-    float maxAdcVal = pow(2, 13) - 1; 
-    float adcRefVoltage = 3.3;
-    uint16_t adcVal = analogRead(26);
-    float vinVal = (((float)adcVal) / maxAdcVal) * adcRefVoltage;
-    float voltage = vinVal * (r1 + r2) / r2;
-    return voltage;
+    // uint16_t r1 = 10000;
+    // uint16_t r2 = 10000;
+    // float maxAdcVal = pow(2, 13) - 1;
+    // float adcRefVoltage = 3.3;
+    // uint16_t adcVal = analogRead(26);
+    // float vinVal = (((float)adcVal) / maxAdcVal) * adcRefVoltage;
+    // float voltage = vinVal * (r1 + r2) / r2;
+    // return voltage;
+    return 3.3; // need to fix this to initialize the adc correctly
 }
 
 void initAll(const gps_config_s *gps_cfg, const tag_config_s *tag_cfg) {
@@ -240,16 +237,17 @@ int main() {
     clock_config.clock0_orig = clocks_hw->sleep_en0;
     clock_config.clock1_orig = clocks_hw->sleep_en1;
 
-    // setLed(true);
-   
-    // wakeVHF();
+    setLed(true);
 
-    // setPttState(true);
+    wakeVHF();
 
-    // while(true) {
-    //     // nothing
-    // }
+    setPttState(true);
 
+    // THIS IS FOR NINAD. Broadcasts a constant 1200 wave. 
+    // nothing after this runs, it hangs here in this function
+    constant1200Wave();
+
+    // NONE OF THIS RUNS WHILE THE CONSTANT WAVEFORM IS ACTIVE
     enum SleepType sleep_type;
     if (timing_.day_trigger > 0 && timing_.night_trigger > 0 &&
         timing_.day_interval > 0 && timing_.night_interval > 0) {
@@ -349,13 +347,15 @@ int main() {
 
                     if (gps_data.timestamp[0] > timing_.day_trigger &&
                         gps_data.timestamp[0] < timing_.night_trigger) {
-                        printf("[DAYTIME]: %d:%d:%d sleeping for %d\n", gps_data.timestamp[0],
-                               gps_data.timestamp[1], gps_data.timestamp[2], timing_.day_interval);
+                        printf("[DAYTIME]: %d:%d:%d sleeping for %d\n",
+                               gps_data.timestamp[0], gps_data.timestamp[1],
+                               gps_data.timestamp[2], timing_.day_interval);
                         rtc_sleep(timing_.day_interval);
                         // recover_from_sleep();
                     } else {
-                        printf("[NIGHTTIME]: %d:%d:%d sleeping for %d\n", gps_data.timestamp[0],
-                               gps_data.timestamp[1], gps_data.timestamp[2], timing_.night_interval);
+                        printf("[NIGHTTIME]: %d:%d:%d sleeping for %d\n",
+                               gps_data.timestamp[0], gps_data.timestamp[1],
+                               gps_data.timestamp[2], timing_.night_interval);
                         rtc_sleep(timing_.night_interval);
                         // recover_from_sleep();
                     }
