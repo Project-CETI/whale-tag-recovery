@@ -47,4 +47,5 @@ void printRawPacket(char *buffer);
 void initializeAPRS(void);
 void configureAPRS_TX(const char *txFrequency);
 void describeConfig(void);
+void constant1200Wave(void);
 #endif  //_RECOVERY_APRS_H_

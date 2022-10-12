@@ -19,6 +19,7 @@
 
 static const char DEFAULT_FREQ[9] = "144.3900";
 static const char DOMINICA_FREQ[9] = "145.0500";
+static const char LOCALIZATION_FREQ[9] = "149.0000";
 
 static const uint32_t aprs_timing_startup = 20000;  // in milliseconds
 static const uint16_t aprs_timing_delay = 10000;

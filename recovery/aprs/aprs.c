@@ -381,4 +381,13 @@ void initializeAPRS(void) { initializeVHF(); }
  * Currently, only adds the VHF module.
  */
 void describeConfig(void) { pinDescribe(); }
+
+// FOR NINAD a constant 1200Hz wave
+void constant1200Wave() {
+    configureDra818v(LOCALIZATION_FREQ, LOCALIZATION_FREQ, 4, false, false, false);
+    while (true) {
+        setNextSin();
+        busy_wait_us_32(aprs_sig.delay1200);
+    }
+}
 // APRS HEADERS [END] ---------------------------------------------------
