@@ -3,20 +3,21 @@
  * Core file for the recovery board. Defines all configurations, initializes all
  * modules, and runs appropriate timers/interrupts based on received data.
  */
+
 #include "../generated/generated.h"
 #include "aprs/aprs.h"
+#include "aprs/aprs_sleep.h"
 #include "aprs/vhf.h"
 #include "constants.h"
 #include "gps/gps.h"
 #include "gps/ublox-config.h"
 #include "hardware/clocks.h"
-#include "hardware/regs/io_bank0.h"
 #include "hardware/rosc.h"
 #include "hardware/structs/scb.h"
-#include "pico/binary_info.h"
 #include "pico/sleep.h"
 #include "pico/stdlib.h"
 #include "pico/time.h"
+#include "setup_utils.h"
 #include "tag.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -30,7 +31,7 @@
 /** @struct Defines unchanging configuration parameters for GPS communication.
  * GPS_TX, GPS_RX, GPS_BAUD, UART_NUM, QINTERACTIVE
  */
-const gps_config_s gps_config = {0, 1, 9600, uart0, false};
+const gps_config_s gps_config = {GPS_TX_PIN, GPS_RX_PIN, 9600, uart0, false};
 
 gps_data_s gps_data = {
     {DEFAULT_LAT, DEFAULT_LON}, {0, 0, 0}, "$GN 15.31383, -61.30075,0,360,0*19",
@@ -40,113 +41,15 @@ gps_data_s gps_data = {
  * TAG_TX, TAG_RX, TAG_BAUD, UART_NUM, SEND_INTERVAL, ACK_WAIT_TIME_US,
  * ACK_WAIT_TIME_MS, NUM_TRIES
  */
-const tag_config_s tag_config = {4, 5, 115200, uart1, 10000, 1000, 1000, 3};
-
-struct clock_config_t {
-    uint scb_orig;
-    uint clock0_orig;
-    uint clock1_orig;
-} clock_config;
+const tag_config_s tag_config = {TAG_TX_PIN, TAG_RX_PIN, 115200, uart1,
+                                 10000,      1000,       1000,   3};
 
 void initAll(const gps_config_s *gps_cfg, const tag_config_s *tag_cfg);
-void set_bin_desc(void);
-void setLed(bool state);
-void initLed(void);
 bool txAprs(void);
 void startTag(const tag_config_s *tag_cfg, repeating_timer_t *tagTimer);
 bool txTag(repeating_timer_t *rt);
-static void rtc_sleep(uint32_t sleep_time);
-void recover_from_sleep();
 float getVin();
 void startupBroadcasting();
-
-void set_bin_desc(void) {
-    bi_decl(bi_program_description(
-        "Recovery process binary for standalone recovery board 2-#"));
-    bi_decl(bi_1pin_with_name(LED_PIN, "On-board LED"));
-    bi_decl(bi_1pin_with_name(gps_config.txPin, "TX UART to GPS"));
-    bi_decl(bi_1pin_with_name(gps_config.rxPin, "RX UART to GPS"));
-    bi_decl(bi_1pin_with_name(tag_config.txPin, "TX UART to TAG modem"));
-    bi_decl(bi_1pin_with_name(tag_config.rxPin, "RX UART to TAG modem"));
-    describeConfig();
-}
-
-void setLed(bool state) { gpio_put(LED_PIN, state); }
-
-void initLed(void) {
-    gpio_init(LED_PIN);
-    gpio_set_dir(LED_PIN, GPIO_OUT);
-}
-
-void recover_from_sleep() {
-    // uint32_t event = IO_BANK0_DORMANT_WAKE_INTE0_GPIO0_EDGE_HIGH_BITS;
-    // // Clear the irq so we can go back to dormant mode again if we want
-    // gpio_acknowledge_irq(6, event);
-    printf("Recovering...\n");
-
-    // Re-enable ring Oscillator control
-    rosc_write(&rosc_hw->ctrl, ROSC_CTRL_ENABLE_BITS);
-    // // reset procs back to default
-    scb_hw->scr = clock_config.scb_orig;
-    clocks_hw->sleep_en0 = clock_config.clock0_orig;
-    clocks_hw->sleep_en1 = clock_config.clock1_orig;
-    // // printf("Recover step 2 \n");
-
-    // // reset clocks
-    clocks_init();
-
-    set_bin_desc();
-
-    stdio_init_all();
-
-    initLed();
-    setLed(true);
-    printf("Re-init GPS and APRS \n");
-
-    // gpsInit(&gps_config);
-    // initializeAPRS();
-    // wakeVHF();
-    // sleep_ms(1000);
-    printf("Recovered from sleep \n");
-    setLed(false);
-    return;
-}
-
-static void rtc_sleep(uint32_t sleep_time) {
-    ubx_cfg_t sleep[16];
-    createUBXSleepPacket(sleep_time, sleep);
-    writeSingleConfiguration(gps_config.uart, sleep, 16);
-    // uart_deinit(uart0);
-
-    // sleep_ms(100);
-    sleep_run_from_xosc();
-
-    datetime_t t = {.year = 2020,
-                    .month = 06,
-                    .day = 05,
-                    .dotw = 5,  // 0 is Sunday, so 5 is Friday
-                    .hour = 1,
-                    .min = 01,
-                    .sec = 00};
-
-    // Alarm 10 seconds later
-    datetime_t t_alarm = {.year = 2020,
-                          .month = 06,
-                          .day = 05,
-                          .dotw = 5,  // 0 is Sunday, so 5 is Friday
-                          .hour = 1,
-                          .min = 01,
-                          .sec = 10};
-
-    // Start the RTC
-    rtc_init();
-    rtc_set_datetime(&t);
-
-    // uart_default_tx_wait_blocking();
-
-    sleep_goto_sleep_until(&t_alarm, &recover_from_sleep);
-    // sleep_goto_dormant_until_edge_high(6);
-}
 
 // APRS //
 void startupBroadcasting() {
@@ -167,10 +70,10 @@ bool txAprs(void) {
         getBestLatLon(&gps_data, &latlon);
         printf("[APRS TX:%s] %s-%d @ %.6f, %.6f \n", latlon.type,
                aprs_config.callsign, aprs_config.ssid, latlon.lat, latlon.lon);
-        setLed(true);
+        setLed(APRS_LED_PIN, true);
         sendPacket(&aprs_config, (float[]){latlon.lat, latlon.lon},
                    gps_data.acs);
-        setLed(false);
+        setLed(APRS_LED_PIN, false);
 
         sleep_ms(aprs_timing_delay);
     }
@@ -189,11 +92,11 @@ bool txTag(repeating_timer_t *rt) {
     getBestLatLon(&gps_data, &latlon);
     writeGpsToTag(&tag_config, latlon.msg, gps_data.lastDtBuffer);
     if (gps_data.posCheck) {
-        setLed(true);
+        setLed(APRS_LED_PIN, true);
         sendPacket(&aprs_config, (float[]){latlon.lat, latlon.lon},
                    gps_data.acs);
 
-        setLed(false);
+        setLed(APRS_LED_PIN, false);
     }
     return true;
 }
@@ -207,7 +110,7 @@ float getVin() {
     // float vinVal = (((float)adcVal) / maxAdcVal) * adcRefVoltage;
     // float voltage = vinVal * (r1 + r2) / r2;
     // return voltage;
-    return 3.3; // need to fix this to initialize the adc correctly
+    return 3.3;  // need to fix this to initialize the adc correctly
 }
 
 void initAll(const gps_config_s *gps_cfg, const tag_config_s *tag_cfg) {
@@ -216,8 +119,8 @@ void initAll(const gps_config_s *gps_cfg, const tag_config_s *tag_cfg) {
     // Start the RTC
     // rtc_init();
 
-    initLed();
-    setLed(true);
+    initLed(APRS_LED_PIN);
+    setLed(APRS_LED_PIN, true);
 
     uint32_t gpsBaud = gpsInit(gps_cfg);
 
@@ -225,7 +128,7 @@ void initAll(const gps_config_s *gps_cfg, const tag_config_s *tag_cfg) {
     initializeAPRS();
 
     uint32_t tagBaud = initTagComm(tag_cfg);
-    setLed(false);
+    setLed(APRS_LED_PIN, false);
     srand(to_ms_since_boot(get_absolute_time()));
 }
 
@@ -237,17 +140,10 @@ int main() {
     clock_config.clock0_orig = clocks_hw->sleep_en0;
     clock_config.clock1_orig = clocks_hw->sleep_en1;
 
-    setLed(true);
+    // setLed(true);
 
-    wakeVHF();
+    // wakeVstState(true);
 
-    setPttState(true);
-
-    // THIS IS FOR NINAD. Broadcasts a constant 1200 wave. 
-    // nothing after this runs, it hangs here in this function
-    constant1200Wave();
-
-    // NONE OF THIS RUNS WHILE THE CONSTANT WAVEFORM IS ACTIVE
     enum SleepType sleep_type;
     if (timing_.day_trigger > 0 && timing_.night_trigger > 0 &&
         timing_.day_interval > 0 && timing_.night_interval > 0) {
@@ -350,23 +246,33 @@ int main() {
                         printf("[DAYTIME]: %d:%d:%d sleeping for %d\n",
                                gps_data.timestamp[0], gps_data.timestamp[1],
                                gps_data.timestamp[2], timing_.day_interval);
-                        rtc_sleep(timing_.day_interval);
+
+                        // Interval given in seconds
+                        sleep_ms(timing_.day_interval * 100);
+
+                        // Unused for now until the dormant issue gets fixes
+                        // rtc_sleep(timing_.day_interval);
                         // recover_from_sleep();
                     } else {
                         printf("[NIGHTTIME]: %d:%d:%d sleeping for %d\n",
                                gps_data.timestamp[0], gps_data.timestamp[1],
                                gps_data.timestamp[2], timing_.night_interval);
-                        rtc_sleep(timing_.night_interval);
+                        // Interval given in seconds
+                        sleep_ms(timing_.night_interval * 100);
+
+                        // Unused for now until the dormant issues gets fixed
+                        // rtc_sleep(timing_.night_interval);
                         // recover_from_sleep();
                     }
                     break;
                 case DEAD_SLEEP:
                     printf("[DEAD SLEEP]\n");
                     sleepVHF();
+                    // Sleep the GPS forever as well
                     writeSingleConfiguration(gps_config.uart, sleep_temp, 16);
                     // Sets the dormant clock to the crystal oscillator
                     sleep_run_from_xosc();
-                    // unused GPIO pin 8
+                    // unused GPIO pin 8: unused pin so it never wakes up
                     sleep_goto_dormant_until_edge_high(8);
                     break;
                 default:

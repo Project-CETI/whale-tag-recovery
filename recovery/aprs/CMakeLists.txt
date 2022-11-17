@@ -2,6 +2,7 @@ set(DIR_NAME "aprs")
 set(SOURCES 
     aprs.c
     vhf.c
+    aprs_sleep.c
     ) 
 
 # set(INCLUDES 
