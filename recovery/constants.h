@@ -6,6 +6,7 @@
 #include "stdbool.h"
 #include "stdint.h"
 #include "tag.h"
+#include "aprs/aprs_sleep.h"
 
 // Callsign and SSIS configuration
 #define DEFAULT_LAT 15.31383
@@ -16,6 +17,16 @@
 #define NUM_SINS 32
 
 #define MAX_TAG_MSG_LEN 20
+
+
+typedef struct clock_config_t {
+    uint scb_orig;
+    uint clock0_orig;
+    uint clock1_orig;
+} clock_config_s;
+
+static clock_config_s clock_config;
+
 
 static const char DEFAULT_FREQ[9] = "144.3900";
 static const char DOMINICA_FREQ[9] = "145.0500";
@@ -31,7 +42,6 @@ static const uint16_t aprs_timing_delay = 10000;
 enum SleepType { BUSY_SLEEP = 0, DAY_NIGHT_SLEEP = 1, DEAD_SLEEP = 2, TAG_SLEEP = 3 };
 // Static constants
 /// Location of the LED pin
-static const uint8_t LED_PIN = 29;
 static const float VIN_SLEEP_LIMIT = 0.75;
 static const uint8_t MAX_APRS_TX_ATTEMPTS = 3;
 
@@ -73,6 +83,13 @@ static const uint8_t VHF_TX =
     12;  ///< Defines the VHF's UART TX pin (for configuration).
 static const uint8_t VHF_RX =
     13;  ///< Defines the VHF's UART RX pin (for configuration).
+static const uint8_t APRS_LED_PIN = 29;
+static const uint8_t GPS_TX_PIN = 0;
+static const uint8_t GPS_RX_PIN = 1;
+
+static const uint8_t TAG_TX_PIN = 4;
+static const uint8_t TAG_RX_PIN = 5;
+
 
 /// Defines the delay between each VHF configuration step.
 static const uint32_t vhfEnableDelay = 1000;
@@ -87,5 +104,7 @@ static const uint8_t sinValues[NUM_SINS] = {
 // static const uint8_t sinValues[NUM_SINS] = {
 //     63, 75, 87, 98, 108, 116, 122, 125, 127, 125, 122, 116, 108, 98, 87, 75,
 //     63, 51, 39, 28, 18,  10,  4,   1,   0,   1,   4,   10,  18,  28, 39, 51};
+
+
 
 #endif  // _RECOVERY_CONSTANTS_H_
