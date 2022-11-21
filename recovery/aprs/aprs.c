@@ -384,6 +384,7 @@ void describeConfig(void) { pinDescribe(); }
 
 // FOR NINAD a constant 1200Hz wave
 void constant1200Wave() {
+    snprintf(LOCALIZATION_FREQ, 9, "%f", aprs_config.freq_lock);
     configureDra818v(LOCALIZATION_FREQ, LOCALIZATION_FREQ, 4, false, false, false);
     while (true) {
         setNextSin();
