@@ -13,11 +13,11 @@
         "dest": "APRS",
         "digi_path": "WIDE2",
         "digi_ssid": 2,
-        "comment": "Localization Testing",
+        "comment": "New Board Testing",
         "comp_format": false,
-        "timing": 0,
-        "variance": 0,
-        "freq_lock": 149.00
+        "timing": 60,
+        "variance": 10,
+        "freq_lock": 144.39
     },
     "timing": {
         "day_trigger": -1,
@@ -30,7 +30,7 @@
         "sim_loc": [
             42.363464, -71.125862
         ],
-        "sim_move": false,
+        "sim_move": true,
         "sim_aprs_tx": true,
         "sim_tag_tx": false
     }

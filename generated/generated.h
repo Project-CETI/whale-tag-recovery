@@ -41,11 +41,11 @@ typedef struct simulation_config_t {
 	bool tag_tx;
 } simulation_config_s;
 
-static const enum BoardBuildTypes board_ = FLOATER;
+static const enum BoardBuildTypes board_ = DEV;
 static const bool debug_ = false;
 static const startup_config_s startup_ = {false, 60, 6};
-static const aprs_config_s aprs_config = {"J75Y", 3, "/C", "APRS", "WIDE2", 2, "APRS-TEST-CETI", false, 60000, 5000, 144.39};
+static const aprs_config_s aprs_config = {"J75Y", 1, "/C", "APRS", "WIDE2", 2, "New Board Testing", false, 60000, 10000, 144.39};
 static const timing_config_s timing_ = {-1, -1, -1, -1, false};
-static const simulation_config_s simulation_ = {{0.0, 0.0}, true, false, false};
+static const simulation_config_s simulation_ = {{42.363464, -71.125862}, true, true, false};
 
 #endif // _GENERATED_H_
