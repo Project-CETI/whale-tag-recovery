@@ -64,8 +64,8 @@ bool freqInDominica = false;
  */
 static void setNextSin(void) {
     // printf("%d | %d\n", aprs_cc.currOutput, sinValues[aprs_cc.currOutput]);
-    if (aprs_cc.currOutput == NUM_SINS) aprs_cc.currOutput = 0;
-    setOutput(sinValues[aprs_cc.currOutput++]);
+    if (aprs_cc.currOutput == NUM_SINES) aprs_cc.currOutput = 0;
+    setOutput(remaskedValues[aprs_cc.currOutput++]);
 }
 
 /** Sets a 1200Hz output wave via the DAC.

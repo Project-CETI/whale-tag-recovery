@@ -15,7 +15,7 @@
         "digi_ssid": 2,
         "comment": "New Board Testing",
         "comp_format": false,
-        "timing": 60,
+        "timing": 10,
         "variance": 10,
         "freq_lock": 144.39
     },

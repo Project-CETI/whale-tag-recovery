@@ -34,7 +34,7 @@ static void initializeOutput(void) {
  */
 void setOutput(uint8_t state) {
     // Use pin mask for added security on gpio
-    gpio_put_masked(VHF_DACMASK, (state << VHF_DACSHIFT) & VHF_DACMASK);
+    gpio_put_masked(VHF_DACMASK, state & VHF_DACMASK);
 }
 
 /** @brief Re-configure the VHF module to tracker transmission frequency
@@ -48,13 +48,13 @@ void prepFishTx(const char *txFreq) {
  * Callback for repeating_timer functions */
 bool vhf_pulse_callback(void) {
     setPttState(true);
-    uint32_t stepLen = VHF_HZ * NUM_SINS;
+    uint32_t stepLen = VHF_HZ * NUM_SINES;
     int numSteps = stepLen * VHF_TX_LEN / 1000;
     // printf("[VHF/CB] steps: %d * %d * %d / 1000 = %d\n", VHF_HZ, NUM_SINS,
     //    VHF_TX_LEN, numSteps);
     stepLen = (int)1000000 / stepLen;
     for (int i = 0; i < numSteps; i++) {
-        setOutput(sinValues[i % NUM_SINS]);
+        setOutput(remaskedValues[i % NUM_SINES]);
         busy_wait_us_32(stepLen);
     }
     setOutput(0x00);
@@ -136,7 +136,7 @@ void configureDra818v(const char *txFrequency, const char *rxFrequency,
 
 /** Sets the VHF module's PTT state.
  * @param state Boolean value; if true, PTT is enabled. */
-void setPttState(bool state) { gpio_put(VHF_PTT, state); }
+void setPttState(bool state) { gpio_put(VHF_PTT, !state); }
 
 /** Sets the VHF module's sleep state.
  * @param state Boolean value; if true, the module is awake.

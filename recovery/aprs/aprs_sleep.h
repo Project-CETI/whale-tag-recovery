@@ -5,7 +5,7 @@
 #include "../gps/gps.h"
 #include <stdint.h>
 #include <stdio.h>
-#include "../setup_utils.h"
+#include "../constants.h"
 
 void set_bin_desc();
 void recover_from_sleep();

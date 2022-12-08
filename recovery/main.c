@@ -17,8 +17,8 @@
 #include "pico/sleep.h"
 #include "pico/stdlib.h"
 #include "pico/time.h"
-#include "setup_utils.h"
 #include "tag.h"
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -75,7 +75,7 @@ bool txAprs(void) {
                    gps_data.acs);
         setLed(APRS_LED_PIN, false);
 
-        sleep_ms(aprs_timing_delay);
+        // sleep_ms(aprs_timing_delay);
     }
 
     return gps_data.posCheck;
@@ -130,6 +130,12 @@ void initAll(const gps_config_s *gps_cfg, const tag_config_s *tag_cfg) {
     uint32_t tagBaud = initTagComm(tag_cfg);
     setLed(APRS_LED_PIN, false);
     srand(to_ms_since_boot(get_absolute_time()));
+
+    remaskDAC();
+    printf("DAC REMASKING\n");
+    for (uint8_t index = 0; index < NUM_SINES; index++) {
+        printf("\t%d -> %d\n", sineValues[index], remaskedValues[index]);
+    }
 }
 
 int main() {
@@ -186,7 +192,8 @@ int main() {
         // if we want to simulation gps coordinates, then seed them with the
         // simulation values. Also check to see if the coordinates should
         // randomly move around or not
-        if (simulation_.latlon[0] > 0 && simulation_.latlon[1] > 0) {
+        if (fabs(simulation_.latlon[0]) > 0 &&
+            fabs(simulation_.latlon[1]) > 0) {
             float sim_gps_variance = 0;
             if (simulation_.sim_move) {
                 sim_gps_variance = ((float)(rand_modifier % 100) / 10000);
@@ -225,13 +232,15 @@ int main() {
             }
 
             switch (sleep_type) {
-                case BUSY_SLEEP:
-                    printf("[BUSY SLEEP]\n");
-                    sleep_ms(((aprs_config.interval + rand_modifier) >
-                              VHF_WAKE_TIME_MS)
-                                 ? ((aprs_config.interval + rand_modifier) -
-                                    VHF_WAKE_TIME_MS)
-                                 : VHF_WAKE_TIME_MS);
+                case BUSY_SLEEP:;
+                    uint32_t sleep_time =
+                        (((aprs_config.interval + rand_modifier) >
+                          VHF_WAKE_TIME_MS)
+                             ? ((aprs_config.interval + rand_modifier) -
+                                VHF_WAKE_TIME_MS)
+                             : VHF_WAKE_TIME_MS);
+                    printf("[BUSY SLEEP] %d ms\n", sleep_time);
+                    sleep_ms(sleep_time);
 
                     wakeVHF();  // wake here so there's enough time to fully
                                 // wake up
