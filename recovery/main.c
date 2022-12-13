@@ -19,6 +19,7 @@
 #include "pico/time.h"
 #include "setup_utils.h"
 #include "tag.h"
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -186,7 +187,8 @@ int main() {
         // if we want to simulation gps coordinates, then seed them with the
         // simulation values. Also check to see if the coordinates should
         // randomly move around or not
-        if (simulation_.latlon[0] > 0 && simulation_.latlon[1] > 0) {
+        if (fabs(simulation_.latlon[0]) > 0 &&
+            fabs(simulation_.latlon[1]) > 0) {
             float sim_gps_variance = 0;
             if (simulation_.sim_move) {
                 sim_gps_variance = ((float)(rand_modifier % 100) / 10000);
