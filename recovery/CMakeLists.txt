@@ -15,7 +15,7 @@ add_executable(${BIN_NAME})
 add_custom_command(
 	TARGET ${BIN_NAME}
 	PRE_BUILD
-    COMMAND cd ${CMAKE_SOURCE_DIR}/config-parser/ && python3 -m json2header -i floater.json
+    COMMAND cd ${CMAKE_SOURCE_DIR}/config-parser/ && python3 -m json2header -i configuration.json
 )
 
 target_sources(${BIN_NAME} PRIVATE ${SOURCES})

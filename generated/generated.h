@@ -44,8 +44,8 @@ typedef struct simulation_config_t {
 static const enum BoardBuildTypes board_ = DEV;
 static const bool debug_ = false;
 static const startup_config_s startup_ = {false, 60, 6};
-static const aprs_config_s aprs_config = {"J75Y", 1, "/C", "APRS", "WIDE2", 2, "Localization Testing", false, 0, 0, 149.0};
+static const aprs_config_s aprs_config = {"J75Y", 1, "/C", "APRS", "WIDE2", 2, "Build Demonstration", false, 30000, 10000, 149.0};
 static const timing_config_s timing_ = {-1, -1, -1, -1, false};
-static const simulation_config_s simulation_ = {{42.363464, -71.125862}, false, true, false};
+static const simulation_config_s simulation_ = {{42.363464, -71.125862}, true, false, true};
 
 #endif // _GENERATED_H_

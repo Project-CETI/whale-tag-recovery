@@ -9,8 +9,8 @@ uart_inst_t *uartTag;
 int parseTagStatus(void) { return 0; }
 
 void writeGpsToTag(const tag_config_s *tag_cfg, char *lastGps, char *lastDt) {
-    printf("[TAG TX] %s\n", lastGps);
-    printf("[TAG TX] %s\n", lastDt);
+    printf("[TAG TX] %s : %s\n", lastGps, lastDt);
+    // printf("[TAG TX] %s\n", lastDt);
 
     if (!uart_is_writable(tag_cfg->uart)) uart_tx_wait_blocking(tag_cfg->uart);
     uart_putc(tag_cfg->uart, 'g');
