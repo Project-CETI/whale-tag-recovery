@@ -26,7 +26,7 @@ static void initializeOutput(void) {
 }
 
 /** Sets the DAC output to drive the VHF input.
- * Bitwise ANDs the input left-shifted by #VHF_DACSHIFT, and #VHF_DACMASK
+ * Bitwise ANDs the input and #VHF_DACMASK
  *
  * Uses the AND output as a pinmask to drive the GPIO pins.
  * @param state 8-bit value. Each bit drives a pin of the DAC, 0->18, 1->19,
@@ -34,7 +34,7 @@ static void initializeOutput(void) {
  */
 void setOutput(uint8_t state) {
     // Use pin mask for added security on gpio
-    gpio_put_masked(VHF_DACMASK, (state << VHF_DACSHIFT) & VHF_DACMASK);
+    gpio_put_masked(VHF_DACMASK, state & VHF_DACMASK);
 }
 
 /** @brief Re-configure the VHF module to tracker transmission frequency
@@ -54,7 +54,7 @@ bool vhf_pulse_callback(void) {
     //    VHF_TX_LEN, numSteps);
     stepLen = (int)1000000 / stepLen;
     for (int i = 0; i < numSteps; i++) {
-        setOutput(sinValues[i % NUM_SINS]);
+        setOutput(remaskedSinValues[i % NUM_SINS]);
         busy_wait_us_32(stepLen);
     }
     setOutput(0x00);
@@ -136,7 +136,15 @@ void configureDra818v(const char *txFrequency, const char *rxFrequency,
 
 /** Sets the VHF module's PTT state.
  * @param state Boolean value; if true, PTT is enabled. */
-void setPttState(bool state) { gpio_put(VHF_PTT, state); }
+void setPttState(bool state) { 
+    if (!state) {
+        gpio_set_dir(VHF_PTT, GPIO_IN);
+    } 
+    else {
+        gpio_set_dir(VHF_PTT, GPIO_OUT);
+        gpio_put(VHF_PTT, 0);
+    }
+}
 
 /** Sets the VHF module's sleep state.
  * @param state Boolean value; if true, the module is awake.

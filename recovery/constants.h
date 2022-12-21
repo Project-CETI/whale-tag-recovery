@@ -61,17 +61,13 @@ static const uint16_t VHF_HZ = 440;
  * input using a resistor ladder DAC, and drives that ladder using a set of GPIO
  * pins.
  *
- * The pinmask is the value 0b00000011111111000000000000000000, which represents
- * which of the GPIO pins 0-31 are to be used. We are using GPIO pins 18-25 for
+ * The pinmask is the value 0b11111111, which represents
+ * which of the GPIO pins 0-31 are to be used. We are using GPIO pins 0-7 for
  * the DAC. */
-static const uint32_t VHF_DACMASK = 0x3fc0000;
-/** Value to left-shift DAC masks to match GPIO pinmask.
- * Using the DAC requires passing an 8-bit pinmask 0b00000000 matching pins
- * 18-25, LSB=18. To match how the RP2040 SDK sets GPIO pins via pinmasks, this
- * DAC mask needs to be left-shifted to match the pin positions. */
-static const uint8_t VHF_DACSHIFT = 18;
 
-/// Set how long the pure VHF pulse should be
+static const uint32_t VHF_DACMASK = 0xFF;
+
+// Set how long the pure VHF pulse should be
 static const uint16_t VHF_TX_LEN = 800;
 
 // VHF control pins
@@ -80,31 +76,51 @@ static const uint8_t VHF_POWER_LEVEL =
 static const uint8_t VHF_PTT = 16;    ///< Defines the VHF's sleep pin.
 static const uint8_t VHF_SLEEP = 14;  ///< Defines the VHF's sleep pin.
 static const uint8_t VHF_TX =
-    12;  ///< Defines the VHF's UART TX pin (for configuration).
+    10;  ///< Defines the VHF's UART TX pin (for configuration).
 static const uint8_t VHF_RX =
-    13;  ///< Defines the VHF's UART RX pin (for configuration).
+    11;  ///< Defines the VHF's UART RX pin (for configuration).
 static const uint8_t APRS_LED_PIN = 29;
-static const uint8_t GPS_TX_PIN = 0;
-static const uint8_t GPS_RX_PIN = 1;
+static const uint8_t GPS_TX_PIN = 19;
+static const uint8_t GPS_RX_PIN = 18;
 
-static const uint8_t TAG_TX_PIN = 4;
-static const uint8_t TAG_RX_PIN = 5;
-
+static const uint8_t TAG_TX_PIN = 23;
+static const uint8_t TAG_RX_PIN = 22;
 
 /// Defines the delay between each VHF configuration step.
 static const uint32_t vhfEnableDelay = 1000;
-/** Array of sin values for the DAC output.
- * Corresponds to one whole 8-bit sine output.
- */
-static const uint8_t sinValues[NUM_SINS] = {
-    152, 176, 198, 217, 233, 245, 252, 255, 252, 245, 233,
-    217, 198, 176, 152, 127, 103, 79,  57,  38,  22,  10,
-    3,   1,   3,   10,  22,  38,  57,  79,  103, 128};
+
+/**The constant 'sinValues' is the sequence of values to be output on the 8 bit 
+ * DAC to generate a sin wave. Since the DAC pins are not in 
+ * order from 0-7, these values must be adjusted so that we 
+ * can drive the 8 gpios simultaneously with a single 8 bit 
+ * value. Based on the schemaic of the board, the values were
+ * remapped so that 
+ *  b0->gpio0
+ *  b1->gpio4
+ *  b2->gpio1
+ *  b3->gpio5
+ *  b4->gpio2
+ *  b5->gpio6
+ *  b6->gpio3
+ *  b7->gpio7
+ *  
+ * instead of the previous 1-to-1 mapping.
+ * 
+ * Each value has been adjusted accordingly in 
+ * 'remaskedSinValues'
+ **/
+
 
 // static const uint8_t sinValues[NUM_SINS] = {
-//     63, 75, 87, 98, 108, 116, 122, 125, 127, 125, 122, 116, 108, 98, 87, 75,
-//     63, 51, 39, 28, 18,  10,  4,   1,   0,   1,   4,   10,  18,  28, 39, 51};
+//     152, 176, 198, 217, 233, 245, 252, 255, 252, 245, 233,
+//     217, 198, 176, 152, 127, 103, 79,  57,  38,  22,  10,
+//     3,   1,   3,   10,  22,  38,  57,  79,  103, 128};
 
+
+static const uint8_t remaskedSinValues[NUM_SINS] = {
+    164, 196, 154, 173, 233, 207, 238, 255, 238, 207, 233,
+    173, 154, 196, 164, 127, 91, 59, 101, 82, 22, 48, 17,
+    1, 17, 48, 22, 82, 101, 59, 91, 128};
 
 
 #endif  // _RECOVERY_CONSTANTS_H_

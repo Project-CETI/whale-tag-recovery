@@ -131,6 +131,7 @@ void initAll(const gps_config_s *gps_cfg, const tag_config_s *tag_cfg) {
     uint32_t tagBaud = initTagComm(tag_cfg);
     setLed(APRS_LED_PIN, false);
     srand(to_ms_since_boot(get_absolute_time()));
+
 }
 
 int main() {
@@ -172,6 +173,8 @@ int main() {
     int32_t rand_modifier = 0;
     bool successfulTX = false;
     uint8_t txAttempt = 0;
+    
+
     // Loop
     while (true) {
         // calculate a random value between 0 and the variance to add/subtract
@@ -187,8 +190,8 @@ int main() {
         // if we want to simulation gps coordinates, then seed them with the
         // simulation values. Also check to see if the coordinates should
         // randomly move around or not
-        if (fabs(simulation_.latlon[0]) > 0 &&
-            fabs(simulation_.latlon[1]) > 0) {
+        if (simulation_.sim_enable) {
+
             float sim_gps_variance = 0;
             if (simulation_.sim_move) {
                 sim_gps_variance = ((float)(rand_modifier % 100) / 10000);
