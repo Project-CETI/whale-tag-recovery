@@ -23,6 +23,8 @@ This project has primarily been developed in Visual Studio Code (VSCode). If usi
 
 If you have other build kits installed, make sure to point the cmake build tools to the correct compiler. In this case, we want `GCC 10.3.1 arm-none-eabi` or a new version.
 
+[Dan V] Note: In Windows, you have to launch Visual code from WSL's console: Go to the folder of interest and type "code .". "WSL" should be visible on the lower left of the software when the IDE is launched correctly. 
+
 ## Code Structure
 The majority of the Recovery Board code is located in the `recovery` directory. Within that, there are two more directories: `aprs` and `gps`. As the naming suggests, code related to the APRS wave generation is stored in the `aprs` directory, and code related the GPS acquisition is within the `gps` directory. 
 
@@ -51,6 +53,7 @@ On MacOS, use Homebrew for the package management:
 ```
 brew install git cmake gcc-arm-none-eabi libstdc++-arm-none-eabi-newlib gcc g++ build-essential python3 libnewlib-arm-none-eabi 
 ```
+[Dan V] Note: the above command does not necessarly install all the libraries listed. "cmake" might need to be installed on its own (brew install cmake), as well as "gcc-arm-none-eabi".
 
 Next, the Pico Pi SDK and Extras will need to be installed. Clone both these repositories to a known location as you will need to configure environment 
 variables to point to their location. 
