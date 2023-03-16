@@ -138,6 +138,8 @@ Deploying to a Recovery Board can be done two ways: using picotool or by draggin
 ## Manual Deployment
 Once code has been built, the `.uf2` just needs to be copied over to the Pico Pi. Start with connecting a Recovery Board in boot select mode. To enter boot select mode, hold down the small boot button on the breakoff section of the Recovery Board as you connect it to the computer via USB. The Pico Pi should show up as a drive in Finder, Explorer or whatever the file system viewer is. Navigate to `/path/to/whale-tag-recovery/build/recovery/` in the file system viewer. Either drag and from the `recovery.uf2` to the Pico Pi drive, or cut and paste `recovery.uf2` into the drive. The drive should then unmount itself automatically. 
 
+[Dan V] Note: One cannot drag and drop in Finder on a Mac. One needs to copy the file via the console, from the build folder: cp -X ./recovery/recovery.uf2 /Volumes/RPI-RP2/
+
 ## Deployment with Picotool
 First `picotool` will need to be installed. This can be done by following the instructions [here](https://github.com/raspberrypi/picotool).
 
