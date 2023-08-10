@@ -1,0 +1,4 @@
+../Middlewares/ST/threadx/utility/low_power/tx_low_power.c:85:7:tx_low_power_enter	32	static,ignoring_inline_asm
+../Middlewares/ST/threadx/utility/low_power/tx_low_power.c:206:7:tx_low_power_exit	16	static
+../Middlewares/ST/threadx/utility/low_power/tx_low_power.c:287:8:tx_timer_get_next	56	static,ignoring_inline_asm
+../Middlewares/ST/threadx/utility/low_power/tx_low_power.c:413:7:tx_time_increment	48	static,ignoring_inline_asm

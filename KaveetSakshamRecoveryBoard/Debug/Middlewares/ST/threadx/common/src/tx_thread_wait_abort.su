@@ -1,0 +1,1 @@
+../Middlewares/ST/threadx/common/src/tx_thread_wait_abort.c:76:7:_tx_thread_wait_abort	64	static,ignoring_inline_asm

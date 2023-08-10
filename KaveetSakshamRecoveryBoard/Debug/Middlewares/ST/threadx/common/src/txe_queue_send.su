@@ -1,0 +1,1 @@
+../Middlewares/ST/threadx/common/src/txe_queue_send.c:78:7:_txe_queue_send	40	static,ignoring_inline_asm

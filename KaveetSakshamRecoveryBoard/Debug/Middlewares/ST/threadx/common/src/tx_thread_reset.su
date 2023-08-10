@@ -1,0 +1,1 @@
+../Middlewares/ST/threadx/common/src/tx_thread_reset.c:75:7:_tx_thread_reset	56	static,ignoring_inline_asm

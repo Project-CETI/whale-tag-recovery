@@ -1,0 +1,1 @@
+../Middlewares/ST/threadx/common/src/tx_byte_pool_search.c:87:9:_tx_byte_pool_search	96	static,ignoring_inline_asm

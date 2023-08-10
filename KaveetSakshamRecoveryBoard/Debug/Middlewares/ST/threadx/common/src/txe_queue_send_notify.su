@@ -1,0 +1,1 @@
+../Middlewares/ST/threadx/common/src/txe_queue_send_notify.c:74:7:_txe_queue_send_notify	24	static

@@ -1,0 +1,1 @@
+../Middlewares/ST/threadx/common/src/tx_byte_release.c:77:7:_tx_byte_release	128	static,ignoring_inline_asm

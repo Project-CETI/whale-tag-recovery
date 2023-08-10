@@ -1,0 +1,1 @@
+../Middlewares/ST/threadx/common/src/tx_timer_activate.c:74:7:_tx_timer_activate	40	static,ignoring_inline_asm

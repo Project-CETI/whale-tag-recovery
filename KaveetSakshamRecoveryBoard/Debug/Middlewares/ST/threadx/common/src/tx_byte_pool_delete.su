@@ -1,0 +1,1 @@
+../Middlewares/ST/threadx/common/src/tx_byte_pool_delete.c:81:7:_tx_byte_pool_delete	80	static,ignoring_inline_asm

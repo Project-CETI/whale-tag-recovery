@@ -1,0 +1,1 @@
+../Middlewares/ST/threadx/common/src/tx_block_pool_cleanup.c:78:7:_tx_block_pool_cleanup	64	static,ignoring_inline_asm

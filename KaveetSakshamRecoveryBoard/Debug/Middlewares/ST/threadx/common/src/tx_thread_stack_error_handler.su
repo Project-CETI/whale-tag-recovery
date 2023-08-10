@@ -1,0 +1,1 @@
+../Middlewares/ST/threadx/common/src/tx_thread_stack_error_handler.c:85:7:_tx_thread_stack_error_handler	32	static,ignoring_inline_asm

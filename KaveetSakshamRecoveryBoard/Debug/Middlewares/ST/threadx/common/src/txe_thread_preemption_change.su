@@ -1,0 +1,1 @@
+../Middlewares/ST/threadx/common/src/txe_thread_preemption_change.c:77:7:_txe_thread_preemption_change	32	static,ignoring_inline_asm

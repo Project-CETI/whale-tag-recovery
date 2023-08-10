@@ -1,0 +1,1 @@
+../Middlewares/ST/threadx/common/src/tx_time_set.c:73:7:_tx_time_set	32	static,ignoring_inline_asm

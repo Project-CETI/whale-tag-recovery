@@ -1,0 +1,1 @@
+../Middlewares/ST/threadx/common/src/txe_semaphore_create.c:81:7:_txe_semaphore_create	80	static,ignoring_inline_asm

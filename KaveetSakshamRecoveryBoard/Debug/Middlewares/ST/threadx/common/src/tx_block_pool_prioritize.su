@@ -1,0 +1,1 @@
+../Middlewares/ST/threadx/common/src/tx_block_pool_prioritize.c:75:7:_tx_block_pool_prioritize	80	static,ignoring_inline_asm

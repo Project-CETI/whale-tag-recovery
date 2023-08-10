@@ -1,0 +1,1 @@
+../Middlewares/ST/threadx/common/src/txe_mutex_get.c:79:7:_txe_mutex_get	40	static,ignoring_inline_asm

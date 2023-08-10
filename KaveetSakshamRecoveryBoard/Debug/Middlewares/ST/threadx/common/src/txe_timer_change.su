@@ -1,0 +1,1 @@
+../Middlewares/ST/threadx/common/src/txe_timer_change.c:79:7:_txe_timer_change	32	static,ignoring_inline_asm

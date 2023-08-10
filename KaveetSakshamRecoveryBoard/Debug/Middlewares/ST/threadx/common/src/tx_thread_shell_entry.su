@@ -1,0 +1,1 @@
+../Middlewares/ST/threadx/common/src/tx_thread_shell_entry.c:76:7:_tx_thread_shell_entry	40	static,ignoring_inline_asm

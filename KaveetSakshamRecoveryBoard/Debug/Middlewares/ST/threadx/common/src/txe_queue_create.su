@@ -1,0 +1,1 @@
+../Middlewares/ST/threadx/common/src/txe_queue_create.c:83:7:_txe_queue_create	88	static,ignoring_inline_asm

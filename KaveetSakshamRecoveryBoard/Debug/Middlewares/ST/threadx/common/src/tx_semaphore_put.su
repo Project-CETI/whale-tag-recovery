@@ -1,0 +1,1 @@
+../Middlewares/ST/threadx/common/src/tx_semaphore_put.c:75:7:_tx_semaphore_put	56	static,ignoring_inline_asm

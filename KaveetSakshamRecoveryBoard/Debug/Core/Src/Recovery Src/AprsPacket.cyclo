@@ -1,0 +1,6 @@
+AprsPacket.c:21:6:aprs_generate_packet	1
+AprsPacket.c:52:13:append_flag	2
+AprsPacket.c:61:13:append_callsign	4
+AprsPacket.c:85:13:append_gps_data	5
+AprsPacket.c:156:13:append_other_data	1
+AprsPacket.c:164:13:append_frame_check	4

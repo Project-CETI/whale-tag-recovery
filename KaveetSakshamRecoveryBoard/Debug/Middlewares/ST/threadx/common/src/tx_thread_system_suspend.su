@@ -1,0 +1,1 @@
+../Middlewares/ST/threadx/common/src/tx_thread_system_suspend.c:83:7:_tx_thread_system_suspend	128	static,ignoring_inline_asm
