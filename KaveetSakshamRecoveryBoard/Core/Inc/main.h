@@ -57,6 +57,14 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define VHF_PTT_Pin GPIO_PIN_2
+#define VHF_PTT_GPIO_Port GPIOA
+#define APRS_PD_Pin GPIO_PIN_5
+#define APRS_PD_GPIO_Port GPIOA
+#define APRS_H_L_Pin GPIO_PIN_6
+#define APRS_H_L_GPIO_Port GPIOA
+#define GPS_EXTINT_Pin GPIO_PIN_0
+#define GPS_EXTINT_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 
