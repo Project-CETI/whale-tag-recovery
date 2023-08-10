@@ -1,5 +1,5 @@
 # whale-tag-recovery
-APRS based GPS tracking for whale tags
+APRS based GPS tracking for whale tags on the Kaveet and Saksham Edition Recovery board.
 
 ## Background information
 Recovery Boards used by Project CETI are attached to tags to record GPS location of the tag when the whale surfaces, and to broadcast GPS location using APRS to track the location of the tag in real time and eventually recover it when it has detached from a whale. Currently there is limited communication between the tag software and the Recovery Board software, so the Recovery Board does not always know when a whale is submerged or not. Because of this, it will attempt to acquire a GPS signal before going into a sleep state until it gets woken up again. Once a GPS signal has been acquired, the Recovery Board broadcasts the GPS location data and also relays the information to the main tag so that it can be logged with the other tag sensor data. The Recovery Boards have also been used as standalone devices, or "floaters". 
