@@ -1,1 +1,0 @@
-../Middlewares/ST/threadx/common/src/tx_thread_sleep.c:74:7:_tx_thread_sleep	64	static,ignoring_inline_asm

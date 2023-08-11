@@ -1,1 +1,0 @@
-../Middlewares/ST/threadx/common/src/txe_mutex_create.c:82:7:_txe_mutex_create	80	static,ignoring_inline_asm

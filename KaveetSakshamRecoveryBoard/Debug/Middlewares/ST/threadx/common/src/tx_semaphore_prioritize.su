@@ -1,1 +1,0 @@
-../Middlewares/ST/threadx/common/src/tx_semaphore_prioritize.c:75:7:_tx_semaphore_prioritize	80	static,ignoring_inline_asm

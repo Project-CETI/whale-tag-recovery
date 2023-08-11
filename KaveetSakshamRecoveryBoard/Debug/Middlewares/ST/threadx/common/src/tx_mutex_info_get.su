@@ -1,1 +1,0 @@
-../Middlewares/ST/threadx/common/src/tx_mutex_info_get.c:81:7:_tx_mutex_info_get	40	static,ignoring_inline_asm

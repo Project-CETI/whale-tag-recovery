@@ -1,3 +1,0 @@
-../Core/Src/Recovery Src/AprsTransmit.c:25:6:aprs_transmit_send_data	80	static
-../Core/Src/Recovery Src/AprsTransmit.c:64:6:aprs_transmit_bit_timer_entry	24	static
-../Core/Src/Recovery Src/AprsTransmit.c:109:13:calcSineValues	24	static

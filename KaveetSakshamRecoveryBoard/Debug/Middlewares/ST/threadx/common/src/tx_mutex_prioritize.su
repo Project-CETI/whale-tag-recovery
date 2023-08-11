@@ -1,1 +1,0 @@
-../Middlewares/ST/threadx/common/src/tx_mutex_prioritize.c:75:7:_tx_mutex_prioritize	80	static,ignoring_inline_asm

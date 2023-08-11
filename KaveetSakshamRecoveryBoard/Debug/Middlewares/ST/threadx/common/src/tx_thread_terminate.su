@@ -1,1 +1,0 @@
-../Middlewares/ST/threadx/common/src/tx_thread_terminate.c:80:7:_tx_thread_terminate	184	static,ignoring_inline_asm

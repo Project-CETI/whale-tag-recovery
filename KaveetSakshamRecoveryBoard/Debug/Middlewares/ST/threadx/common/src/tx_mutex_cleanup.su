@@ -1,2 +1,0 @@
-../Middlewares/ST/threadx/common/src/tx_mutex_cleanup.c:78:7:_tx_mutex_cleanup	64	static,ignoring_inline_asm
-../Middlewares/ST/threadx/common/src/tx_mutex_cleanup.c:259:7:_tx_mutex_thread_release	48	static,ignoring_inline_asm

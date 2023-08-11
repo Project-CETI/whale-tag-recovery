@@ -1,6 +1,0 @@
-../Core/Src/Recovery Src/VHF.c:12:19:initialize_vhf	160	static
-../Core/Src/Recovery Src/VHF.c:25:19:configure_dra818v	224	static
-../Core/Src/Recovery Src/VHF.c:89:6:set_ptt	16	static
-../Core/Src/Recovery Src/VHF.c:96:6:set_power_level	16	static
-../Core/Src/Recovery Src/VHF.c:103:6:sleep_vhf	8	static
-../Core/Src/Recovery Src/VHF.c:109:6:wake_vhf	8	static

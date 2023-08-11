@@ -1,1 +1,0 @@
-../Middlewares/ST/threadx/common/src/tx_queue_receive.c:82:7:_tx_queue_receive	96	static,ignoring_inline_asm

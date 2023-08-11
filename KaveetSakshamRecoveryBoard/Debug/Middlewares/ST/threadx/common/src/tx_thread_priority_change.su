@@ -1,1 +1,0 @@
-../Middlewares/ST/threadx/common/src/tx_thread_priority_change.c:89:7:_tx_thread_priority_change	72	static,ignoring_inline_asm

@@ -1,1 +1,0 @@
-../Middlewares/ST/threadx/common/src/txe_thread_create.c:90:9:_txe_thread_create	112	static,ignoring_inline_asm

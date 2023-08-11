@@ -1,1 +1,0 @@
-../Middlewares/ST/threadx/common/src/tx_thread_timeout.c:79:7:_tx_thread_timeout	48	static,ignoring_inline_asm

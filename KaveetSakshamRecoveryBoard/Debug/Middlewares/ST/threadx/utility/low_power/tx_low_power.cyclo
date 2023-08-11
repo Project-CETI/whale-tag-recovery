@@ -1,4 +1,0 @@
-tx_low_power.c:85:7:tx_low_power_enter	2
-tx_low_power.c:206:7:tx_low_power_exit	3
-tx_low_power.c:287:8:tx_timer_get_next	8
-tx_low_power.c:413:7:tx_time_increment	12
