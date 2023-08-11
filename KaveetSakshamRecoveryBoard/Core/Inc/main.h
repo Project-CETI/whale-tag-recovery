@@ -53,7 +53,7 @@ extern "C" {
 void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
-
+void MX_TIM2_Fake_init(uint8_t newPeriod);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/

@@ -23,7 +23,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "Recovery Inc/Aprs.h"
+#include <stdint.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -33,7 +34,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define APRS_STACK_SIZE 2048
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -43,7 +44,8 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
-
+uint8_t aprs_stack[APRS_STACK_SIZE] = {0};
+TX_THREAD aprs_thread;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -61,8 +63,15 @@ UINT App_ThreadX_Init(VOID *memory_ptr)
   UINT ret = TX_SUCCESS;
   /* USER CODE BEGIN App_ThreadX_MEM_POOL */
 
+  VOID * pointer = aprs_stack;
+
+  TX_BYTE_POOL* byte_pool = (TX_BYTE_POOL*) memory_ptr;
+  ret = tx_byte_allocate(byte_pool, &pointer, APRS_STACK_SIZE, TX_NO_WAIT);
+
   /* USER CODE END App_ThreadX_MEM_POOL */
   /* USER CODE BEGIN App_ThreadX_Init */
+
+  tx_thread_create(&aprs_thread, "APRS Thread", aprs_thread_entry, 0x1234, pointer, APRS_STACK_SIZE, 1, 1, TX_NO_TIME_SLICE, TX_AUTO_START);
   /* USER CODE END App_ThreadX_Init */
 
   return ret;

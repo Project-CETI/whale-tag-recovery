@@ -1,6 +1,6 @@
-app_threadx.c:59:6:App_ThreadX_Init	1
-app_threadx.c:76:6:MX_ThreadX_Init	1
-app_threadx.c:94:6:App_ThreadX_LowPower_Timer_Setup	1
-app_threadx.c:106:6:App_ThreadX_LowPower_Enter	1
-app_threadx.c:118:6:App_ThreadX_LowPower_Exit	1
-app_threadx.c:130:7:App_ThreadX_LowPower_Timer_Adjust	1
+app_threadx.c:61:6:App_ThreadX_Init	1
+app_threadx.c:85:6:MX_ThreadX_Init	1
+app_threadx.c:103:6:App_ThreadX_LowPower_Timer_Setup	1
+app_threadx.c:115:6:App_ThreadX_LowPower_Enter	1
+app_threadx.c:127:6:App_ThreadX_LowPower_Exit	1
+app_threadx.c:139:7:App_ThreadX_LowPower_Timer_Adjust	1

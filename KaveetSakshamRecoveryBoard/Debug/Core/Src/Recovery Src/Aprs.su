@@ -1,0 +1,2 @@
+../Core/Src/Recovery Src/Aprs.c:22:6:aprs_thread_entry	568	static
+../Core/Src/Recovery Src/Aprs.c:94:13:toggle_freq	168	static
