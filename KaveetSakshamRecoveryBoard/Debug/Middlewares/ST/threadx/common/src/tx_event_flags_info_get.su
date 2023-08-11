@@ -1,1 +1,0 @@
-../Middlewares/ST/threadx/common/src/tx_event_flags_info_get.c:82:7:_tx_event_flags_info_get	40	static,ignoring_inline_asm

@@ -1,1 +1,0 @@
-../Middlewares/ST/threadx/common/src/tx_thread_relinquish.c:78:7:_tx_thread_relinquish	48	static,ignoring_inline_asm

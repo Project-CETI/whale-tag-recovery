@@ -1,1 +1,0 @@
-../Middlewares/ST/threadx/common/src/txe_event_flags_create.c:81:7:_txe_event_flags_create	80	static,ignoring_inline_asm

@@ -1,1 +1,0 @@
-../Middlewares/ST/threadx/common/src/tx_timer_thread_entry.c:77:7:_tx_timer_thread_entry	104	static,ignoring_inline_asm

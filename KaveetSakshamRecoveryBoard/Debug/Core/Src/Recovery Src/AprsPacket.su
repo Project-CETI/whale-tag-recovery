@@ -1,6 +1,0 @@
-../Core/Src/Recovery Src/AprsPacket.c:21:6:aprs_generate_packet	24	static
-../Core/Src/Recovery Src/AprsPacket.c:52:13:append_flag	24	static
-../Core/Src/Recovery Src/AprsPacket.c:61:13:append_callsign	32	static
-../Core/Src/Recovery Src/AprsPacket.c:85:13:append_gps_data	72	static
-../Core/Src/Recovery Src/AprsPacket.c:156:13:append_other_data	40	static
-../Core/Src/Recovery Src/AprsPacket.c:164:13:append_frame_check	32	static

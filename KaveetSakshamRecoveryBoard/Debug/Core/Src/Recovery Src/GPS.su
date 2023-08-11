@@ -1,6 +1,0 @@
-../Core/Inc/Lib Inc/minmea.h:268:21:minmea_tocoord	24	static
-../Core/Src/Recovery Src/GPS.c:19:19:initialize_gps	16	static
-../Core/Src/Recovery Src/GPS.c:29:6:read_gps_data	280	static
-../Core/Src/Recovery Src/GPS.c:65:13:parse_gps_output	144	static
-../Core/Src/Recovery Src/GPS.c:178:6:get_gps_lock	32	static
-../Core/Src/Recovery Src/GPS.c:214:6:is_in_dominica	24	static

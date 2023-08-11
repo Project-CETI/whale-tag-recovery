@@ -1,1 +1,0 @@
-../Middlewares/ST/threadx/common/src/tx_queue_delete.c:76:7:_tx_queue_delete	80	static,ignoring_inline_asm

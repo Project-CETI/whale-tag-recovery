@@ -1,1 +1,0 @@
-../Middlewares/ST/threadx/common/src/txe_mutex_delete.c:76:7:_txe_mutex_delete	32	static,ignoring_inline_asm
