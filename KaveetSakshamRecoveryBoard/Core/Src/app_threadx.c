@@ -61,8 +61,8 @@ extern Thread_HandleTypeDef threads[NUM_THREADS];
   */
 UINT App_ThreadX_Init(VOID *memory_ptr)
 {
-	UINT ret = TX_SUCCESS;
-	/* USER CODE BEGIN App_ThreadX_MEM_POOL */
+  UINT ret = TX_SUCCESS;
+  /* USER CODE BEGIN App_ThreadX_MEM_POOL */
 
 	//Initialize thread list so we can create threads
 	threadListInit();
@@ -75,8 +75,8 @@ UINT App_ThreadX_Init(VOID *memory_ptr)
 	  TX_BYTE_POOL* byte_pool = (TX_BYTE_POOL*) memory_ptr;
 	  ret = tx_byte_allocate(byte_pool, &pointer, threads[index].config.thread_stack_size, TX_NO_WAIT);
 
-	/* USER CODE END App_ThreadX_MEM_POOL */
-	/* USER CODE BEGIN App_ThreadX_Init */
+  /* USER CODE END App_ThreadX_MEM_POOL */
+  /* USER CODE BEGIN App_ThreadX_Init */
 	  tx_thread_create(
 			  &threads[index].thread,
 			  threads[index].config.thread_name,
@@ -97,9 +97,9 @@ UINT App_ThreadX_Init(VOID *memory_ptr)
 	else {
 		tx_thread_resume(&threads[APRS_THREAD].thread);
 	}
-	/* USER CODE END App_ThreadX_Init */
+  /* USER CODE END App_ThreadX_Init */
 
-	return ret;
+  return ret;
 }
 
   /**
