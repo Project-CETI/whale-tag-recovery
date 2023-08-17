@@ -15,139 +15,14 @@ Within the `aprs` directory, the values for the timing can be found in the `aprs
 
 In the United States, the frequency APRS is broadcast at is 144.39MHz, but in Dominica it is 145.05MHz. It varies country to country. 
 
-## C++ Style and formatting
-This repository is formatted using Clang Format, and loosely follows the Google C/C++ standard. The formatting is stored in the `.clang-format` file in the base directory of the repository.
+## C Style and formatting
+This repository is formatted in the same manner as the V3.0 Embedded Firmware for the Tag. See the style guide written by Michael Salino-Hugg for more specific details.
 
-## IDE Configuration
-This project has primarily been developed in Visual Studio Code (VSCode). If using VSCode, some extensions that might be helpful include: C/C++ (for IntelliSense), Clang-Format, CMake, CMake Tools, Python for VSCode
+## Repository Setup
+This project is setup the same way as any other generic STM32 project, like the V3 Tag Firmware. See the section titled "Code and Flashing" from Amjad's Handover document for more specifics on downloading STM32CubeIDE and flashing the board: https://docs.google.com/document/d/1o9TE2r5OU4Np_9Mus9UJ9wEsDlY4g3nc/edit
 
-If you have other build kits installed, make sure to point the cmake build tools to the correct compiler. In this case, we want `GCC 10.3.1 arm-none-eabi` or a new version.
+## ThreadX Documentation
+This project uses ThreadX as its RTOS. Although we only really have one active thread at a time (APRS or Fishtracker), an RTOS was used since it was also used on the V3 Tag. This made the code entirely reuseable between the two. For more information on ThreadX, see the setup document: https://docs.google.com/document/d/1OzBxFDs0OrZu2cVyPhHXoqq2Y2pGeERJWq3Q2YsUxtY/edit?usp=sharing
 
-[Dan V] Note: In Windows, you have to launch Visual code from WSL's console: Go to the folder of interest and type "code .". "WSL" should be visible on the lower left of the software when the IDE is launched correctly. 
-
-## Code Structure
-The majority of the Recovery Board code is located in the `recovery` directory. Within that, there are two more directories: `aprs` and `gps`. As the naming suggests, code related to the APRS wave generation is stored in the `aprs` directory, and code related the GPS acquisition is within the `gps` directory. 
-
-The `lib` directory is where third party libraries should be located. Right now the only one used is `minmea` for parsing NMEA messages from the satellites. 
-
-### Configuration Parser
-There are many different parameters about a Recovery Board that have to be configured each time it is attached to a tag, or used as a standalone device (floater). This can include the APRS callsign and SSID, digipath, sleep patterns for the board, simulating location, etc. To make the code easier for non-developers to use, such as the Dominica team, there is a `json` file used for configuring specific Recovery Board parameters. Located in `config-parser`, there is a file called `configuration.json`. This file contains the configuration that will Recovery Board will use the next time code is rebuilt. There is also a `example.json` that details more about what each configuration paramters does, and `json_options.txt` is more explicit about what type of input the parser is expecting. 
-
-The json file is parsed with a simple Python parser that then loads the configurations into an auto-generated header file that the rest of the code uses. This auto-generated file is located in the `generated` directory. **Do not** modify the auto-generated file. If any changes need to be made, make them in `configuration.json`. 
-
-# Setup and Building Local Environment
-## Mac/Linux Local Environments
-When working on a MacOS or Linux environment, it is not needed to set up a Docker Development environment and everything can be installed localled. However, a Docker environment can be
-used if needed. 
-
-Start by cloning this repository to a location of your choosing:
-```
-git clone -b <branch> https://github.com/Project-CETI/whale-tag-recovery.git
-```
-
-Next, a number of packages will need to be installed:
-```
-apt-get install git cmake gcc-arm-none-eabi libstdc++-arm-none-eabi-newlib gcc g++ build-essential python3 libnewlib-arm-none-eabi 
-```
-On MacOS, use Homebrew for the package management:
-```
-brew install git cmake gcc-arm-none-eabi libstdc++-arm-none-eabi-newlib gcc g++ build-essential python3 libnewlib-arm-none-eabi 
-```
-[Dan V] Note: the above command does not necessarly install all the libraries listed. "cmake" might need to be installed on its own (brew install cmake), as well as "gcc-arm-none-eabi".
-
-Next, the Pico Pi SDK and Extras will need to be installed. Clone both these repositories to a known location as you will need to configure environment 
-variables to point to their location. 
-```
-mkdir -p /pico && cd pico 
-git clone -b master https://github.com/raspberrypi/pico-sdk.git 
-git clone -b master https://github.com/raspberrypi/pico-extras.git 
-cd pico-sdk && git submodule update --init 
-cd ../pico-extras && git submodule update --init 
-```
-Finally, configure the environment variables. 
-```
-export PICO_SDK_PATH="/path/to/pico/pico-sdk"
-export PICO_EXTRAS_PATH="/path/to/pico/pico-extras"
-```
-This will configure the variables for this use of the terminal, but it's best to add them to the `.bashrc` or `.zshrc` or whatever the equivalent 
-location is for your terminal instance so that they will be persistent environment. Simply copy the above `export` commands into the dotfile. 
-
-## Building with a local environment
-In the main folder of the respository, create a `build` folder if one does not exist:
-```
-mkdir build
-``` 
-To build from the command line, run:
-```
-cd build && cmake .. && make -j4
-```
-
-To just build within the IDE, click the build button on the bottom bar of the IDE. Make sure the build target is set to `[all]`. 
-
-# Docker Dev Environments
-## MacOS/Linux Docker Dev Environment Specifics
-Simply clone the respository to a known location. 
-```
-git clone -b <branch> https://github.com/Project-CETI/whale-tag-recovery.git
-```
-Install Docker Desktop for your system, and then follow the steps below for building an image.
-
-## Windows Docker Dev Environment Specifics
-First, configure Github to avoid CRLF conversions on Windows:
-```
-git config --global core.autocrlf input
-```
-
-ONLY then do we clone this repository:
-```
-git clone -b <branch> https://github.com/Project-CETI/whale-tag-recovery.git
-```
-
-Next, install Docker Desktop for Windows. This setup has been tested with the WSL-2 setup, but should hypothetically also work with the Hyper-V method. Enable Virtualization in BIOS as needed (for the Windows Surface Pro, this is already enabled and needs no extra steps).
-
-## Building the Docker image for All Systems
-After cloning the respository and install Docker Desktop for the system, build the Docker dev environment image:
-```
-cd /path/to/whale-tag-recovery
-cd docker/pico
-docker build -t ceti:pico -f Picofile .
-```
-
-We name this `ceti:pico` to indicate that this is the dev environment for the RP2040 chip. The Dockerfile has also been renamed `Picofile` for the same reason.
-
-After building the image, make sure you've removed any existing `build` folder, because CMake will throw an error if you try building in a folder not made inside Docker.
-```
-cd /path/to/whale-tag-recovery
-rm -r build
-```
-
-Now, set up a **persistent** container! This is critical for Windows. If you leave it as persistent, then the convenient GUI of Docker Desktop will let you have a running 'executable' that just compiles the build folder for you. To do this, run:
-
-```
-cd /path/to/whale-tag-recovery
-docker run -v ${PWD}:/project --name pico-dev ceti:pico
-```
-
-The image name (final portion of the second line above) must be the image name you specified while building the image; the instructions default to `ceti:pico`. Likewise, you should name your container something informative, like `pico-dev`, because Docker has almost intentionally terrible naming conventions. Running this command should already produce a `build` sub-directory in your `whale-tag-recovery` repo, complete with built binaries. In the future, you can go to Docker Desktop, and in the Container tab, click the play button to have things recompiled as you wish. Note that in Docker Desktop you need to click the container's name, and then navigate to the `Logs` folder to see the error output from the builds.
-
-And that's it! You now have a fully functional build environment on Windows.
-
-# Deploying to a Recovery Board
-Deploying to a Recovery Board can be done two ways: using picotool or by dragging and dropping the `.uf2` file. 
-
-## Manual Deployment
-Once code has been built, the `.uf2` just needs to be copied over to the Pico Pi. Start with connecting a Recovery Board in boot select mode. To enter boot select mode, hold down the small boot button on the breakoff section of the Recovery Board as you connect it to the computer via USB. The Pico Pi should show up as a drive in Finder, Explorer or whatever the file system viewer is. Navigate to `/path/to/whale-tag-recovery/build/recovery/` in the file system viewer. Either drag and from the `recovery.uf2` to the Pico Pi drive, or cut and paste `recovery.uf2` into the drive. The drive should then unmount itself automatically. 
-
-[Dan V] Note: One cannot drag and drop in Finder on a Mac. One needs to copy the file via the console, from the build folder: cp -X ./recovery/recovery.uf2 /Volumes/RPI-RP2/
-
-## Deployment with Picotool
-First `picotool` will need to be installed. This can be done by following the instructions [here](https://github.com/raspberrypi/picotool).
-
-The Cmake has already been configured to allow picotool to work, so simply open a terminal and navigate to the `/path/to/whale-tag-recovery/build/recovery/`. Next, connect a recovery board to the computer via a USB-C cable. The board does not need to be in boot select mode for this to work, as the command will ask the Pico Pi to boot select itself. However, if the Pico Pi is in a hanging/idle state in which picotool cannot access it, you will need to connect using boot select. To enter boot select mode, hold down the small boot button on the breakoff section of the recovery board as you connect it to the computer via USB.
-
-In either boot select mode or not in boot select, run the following command to deploy the new `.uf2` using picotool:
-```
-picotool load -xv recovery.uf2 -f
-```
-The `-f` flag forces the Pico Pi not in BOOTSEL mode but running compatible code to reset, `-xv` verifies the contents of the `.uf2` and then executes the file as a program once it's been loaded. 
-
+## Recovery Documentation and Code Description
+For more information on how the Recovery Algorithm works, see the following resources/handover documents: TODO: ADD HANDOVER LINKS HERE
