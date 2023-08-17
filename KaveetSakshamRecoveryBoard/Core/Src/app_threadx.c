@@ -23,7 +23,9 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "Lib Inc/threads.h"
 #include "Recovery Inc/Aprs.h"
+#include "Recovery Inc/FishTracker.h"
 #include <stdint.h>
 /* USER CODE END Includes */
 
@@ -34,7 +36,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define APRS_STACK_SIZE 2048
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -44,8 +46,7 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
-uint8_t aprs_stack[APRS_STACK_SIZE] = {0};
-TX_THREAD aprs_thread;
+extern Thread_HandleTypeDef threads[NUM_THREADS];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -60,21 +61,45 @@ TX_THREAD aprs_thread;
   */
 UINT App_ThreadX_Init(VOID *memory_ptr)
 {
-  UINT ret = TX_SUCCESS;
-  /* USER CODE BEGIN App_ThreadX_MEM_POOL */
+	UINT ret = TX_SUCCESS;
+	/* USER CODE BEGIN App_ThreadX_MEM_POOL */
 
-  VOID * pointer = aprs_stack;
+	//Initialize thread list so we can create threads
+	threadListInit();
 
-  TX_BYTE_POOL* byte_pool = (TX_BYTE_POOL*) memory_ptr;
-  ret = tx_byte_allocate(byte_pool, &pointer, APRS_STACK_SIZE, TX_NO_WAIT);
+	//loop through each thread in the list, allocate the memory and create the stack
+	for (uint8_t index = 0; index < NUM_THREADS; index++){
 
-  /* USER CODE END App_ThreadX_MEM_POOL */
-  /* USER CODE BEGIN App_ThreadX_Init */
+	  VOID * pointer = threads[index].thread_stack_start;
+	// Allocate memory pool
+	  TX_BYTE_POOL* byte_pool = (TX_BYTE_POOL*) memory_ptr;
+	  ret = tx_byte_allocate(byte_pool, &pointer, threads[index].config.thread_stack_size, TX_NO_WAIT);
 
-  tx_thread_create(&aprs_thread, "APRS Thread", aprs_thread_entry, 0x1234, pointer, APRS_STACK_SIZE, 1, 1, TX_NO_TIME_SLICE, TX_AUTO_START);
-  /* USER CODE END App_ThreadX_Init */
+	/* USER CODE END App_ThreadX_MEM_POOL */
+	/* USER CODE BEGIN App_ThreadX_Init */
+	  tx_thread_create(
+			  &threads[index].thread,
+			  threads[index].config.thread_name,
+			  threads[index].config.thread_entry_function,
+			  threads[index].config.thread_input,
+			  threads[index].thread_stack_start,
+			  threads[index].config.thread_stack_size,
+			  threads[index].config.priority,
+			  threads[index].config.preempt_threshold,
+			  threads[index].config.timeslice,
+			  threads[index].config.start);
+	}
 
-  return ret;
+	//TEMP: start the correct thread
+	if (USE_FISHTRACKER){
+		tx_thread_resume(&threads[FISHTRACKER_THREAD].thread);
+	}
+	else {
+		tx_thread_resume(&threads[APRS_THREAD].thread);
+	}
+	/* USER CODE END App_ThreadX_Init */
+
+	return ret;
 }
 
   /**
