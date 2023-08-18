@@ -29,8 +29,10 @@
 #define PI_COMMS_BAD_START_FLAG 0x2
 
 typedef enum __PI_COMMS_RX_MESSAGES {
-	START_RECOVERY = 0,
-	STOP_RECOVERY = 1,
+	BAD_MESSAGE = 0,
+	START_RECOVERY = 1,
+	STOP = 2,
+	START_GPS_COLLECTION = 3,
 	NUM_RX_MESSAGES //ALL ADDED MESSAGES SHOULD BE PUT ABOVE THIS ELEMENT. NUM_RX_MESSAGES SHOULD ALWAYS BE THE LAST ELEMENT IN THE ENUM.
 }RX_Message_IDs;
 
@@ -46,6 +48,8 @@ typedef struct __PI_COMMS_PACKET {
 	uint8_t data_buffer[PI_COMMS_MAX_DATA_PAYLOAD];
 
 }RX_Message;
+
+void pi_comms_parse_message(RX_Message_IDs message_id, uint8_t * payload_pointer, uint8_t payload_length);
 
 void pi_comms_rx_thread_entry(ULONG thread_input);
 

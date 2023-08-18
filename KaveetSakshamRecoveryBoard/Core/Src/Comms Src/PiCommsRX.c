@@ -7,10 +7,15 @@
 
 
 #include "Comms Inc/PiCommsRX.h"
+#include "Lib Inc/threads.h"
 #include "main.h"
 #include "stm32u5xx_hal_uart.h"
 
+//External variables
 extern UART_HandleTypeDef huart2;
+extern Thread_HandleTypeDef threads[NUM_THREADS];
+
+//Data buffer for receives
 uint8_t dataBuffer[256] = {0};
 
 TX_EVENT_FLAGS_GROUP pi_comms_event_flags_group;
@@ -23,6 +28,7 @@ void comms_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 	else {
 		tx_event_flags_set(&pi_comms_event_flags_group, PI_COMMS_BAD_START_FLAG, TX_OR);
 	}
+
 }
 void pi_comms_rx_thread_entry(ULONG thread_input){
 
@@ -33,15 +39,7 @@ void pi_comms_rx_thread_entry(ULONG thread_input){
 	while (1) {
 
 		//Start a non-blocking 1 byte UART read. Let the RX complete callback handle the rest.
-		HAL_UART_Receive_IT(&huart2, dataBuffer, 15);
-
-		char transmit_data[100];
-
-
-			//Start with the VHF handshake to confirm module is setup correctly
-			sprintf(transmit_data, "AT+DMOCONNECT \r\n");
-
-			HAL_UART_Transmit(&huart2, (uint8_t*) transmit_data, 16, HAL_MAX_DELAY);
+		HAL_UART_Receive_IT(&huart2, (uint8_t *) dataBuffer, 1);
 
 		ULONG actual_flags;
 
@@ -54,8 +52,35 @@ void pi_comms_rx_thread_entry(ULONG thread_input){
 			HAL_UART_Receive(&huart2, &dataBuffer[1], 2, HAL_MAX_DELAY);
 
 			//Now read the entire payload
-			HAL_UART_Receive(&huart2, &dataBuffer[3], &dataBuffer[2], HAL_MAX_DELAY);
+			HAL_UART_Receive(&huart2, &dataBuffer[3], dataBuffer[2], HAL_MAX_DELAY);
+
+			//parse the message and act accordingly
+			pi_comms_parse_message(dataBuffer[1], &dataBuffer[3], dataBuffer[2]);
 		}
+
+	}
+
+}
+
+void pi_comms_parse_message(RX_Message_IDs message_id, uint8_t * payload_pointer, uint8_t payload_length){
+
+	switch (message_id) {
+
+		case START_RECOVERY:
+			//Start recovery
+			tx_thread_resume(&threads[APRS_THREAD].thread);
+			break;
+
+		case STOP:
+			//Stop recovery
+			tx_thread_suspend(&threads[APRS_THREAD].thread);
+			break;
+
+		case START_GPS_COLLECTION:
+			break;
+		default:
+			//Bad message ID - do nothing
+			break;
 
 	}
 

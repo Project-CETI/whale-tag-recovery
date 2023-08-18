@@ -44,6 +44,7 @@ typedef enum __GPS_MESSAGE_TYPES {
 	GPS_NUM_MSG_TYPES //Should always be the last element in the enum. Represents the number of message types. If you need to add a new type, put it before this element.
 }GPS_MsgTypes;
 
+__attribute__ ((scalar_storage_order("little-endian")))
 typedef struct __GPS_Data {
 
 	float latitude;
