@@ -7,10 +7,12 @@
 
 #include "Sensor Inc/GPSCollection.h"
 #include "Recovery Inc/GPS.h"
+#include "Comms Inc/PiCommsTX.h"
 #include "main.h"
 
-//External variables defined in other C files (uart handler and state machine event flag)
+//External variables defined in other C files (uart handler and queue for comms threads)
 extern UART_HandleTypeDef huart3;
+extern TX_QUEUE gps_tx_queue;
 
 void gps_collection_thread_entry(ULONG thread_input){
 
@@ -27,6 +29,13 @@ void gps_collection_thread_entry(ULONG thread_input){
 		//Try to get a GPS lock
 		if (get_gps_lock(&gps, &gps_data)){
 
+			//DEBUG
+			gps_data.quality = 0x89ABCDEF;
+			gps_data.timestamp[0] = 0x3210;
+			gps_data.timestamp[1] = 0x7654;
+			gps_data.timestamp[2] = 0xBA98;
+
+			tx_queue_send(&gps_tx_queue, &gps_data, TX_WAIT_FOREVER);
 
 		}
 
