@@ -21,6 +21,7 @@
 #include "Recovery Inc/Aprs.h"
 #include "Recovery Inc/FishTracker.h"
 #include "Sensor Inc/GPSCollection.h"
+#include "Sensor Inc/BatteryMonitoring.h"
 #include "Comms Inc/PiCommsRX.h"
 #include "Comms Inc/PiCommsTX.h"
 
@@ -30,6 +31,7 @@ typedef enum __TX_THREAD_LIST {
 	APRS_THREAD,
 	FISHTRACKER_THREAD,
 	GPS_COLLECTION_THREAD,
+	BATTERY_MONITOR_THREAD,
 	PI_COMMS_RX_THREAD,
 	PI_COMMS_TX_THREAD,
 	NUM_THREADS //DO NOT ADD THREAD ENUMS BELOW THIS
@@ -100,6 +102,17 @@ static Thread_ConfigTypeDef threadConfigList[NUM_THREADS] = {
 				.preempt_threshold = 7,
 				.timeslice = TX_NO_TIME_SLICE,
 				.start = TX_DONT_START
+		},
+		[BATTERY_MONITOR_THREAD] = {
+						//GPS Collection
+						.thread_name = "Battery Monitoring Thread",
+						.thread_entry_function = battery_monitor_thread_entry,
+						.thread_input = 0x1234,
+						.thread_stack_size = 2048,
+						.priority = 9,
+						.preempt_threshold = 9,
+						.timeslice = TX_NO_TIME_SLICE,
+						.start = TX_DONT_START
 		},
 		[PI_COMMS_RX_THREAD] = {
 				//Pi Comms RX Thread

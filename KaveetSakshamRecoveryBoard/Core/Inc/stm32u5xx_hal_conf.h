@@ -36,7 +36,7 @@
 
 #define HAL_MODULE_ENABLED
 
-/*#define HAL_ADC_MODULE_ENABLED */
+#define HAL_ADC_MODULE_ENABLED
 /*#define HAL_MDF_MODULE_ENABLED */
 /*#define HAL_COMP_MODULE_ENABLED */
 /*#define HAL_CORDIC_MODULE_ENABLED */
@@ -200,7 +200,7 @@
   *        for possible callback identifiers defined in HAL_PPP_CallbackIDTypeDef
   *        for each PPP peripheral).
   */
-#define  USE_HAL_ADC_REGISTER_CALLBACKS        0U /* ADC register callback disabled       */
+#define  USE_HAL_ADC_REGISTER_CALLBACKS        1U /* ADC register callback enabled       */
 #define  USE_HAL_COMP_REGISTER_CALLBACKS       0U /* COMP register callback disabled      */
 #define  USE_HAL_CORDIC_REGISTER_CALLBACKS     0U /* CORDIC register callback disabled    */
 #define  USE_HAL_CRYP_REGISTER_CALLBACKS       0U /* CRYP register callback disabled      */
