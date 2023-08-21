@@ -20,6 +20,8 @@
 
 typedef struct __GPS_TX_MESSAGE {
 
+	uint8_t start_byte;
+
 	Message_IDs message_id;
 
 	uint8_t message_length;

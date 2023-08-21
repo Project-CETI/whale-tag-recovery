@@ -19,8 +19,6 @@
 
 #define PI_COMMS_START_CHAR 0x24 //"$"
 
-#define PI_COMMS_END_CHAR 0x40 //"@"
-
 //Our max payload length, which is just the size of our data buffer minus the start/end character, message id and message_length field
 #define PI_COMMS_MAX_DATA_PAYLOAD 252
 
