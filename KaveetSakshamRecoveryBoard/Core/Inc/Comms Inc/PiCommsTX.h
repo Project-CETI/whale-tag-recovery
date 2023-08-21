@@ -15,17 +15,12 @@
 #define INC_COMMS_INC_PICOMMSTX_H_
 
 #include "Recovery Inc/GPS.h"
+#include "Comms Inc/PiCommsRX.h"
 #include "tx_api.h"
-
-typedef enum __PI_COMMS_TX_MESSAGE_ID {
-	INVALID_MESSAGE = 0,
-	GPS_MESSAGE = 1,
-	NUM_MESSAGES
-}TX_Message_ID;
 
 typedef struct __GPS_TX_MESSAGE {
 
-	TX_Message_ID message_id;
+	Message_IDs message_id;
 
 	uint8_t message_length;
 

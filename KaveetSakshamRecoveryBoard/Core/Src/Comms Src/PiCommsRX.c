@@ -66,7 +66,7 @@ void pi_comms_rx_thread_entry(ULONG thread_input){
 
 }
 
-void pi_comms_parse_message(RX_Message_IDs message_id, uint8_t * payload_pointer, uint8_t payload_length){
+void pi_comms_parse_message(Message_IDs message_id, uint8_t * payload_pointer, uint8_t payload_length){
 
 	static bool isRecovery = false;
 	static bool isGPSCollect = false;

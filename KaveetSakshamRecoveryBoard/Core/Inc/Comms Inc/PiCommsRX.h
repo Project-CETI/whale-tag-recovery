@@ -33,13 +33,14 @@ typedef enum __PI_COMMS_RX_MESSAGES {
 	START_RECOVERY = 1,
 	STOP = 2,
 	START_GPS_COLLECTION = 3,
+	GPS_DATA_MESSAGE = 4,
 	NUM_RX_MESSAGES //ALL ADDED MESSAGES SHOULD BE PUT ABOVE THIS ELEMENT. NUM_RX_MESSAGES SHOULD ALWAYS BE THE LAST ELEMENT IN THE ENUM.
-}RX_Message_IDs;
+}Message_IDs;
 
 typedef struct __PI_COMMS_PACKET {
 
 	//Message ID corresponding to ENUM above
-	RX_Message_IDs message_id;
+	Message_IDs message_id;
 
 	//Message lengths are limited to 252 bytes (see above).
 	uint8_t data_length;
@@ -49,7 +50,7 @@ typedef struct __PI_COMMS_PACKET {
 
 }RX_Message;
 
-void pi_comms_parse_message(RX_Message_IDs message_id, uint8_t * payload_pointer, uint8_t payload_length);
+void pi_comms_parse_message(Message_IDs message_id, uint8_t * payload_pointer, uint8_t payload_length);
 
 void pi_comms_rx_thread_entry(ULONG thread_input);
 

@@ -45,7 +45,7 @@ void pi_comms_tx_thread_entry(ULONG thread_input){
 		tx_queue_receive(&gps_tx_queue, &gps_msg.data, TX_WAIT_FOREVER);
 
 		//Fill in our ID and length
-		gps_msg.message_id = GPS_MESSAGE;
+		gps_msg.message_id = GPS_DATA_MESSAGE;
 		gps_msg.message_length = GPS_TX_DATA_SIZE_BYTES;
 
 		HAL_UART_Transmit(&huart2, &gps_msg, (uint8_t *) GPS_TX_MESSAGE_SIZE, HAL_MAX_DELAY);
