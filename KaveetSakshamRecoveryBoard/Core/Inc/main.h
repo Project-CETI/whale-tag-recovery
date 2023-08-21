@@ -65,8 +65,6 @@ void MX_TIM2_Fake_init(uint8_t newPeriod);
 #define APRS_H_L_GPIO_Port GPIOA
 #define GPS_EXTINT_Pin GPIO_PIN_0
 #define GPS_EXTINT_GPIO_Port GPIOB
-#define VSYS_IN_Pin GPIO_PIN_11
-#define VSYS_IN_GPIO_Port GPIOD
 
 /* USER CODE BEGIN Private defines */
 
