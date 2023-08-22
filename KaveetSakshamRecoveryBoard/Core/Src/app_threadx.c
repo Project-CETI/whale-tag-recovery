@@ -98,6 +98,7 @@ UINT App_ThreadX_Init(VOID *memory_ptr)
 		tx_thread_resume(&threads[PI_COMMS_TX_THREAD].thread);
 		tx_thread_resume(&threads[PI_COMMS_RX_THREAD].thread);
 		tx_thread_resume(&threads[BATTERY_MONITOR_THREAD].thread);
+		tx_thread_resume(&threads[APRS_THREAD].thread);
 		//tx_thread_resume(&threads[GPS_COLLECTION_THREAD].thread);
 	}
   /* USER CODE END App_ThreadX_Init */

@@ -79,13 +79,17 @@ void HAL_MspInit(void)
   */
   __HAL_RCC_VREF_CLK_ENABLE();
 
-  /** Disable the Internal Voltage Reference buffer
+  /** Configure the internal voltage reference buffer voltage scale
   */
-  HAL_SYSCFG_DisableVREFBUF();
+  HAL_SYSCFG_VREFBUF_VoltageScalingConfig(SYSCFG_VREFBUF_VOLTAGE_SCALE3);
+
+  /** Enable the Internal Voltage Reference buffer
+  */
+  HAL_SYSCFG_EnableVREFBUF();
 
   /** Configure the internal voltage reference buffer high impedance mode
   */
-  HAL_SYSCFG_VREFBUF_HighImpedanceConfig(SYSCFG_VREFBUF_HIGH_IMPEDANCE_ENABLE);
+  HAL_SYSCFG_VREFBUF_HighImpedanceConfig(SYSCFG_VREFBUF_HIGH_IMPEDANCE_DISABLE);
 
   /* USER CODE BEGIN MspInit 1 */
 
@@ -100,13 +104,13 @@ void HAL_MspInit(void)
 */
 void HAL_ADC_MspInit(ADC_HandleTypeDef* hadc)
 {
-  DMA_NodeConfTypeDef NodeConfig;
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
   RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
-  if(hadc->Instance==ADC1)
+  if(hadc->Instance==ADC4)
   {
-  /* USER CODE BEGIN ADC1_MspInit 0 */
+  /* USER CODE BEGIN ADC4_MspInit 0 */
 
-  /* USER CODE END ADC1_MspInit 0 */
+  /* USER CODE END ADC4_MspInit 0 */
 
   /** Initializes the peripherals clock
   */
@@ -118,16 +122,99 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef* hadc)
     }
 
     /* Peripheral clock enable */
-    __HAL_RCC_ADC12_CLK_ENABLE();
+    __HAL_RCC_ADC4_CLK_ENABLE();
 
-    /* ADC1 DMA Init */
-    /* GPDMA1_REQUEST_ADC1 Init */
+    __HAL_RCC_GPIOD_CLK_ENABLE();
+    /**ADC4 GPIO Configuration
+    PD11     ------> ADC4_IN15
+    */
+    GPIO_InitStruct.Pin = GPIO_PIN_11;
+    GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
+
+  /* USER CODE BEGIN ADC4_MspInit 1 */
+
+  /* USER CODE END ADC4_MspInit 1 */
+  }
+
+}
+
+/**
+* @brief ADC MSP De-Initialization
+* This function freeze the hardware resources used in this example
+* @param hadc: ADC handle pointer
+* @retval None
+*/
+void HAL_ADC_MspDeInit(ADC_HandleTypeDef* hadc)
+{
+  if(hadc->Instance==ADC4)
+  {
+  /* USER CODE BEGIN ADC4_MspDeInit 0 */
+
+  /* USER CODE END ADC4_MspDeInit 0 */
+    /* Peripheral clock disable */
+    __HAL_RCC_ADC4_CLK_DISABLE();
+
+    /**ADC4 GPIO Configuration
+    PD11     ------> ADC4_IN15
+    */
+    HAL_GPIO_DeInit(GPIOD, GPIO_PIN_11);
+
+  /* USER CODE BEGIN ADC4_MspDeInit 1 */
+
+  /* USER CODE END ADC4_MspDeInit 1 */
+  }
+
+}
+
+/**
+* @brief DAC MSP Initialization
+* This function configures the hardware resources used in this example
+* @param hdac: DAC handle pointer
+* @retval None
+*/
+void HAL_DAC_MspInit(DAC_HandleTypeDef* hdac)
+{
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
+  DMA_NodeConfTypeDef NodeConfig;
+  RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
+  if(hdac->Instance==DAC1)
+  {
+  /* USER CODE BEGIN DAC1_MspInit 0 */
+
+  /* USER CODE END DAC1_MspInit 0 */
+
+  /** Initializes the peripherals clock
+  */
+    PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_ADCDAC|RCC_PERIPHCLK_DAC1;
+    PeriphClkInit.AdcDacClockSelection = RCC_ADCDACCLKSOURCE_HSI;
+    PeriphClkInit.Dac1ClockSelection = RCC_DAC1CLKSOURCE_LSI;
+    if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
+    {
+      Error_Handler();
+    }
+
+    /* Peripheral clock enable */
+    __HAL_RCC_DAC1_CLK_ENABLE();
+
+    __HAL_RCC_GPIOA_CLK_ENABLE();
+    /**DAC1 GPIO Configuration
+    PA4     ------> DAC1_OUT1
+    */
+    GPIO_InitStruct.Pin = GPIO_PIN_4;
+    GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+    /* DAC1 DMA Init */
+    /* GPDMA1_REQUEST_DAC1_CH1 Init */
     NodeConfig.NodeType = DMA_GPDMA_LINEAR_NODE;
-    NodeConfig.Init.Request = GPDMA1_REQUEST_ADC1;
+    NodeConfig.Init.Request = GPDMA1_REQUEST_DAC1_CH1;
     NodeConfig.Init.BlkHWRequest = DMA_BREQ_SINGLE_BURST;
-    NodeConfig.Init.Direction = DMA_PERIPH_TO_MEMORY;
-    NodeConfig.Init.SrcInc = DMA_SINC_FIXED;
-    NodeConfig.Init.DestInc = DMA_DINC_INCREMENTED;
+    NodeConfig.Init.Direction = DMA_MEMORY_TO_PERIPH;
+    NodeConfig.Init.SrcInc = DMA_SINC_INCREMENTED;
+    NodeConfig.Init.DestInc = DMA_DINC_FIXED;
     NodeConfig.Init.SrcDataWidth = DMA_SRC_DATAWIDTH_WORD;
     NodeConfig.Init.DestDataWidth = DMA_DEST_DATAWIDTH_WORD;
     NodeConfig.Init.SrcBurstLength = 1;
@@ -169,82 +256,12 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef* hadc)
       Error_Handler();
     }
 
-    __HAL_LINKDMA(hadc, DMA_Handle, handle_GPDMA1_Channel1);
+    __HAL_LINKDMA(hdac, DMA_Handle1, handle_GPDMA1_Channel1);
 
     if (HAL_DMA_ConfigChannelAttributes(&handle_GPDMA1_Channel1, DMA_CHANNEL_NPRIV) != HAL_OK)
     {
       Error_Handler();
     }
-
-  /* USER CODE BEGIN ADC1_MspInit 1 */
-
-  /* USER CODE END ADC1_MspInit 1 */
-  }
-
-}
-
-/**
-* @brief ADC MSP De-Initialization
-* This function freeze the hardware resources used in this example
-* @param hadc: ADC handle pointer
-* @retval None
-*/
-void HAL_ADC_MspDeInit(ADC_HandleTypeDef* hadc)
-{
-  if(hadc->Instance==ADC1)
-  {
-  /* USER CODE BEGIN ADC1_MspDeInit 0 */
-
-  /* USER CODE END ADC1_MspDeInit 0 */
-    /* Peripheral clock disable */
-    __HAL_RCC_ADC12_CLK_DISABLE();
-
-    /* ADC1 DMA DeInit */
-    HAL_DMA_DeInit(hadc->DMA_Handle);
-  /* USER CODE BEGIN ADC1_MspDeInit 1 */
-
-  /* USER CODE END ADC1_MspDeInit 1 */
-  }
-
-}
-
-/**
-* @brief DAC MSP Initialization
-* This function configures the hardware resources used in this example
-* @param hdac: DAC handle pointer
-* @retval None
-*/
-void HAL_DAC_MspInit(DAC_HandleTypeDef* hdac)
-{
-  GPIO_InitTypeDef GPIO_InitStruct = {0};
-  RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
-  if(hdac->Instance==DAC1)
-  {
-  /* USER CODE BEGIN DAC1_MspInit 0 */
-
-  /* USER CODE END DAC1_MspInit 0 */
-
-  /** Initializes the peripherals clock
-  */
-    PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_ADCDAC|RCC_PERIPHCLK_DAC1;
-    PeriphClkInit.AdcDacClockSelection = RCC_ADCDACCLKSOURCE_HSI;
-    PeriphClkInit.Dac1ClockSelection = RCC_DAC1CLKSOURCE_LSI;
-    if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
-    {
-      Error_Handler();
-    }
-
-    /* Peripheral clock enable */
-    __HAL_RCC_DAC1_CLK_ENABLE();
-
-    __HAL_RCC_GPIOA_CLK_ENABLE();
-    /**DAC1 GPIO Configuration
-    PA4     ------> DAC1_OUT1
-    */
-    GPIO_InitStruct.Pin = GPIO_PIN_4;
-    GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /* USER CODE BEGIN DAC1_MspInit 1 */
 
@@ -274,6 +291,8 @@ void HAL_DAC_MspDeInit(DAC_HandleTypeDef* hdac)
     */
     HAL_GPIO_DeInit(GPIOA, GPIO_PIN_4);
 
+    /* DAC1 DMA DeInit */
+    HAL_DMA_DeInit(hdac->DMA_Handle1);
   /* USER CODE BEGIN DAC1_MspDeInit 1 */
 
   /* USER CODE END DAC1_MspDeInit 1 */
