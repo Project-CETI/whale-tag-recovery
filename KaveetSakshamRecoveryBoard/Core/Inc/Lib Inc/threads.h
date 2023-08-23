@@ -18,6 +18,7 @@
 
 #include "tx_api.h"
 #include "app_threadx.h"
+#include "Lib Inc/state_machine.h"
 #include "Recovery Inc/Aprs.h"
 #include "Recovery Inc/FishTracker.h"
 #include "Sensor Inc/GPSCollection.h"
@@ -28,6 +29,7 @@
 //Enum for all threads so we can easily keep track of the list + total number of threads.
 // If adding a new thread to the list, put it before the "NUM_THREADS" element, as it must always be the last element in the enum.
 typedef enum __TX_THREAD_LIST {
+	STATE_MACHINE_THREAD,
 	APRS_THREAD,
 	FISHTRACKER_THREAD,
 	GPS_COLLECTION_THREAD,
@@ -70,16 +72,27 @@ typedef struct __TX_THREAD_TypeDef {
 //Define the config for each struct here, in the same order the are listed in the Thread Enum above.
 static Thread_ConfigTypeDef threadConfigList[NUM_THREADS] = {
 
+		[STATE_MACHINE_THREAD] = {
+				//State Machine Thread
+				.thread_name = "State Machine Thread",
+				.thread_entry_function = state_machine_thread_entry,
+				.thread_input = 0x1234,
+				.thread_stack_size = 2048,
+				.priority = 2,
+				.preempt_threshold = 2,
+				.timeslice = TX_NO_TIME_SLICE,
+				.start = TX_DONT_START
+		},
 		[APRS_THREAD] = {
-			//APRS Thread
-			.thread_name = "APRS Thread",
-			.thread_entry_function = aprs_thread_entry,
-			.thread_input = 0x1234,
-			.thread_stack_size = 2048,
-			.priority = 6,
-			.preempt_threshold = 6,
-			.timeslice = TX_NO_TIME_SLICE,
-			.start = TX_DONT_START
+				//APRS Thread
+				.thread_name = "APRS Thread",
+				.thread_entry_function = aprs_thread_entry,
+				.thread_input = 0x1234,
+				.thread_stack_size = 2048,
+				.priority = 6,
+				.preempt_threshold = 6,
+				.timeslice = TX_NO_TIME_SLICE,
+				.start = TX_DONT_START
 		},
 		[FISHTRACKER_THREAD] = {
 				//Fishtracker Thread
@@ -104,15 +117,15 @@ static Thread_ConfigTypeDef threadConfigList[NUM_THREADS] = {
 				.start = TX_DONT_START
 		},
 		[BATTERY_MONITOR_THREAD] = {
-						//GPS Collection
-						.thread_name = "Battery Monitoring Thread",
-						.thread_entry_function = battery_monitor_thread_entry,
-						.thread_input = 0x1234,
-						.thread_stack_size = 2048,
-						.priority = 9,
-						.preempt_threshold = 9,
-						.timeslice = TX_NO_TIME_SLICE,
-						.start = TX_DONT_START
+				//GPS Collection
+				.thread_name = "Battery Monitoring Thread",
+				.thread_entry_function = battery_monitor_thread_entry,
+				.thread_input = 0x1234,
+				.thread_stack_size = 2048,
+				.priority = 9,
+				.preempt_threshold = 9,
+				.timeslice = TX_NO_TIME_SLICE,
+				.start = TX_DONT_START
 		},
 		[PI_COMMS_RX_THREAD] = {
 				//Pi Comms RX Thread

@@ -6,11 +6,13 @@
  */
 
 #include "Sensor Inc/BatteryMonitoring.h"
+#include "Lib Inc/state_machine.h"
 #include "main.h"
 #include "stm32u5xx_hal_adc.h"
 
 //External variables
 extern ADC_HandleTypeDef hadc4;
+extern TX_EVENT_FLAGS_GROUP state_machine_event_flags_group;
 
 float voltage_mon = 0;
 
@@ -25,7 +27,7 @@ void battery_monitor_thread_entry(ULONG thread_input){
 
 		//If our voltage is too low (low battery detected)
 		if (voltage_mon < BATT_MON_LOW_VOLTAGE_THRESHOLD){
-			//TODO: SIGNAL LOW BATTERY TO STATE MACHINE
+			tx_event_flags_set(&state_machine_event_flags_group, STATE_CRITICAL_LOW_BATTERY_FLAG, TX_OR);
 		}
 
 		//Sleep and repeat the process once woken up

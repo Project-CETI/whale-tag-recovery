@@ -7,6 +7,7 @@
 
 
 #include "Comms Inc/PiCommsRX.h"
+#include "Lib Inc/state_machine.h"
 #include "Lib Inc/threads.h"
 #include "main.h"
 #include "stm32u5xx_hal_uart.h"
@@ -18,6 +19,7 @@ static bool stopGPSCollection(bool * isActive);
 //External variables
 extern UART_HandleTypeDef huart2;
 extern Thread_HandleTypeDef threads[NUM_THREADS];
+extern TX_EVENT_FLAGS_GROUP state_machine_event_flags_group;
 
 //Data buffer for receives
 uint8_t dataBuffer[256] = {0};
@@ -75,45 +77,25 @@ void pi_comms_parse_message(Message_IDs message_id, uint8_t * payload_pointer, u
 
 		case START_RECOVERY:
 
-			//Stop GPS data collection if its running (function will handle checking if its active or not)
-			stopGPSCollection(&isGPSCollect);
-
-			//Start recovery
-			tx_thread_resume(&threads[APRS_THREAD].thread);
-			isRecovery = true;
-
-			/*if GPS collection is active, suspend it (so only one thread that accesses the GPS hardware is active at a time)
-			if (isGPSCollect) {
-				tx_thread_suspend(&threads[GPS_COLLECTION_THREAD].thread);
-				isGPSCollect = false;
-			}*/
-
+			//Publish event flag to state machine to enter recovery
+			tx_event_flags_set(&state_machine_event_flags_group, STATE_COMMS_APRS_FLAG, TX_OR);
 			break;
 
 		case STOP:
 
-			//Stop recovery or GPS collection (function will handle checking if its active or not)
-			stopRecovery(&isRecovery);
-			stopGPSCollection(&isGPSCollect);
-
+			//Publish event flag to state machine to stop (and wait for more commands)
+			tx_event_flags_set(&state_machine_event_flags_group, STATE_COMMS_STOP_FLAG, TX_OR);
 			break;
 
 		case START_GPS_COLLECTION:
 
-			//Call to suspend recovery if it is active (function will handle checking if its active or not)
-			stopRecovery(&isRecovery);
-
-			//Start Normal GPS collection
-			tx_thread_resume(&threads[GPS_COLLECTION_THREAD].thread);
-			isGPSCollect = true;
-
-			//if APRS recovery is active, suspend it (so only one thread that accesses the GPS hardware is active at a time)
-			/*if (isRecovery) {
-				tx_thread_suspend(&threads[APRS_THREAD].thread);
-				isRecovery = false;
-			}*/
-
+			//Publish event flag to state machine to enter regular GPS collection
+			tx_event_flags_set(&state_machine_event_flags_group, STATE_COMMS_COLLECT_GPS_FLAG, TX_OR);
 			break;
+		case ENTER_CRITICAL:
+
+			//Publish event flag to state machien to enter a critical low power state (nothing runs)
+			tx_event_flags_set(&state_machine_event_flags_group, STATE_CRITICAL_LOW_BATTERY_FLAG, TX_OR);
 		default:
 			//Bad message ID - do nothing
 			break;
@@ -121,27 +103,3 @@ void pi_comms_parse_message(Message_IDs message_id, uint8_t * payload_pointer, u
 	}
 
 }
-
-//Checks to see if recovery is active, if it is, we stop it.
-static bool stopRecovery(bool * isActive){
-
-	//if APRS recovery is active, suspend it (so only one thread that accesses the GPS hardware is active at a time)
-	if (*isActive){
-		tx_thread_suspend(&threads[APRS_THREAD].thread);
-		*isActive = false;
-	}
-
-}
-
-//Checks to see if GPS data collection is active, if it is, we stop it.
-static bool stopGPSCollection(bool * isActive){
-
-	//if GPS data collecion is active, suspend it (so only one thread that accesses the GPS hardware is active at a time)
-	if (*isActive){
-		tx_thread_suspend(&threads[GPS_COLLECTION_THREAD].thread);
-		*isActive = false;
-	}
-
-}
-
-

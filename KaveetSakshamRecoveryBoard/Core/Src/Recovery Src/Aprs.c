@@ -13,9 +13,10 @@
 #include "main.h"
 #include <stdlib.h>
 
-//Extern variables for HAL UART handlers
+//Extern variables for HAL UART handlers and message queues
 extern UART_HandleTypeDef huart4;
 extern UART_HandleTypeDef huart3;
+extern TX_QUEUE gps_tx_queue;
 
 static bool toggle_freq(bool is_gps_dominica, bool is_currently_dominica);
 
@@ -77,6 +78,9 @@ void aprs_thread_entry(ULONG aprs_thread_input){
 
 			//Add a random amount of seconds to the sleep, from 0 to 29
 			sleep_period += tx_s_to_ticks(random_num);
+
+			//Send our GPS data to the Pi Comms TX thread so we can send it to the tag
+			tx_queue_send(&gps_tx_queue, &gps_data, TX_WAIT_FOREVER);
 		}
 
 		//Go to sleep now
