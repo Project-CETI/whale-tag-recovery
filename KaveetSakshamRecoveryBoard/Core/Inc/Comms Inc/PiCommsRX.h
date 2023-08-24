@@ -38,8 +38,8 @@ typedef enum __PI_COMMS_RX_MESSAGES {
 
 typedef struct __PI_COMMS_PACKET {
 
-	//Message ID corresponding to ENUM above
-	Message_IDs message_id;
+	//Message ID corresponding to ENUM above. Defined as 8 bit to prevent 4 bytes being sent (enums are 32 bits)
+	uint8_t message_id;
 
 	//Message lengths are limited to 252 bytes (see above).
 	uint8_t data_length;

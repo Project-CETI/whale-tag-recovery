@@ -22,7 +22,8 @@ typedef struct __GPS_TX_MESSAGE {
 
 	uint8_t start_byte;
 
-	Message_IDs message_id;
+	//Matches the enum in PiCommsRX.h -> casted to uint8_t since enums are default 32bits
+	uint8_t message_id;
 
 	uint8_t message_length;
 

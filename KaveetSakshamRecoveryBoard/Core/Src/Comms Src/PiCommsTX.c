@@ -42,6 +42,7 @@ void pi_comms_tx_thread_entry(ULONG thread_input){
 		//Variable to hold the incoming data
 		GPS_TX_Message gps_msg;
 
+		//Go to sleep forever until we receive some data.
 		tx_queue_receive(&gps_tx_queue, &gps_msg.data, TX_WAIT_FOREVER);
 
 		//Fill in our start byte, ID and length
