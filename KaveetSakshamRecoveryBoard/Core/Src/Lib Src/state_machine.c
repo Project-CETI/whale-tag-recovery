@@ -21,7 +21,7 @@ void state_machine_thread_entry(ULONG thread_input){
 	tx_event_flags_create(&state_machine_event_flags_group, "State Machine Event Flags");
 
 	//If simulating, set the simulation state defined in the header file, else, enter data capture as a default
-	State state = (IS_SIMULATING) ? SIMULATING_STATE : STATE_WAITING;
+	State state = STARTING_STATE;
 
 	//Check the initial state and start in the appropriate state
 	if (state == STATE_CRITICAL){
@@ -102,6 +102,8 @@ void enter_aprs_recovery(){
 	tx_thread_resume(&threads[APRS_THREAD].thread);
 
 	//TODO: Enable Power FET to turn GPS on
+	HAL_GPIO_WritePin(PWR_LED_NEN_GPIO_Port, PWR_LED_NEN_Pin, GPIO_PIN_SET); //only flash LED when transmitting
+	HAL_GPIO_WritePin(GPS_NEN_GPIO_Port, GPS_NEN_Pin, GPIO_PIN_RESET);
 }
 
 //Suspends the APRS recovery thread

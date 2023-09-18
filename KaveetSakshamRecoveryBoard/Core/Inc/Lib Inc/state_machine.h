@@ -13,7 +13,7 @@
 #define IS_SIMULATING false
 
 //Should correspond with the state types enum below
-#define SIMULATING_STATE 1
+#define STARTING_STATE STATE_WAITING
 
 //Flags inside of our state machine event flags
 #define STATE_COMMS_STOP_FLAG 0x1
