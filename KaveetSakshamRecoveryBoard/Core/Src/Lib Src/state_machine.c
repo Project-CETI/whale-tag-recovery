@@ -112,6 +112,7 @@ void exit_aprs_recovery(){
 	tx_thread_suspend(&threads[APRS_THREAD].thread);
 
 	//TODO: Turn GPS off (through power FET)
+	HAL_GPIO_WritePin(GPS_NEN_GPIO_Port, GPS_NEN_Pin, GPIO_PIN_SET);
 }
 
 //Starts the GPS data collection thread
@@ -120,6 +121,7 @@ void enter_gps_collection(){
 	tx_thread_resume(&threads[GPS_COLLECTION_THREAD].thread);
 
 	//TODO: Enable power FET to turn GPS on
+	HAL_GPIO_WritePin(GPS_NEN_GPIO_Port, GPS_NEN_Pin, GPIO_PIN_RESET);
 }
 
 //Exit GPS data collection thread
@@ -128,6 +130,7 @@ void exit_gps_collection(){
 	tx_thread_suspend(&threads[GPS_COLLECTION_THREAD].thread);
 
 	//TODO: Turn GPS off (through power FET)
+	HAL_GPIO_WritePin(GPS_NEN_GPIO_Port, GPS_NEN_Pin, GPIO_PIN_SET);
 }
 
 //Starts the threads that are active while waiting (comms, battery monitoring)
