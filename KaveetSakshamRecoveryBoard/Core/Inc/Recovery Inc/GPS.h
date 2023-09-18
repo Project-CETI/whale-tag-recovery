@@ -45,8 +45,7 @@ typedef enum __GPS_MESSAGE_TYPES {
 }GPS_MsgTypes;
 
 //__attribute__ ((scalar_storage_order("little-endian")))
-__attribute__ ((__packed__))
-typedef struct __GPS_Data {
+typedef struct __attribute__((packed, scalar_storage_order("little-endian"))) __GPS_Data {
 
 	float latitude;
 	float longitude;

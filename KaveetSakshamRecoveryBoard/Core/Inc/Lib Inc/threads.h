@@ -70,6 +70,7 @@ typedef struct __TX_THREAD_TypeDef {
 }Thread_HandleTypeDef;
 
 //Define the config for each struct here, in the same order the are listed in the Thread Enum above.
+__attribute__((unused))
 static Thread_ConfigTypeDef threadConfigList[NUM_THREADS] = {
 
 		[STATE_MACHINE_THREAD] = {

@@ -64,7 +64,7 @@ bool read_gps_data(GPS_HandleTypeDef* gps){
 
 static void parse_gps_output(GPS_HandleTypeDef* gps, uint8_t* buffer, uint8_t buffer_length){
 
-	enum minmea_sentence_id sentence_id = minmea_sentence_id(buffer, false);
+	enum minmea_sentence_id sentence_id = minmea_sentence_id((const char *)buffer, false);
 
 	float lat;
 	float lon;
@@ -74,7 +74,7 @@ static void parse_gps_output(GPS_HandleTypeDef* gps, uint8_t* buffer, uint8_t bu
 	case MINMEA_SENTENCE_RMC: {
 		;
 		struct minmea_sentence_rmc frame;
-		if (minmea_parse_rmc(&frame, buffer)){
+		if (minmea_parse_rmc(&frame, (const char *)buffer)){
 
 			lat = minmea_tocoord(&frame.latitude);
 			lon = minmea_tocoord(&frame.longitude);
@@ -107,7 +107,7 @@ static void parse_gps_output(GPS_HandleTypeDef* gps, uint8_t* buffer, uint8_t bu
 	case MINMEA_SENTENCE_GLL: {
 		;
 		struct minmea_sentence_gll frame;
-		if (minmea_parse_gll(&frame, buffer)){
+		if (minmea_parse_gll(&frame, (const char *)buffer)){
 
 			lat = minmea_tocoord(&frame.latitude);
 			lon = minmea_tocoord(&frame.longitude);
@@ -139,7 +139,7 @@ static void parse_gps_output(GPS_HandleTypeDef* gps, uint8_t* buffer, uint8_t bu
 	}
 	case MINMEA_SENTENCE_GGA: {
 		struct minmea_sentence_gga frame;
-		if (minmea_parse_gga(&frame, buffer)){
+		if (minmea_parse_gga(&frame, (const char *)buffer)){
 
 			lat = minmea_tocoord(&frame.latitude);
 			lon = minmea_tocoord(&frame.longitude);

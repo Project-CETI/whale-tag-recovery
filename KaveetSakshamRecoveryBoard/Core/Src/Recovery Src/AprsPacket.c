@@ -117,7 +117,7 @@ static void append_gps_data(uint8_t * buffer, float lat, float lon){
 
 	//Create our string. We use the format ddmm.hh(N/S), where "d" is degrees, "m" is minutes and "h" is fractional minutes.
 	//Store this in our buffer.
-	snprintf(&buffer[1], APRS_LATITUDE_LENGTH, "%02d%02d.%02d%c", lat_deg_whole, lat_minutes_whole, lat_minutes_frac, lat_direction);
+	snprintf((char *)&buffer[1], APRS_LATITUDE_LENGTH, "%02d%02d.%02d%c", lat_deg_whole, lat_minutes_whole, lat_minutes_frac, lat_direction);
 
 
 	//Right now we have the null-terminating character in the buffer "\0". Replace this with our latitude and longitude seperating symbol "1".
@@ -146,7 +146,7 @@ static void append_gps_data(uint8_t * buffer, float lat, float lon){
 	char lon_direction = (is_east) ? 'E' : 'W';
 
 	//Store this in the buffer, in the format dddmm.hh(E/W)
-	snprintf(&buffer[APRS_LATITUDE_LENGTH + 1], APRS_LONGITUDE_LENGTH, "%03d%02d.%02d%c", lon_deg_whole, lon_minutes_whole, lon_minutes_fractional, lon_direction);
+	snprintf((char *)&buffer[APRS_LATITUDE_LENGTH + 1], APRS_LONGITUDE_LENGTH, "%03d%02d.%02d%c", lon_deg_whole, lon_minutes_whole, lon_minutes_fractional, lon_direction);
 
 	//Appending payload character indicating the APRS symbol (using boat symbol). Replace the null-terminating character with it.
 	buffer[APRS_LATITUDE_LENGTH + APRS_LONGITUDE_LENGTH] = APRS_SYM_CODE_CHAR;
@@ -157,7 +157,7 @@ static void append_other_data(uint8_t * buffer, uint16_t course, uint16_t speed,
 
 	//Append the course and speed of the tag (course is the heading 0->360 degrees
 	uint8_t length = 8 + strlen(comment);
-	snprintf(buffer, length, "%03d/%03d%s", course, speed, comment);
+	snprintf((char *)buffer, length, "%03d/%03d%s", course, speed, comment);
 }
 
 //Calculates and appends the CRC frame checker. Follows the CRC-16 CCITT standard.

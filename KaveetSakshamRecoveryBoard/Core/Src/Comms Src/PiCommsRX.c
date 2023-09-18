@@ -12,10 +12,6 @@
 #include "main.h"
 #include "stm32u5xx_hal_uart.h"
 
-//static function helpers.
-static bool stopRecovery(bool * isActive);
-static bool stopGPSCollection(bool * isActive);
-
 //External variables
 extern UART_HandleTypeDef huart2;
 extern Thread_HandleTypeDef threads[NUM_THREADS];
@@ -70,9 +66,6 @@ void pi_comms_rx_thread_entry(ULONG thread_input){
 
 void pi_comms_parse_message(Message_IDs message_id, uint8_t * payload_pointer, uint8_t payload_length){
 
-	static bool isRecovery = false;
-	static bool isGPSCollect = false;
-
 	switch (message_id) {
 
 		case START_RECOVERY:
@@ -92,10 +85,12 @@ void pi_comms_parse_message(Message_IDs message_id, uint8_t * payload_pointer, u
 			//Publish event flag to state machine to enter regular GPS collection
 			tx_event_flags_set(&state_machine_event_flags_group, STATE_COMMS_COLLECT_GPS_FLAG, TX_OR);
 			break;
+
 		case ENTER_CRITICAL:
 
 			//Publish event flag to state machien to enter a critical low power state (nothing runs)
 			tx_event_flags_set(&state_machine_event_flags_group, STATE_CRITICAL_LOW_BATTERY_FLAG, TX_OR);
+
 		default:
 			//Bad message ID - do nothing
 			break;
