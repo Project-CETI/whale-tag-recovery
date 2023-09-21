@@ -5,7 +5,7 @@
  *      Author: Kaveet
  */
 
-#include "Comms Inc/PiCommsTX.h"
+#include "Comms Inc/PiComms.h"
 #include "Recovery Inc/GPS.h"
 #include <stdlib.h>
 #include <stdint.h>
@@ -15,6 +15,16 @@ TX_QUEUE gps_tx_queue;
 
 //External variables (uart handler)
 extern UART_HandleTypeDef huart2;
+
+void pi_comms_tx_forward_gps(uint8_t *buffer, uint8_t len){
+	PiCommHeader gps_header = {
+			.start_byte = PI_COMMS_START_CHAR,
+			.id = PI_COMM_MSG_GPS_PACKET,
+			.length = len,
+	};
+	HAL_UART_Transmit(&huart2, (uint8_t *) &gps_header, sizeof(PiCommHeader), HAL_MAX_DELAY);
+	HAL_UART_Transmit(&huart2, buffer, len, HAL_MAX_DELAY);
+}
 
 void pi_comms_tx_thread_entry(ULONG thread_input){
 
@@ -47,10 +57,11 @@ void pi_comms_tx_thread_entry(ULONG thread_input){
 
 		//Fill in our start byte, ID and length
 		gps_msg.start_byte = PI_COMMS_START_CHAR;
-		gps_msg.message_id = GPS_DATA_MESSAGE;
-		gps_msg.message_length = GPS_TX_DATA_SIZE_BYTES;
+		gps_msg.message_id = PI_COMM_MSG_GPS_PACKET;
+//		gps_msg.message_length = GPS_TX_DATA_SIZE_BYTES;
+		gps_msg.message_length = sizeof(GPS_Data);
 
-		HAL_UART_Transmit(&huart2, (uint8_t *) &gps_msg, GPS_TX_MESSAGE_SIZE, HAL_MAX_DELAY);
+		HAL_UART_Transmit(&huart2, (uint8_t *) &gps_msg, sizeof(GPS_TX_Message), HAL_MAX_DELAY);
 
 	}
 

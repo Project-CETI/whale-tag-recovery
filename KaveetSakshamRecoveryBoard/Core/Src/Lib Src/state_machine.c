@@ -43,7 +43,7 @@ void state_machine_thread_entry(ULONG thread_input){
 			ULONG actual_flags;
 			tx_event_flags_get(&state_machine_event_flags_group, ALL_STATE_FLAGS, TX_OR_CLEAR, &actual_flags, TX_WAIT_FOREVER);
 
-			//Received STOP command from Pi
+			//Received PI_COMM_MSG_STOP command from Pi
 			if (actual_flags & STATE_COMMS_STOP_FLAG){
 
 				//Enter waiting mode (stop APRS or GPS collect)

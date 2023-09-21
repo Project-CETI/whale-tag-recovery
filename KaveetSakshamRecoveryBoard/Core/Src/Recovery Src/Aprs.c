@@ -16,6 +16,7 @@
 //Extern variables for HAL UART handlers and message queues
 extern UART_HandleTypeDef huart4;
 extern UART_HandleTypeDef huart3;
+extern UART_HandleTypeDef huart2;
 extern TX_QUEUE gps_tx_queue;
 
 static bool toggle_freq(bool is_gps_dominica, bool is_currently_dominica);
@@ -80,7 +81,11 @@ void aprs_thread_entry(ULONG aprs_thread_input){
 			sleep_period += tx_s_to_ticks(random_num);
 
 			//Send our GPS data to the Pi Comms TX thread so we can send it to the tag
-			tx_queue_send(&gps_tx_queue, &gps_data, TX_WAIT_FOREVER);
+			//tx_queue_send(&gps_tx_queue, &gps_data, TX_WAIT_FOREVER);
+		}
+		else{
+			
+			HAL_UART_Transmit(&huart2, (uint8_t *)"!No Lock!\n\r", 11, HAL_MAX_DELAY);
 		}
 
 		//Go to sleep now

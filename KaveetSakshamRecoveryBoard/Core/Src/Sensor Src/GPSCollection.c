@@ -7,7 +7,7 @@
 
 #include "Sensor Inc/GPSCollection.h"
 #include "Recovery Inc/GPS.h"
-#include "Comms Inc/PiCommsTX.h"
+#include "Comms Inc/PiComms.h"
 #include "main.h"
 
 //External variables defined in other C files (uart handler and queue for comms threads)

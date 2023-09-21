@@ -21,13 +21,13 @@
 #include "stm32u5xx_hal_uart.h"
 #include <stdbool.h>
 
-#define GPS_PACKET_START_CHAR 0x24 //"$"
-#define GPS_PACKET_END_CHAR 0x0D //"\r" or <CR>
+#define GPS_PACKET_START_CHAR '$'
+#define GPS_PACKET_END_CHAR '\r'
 
 #define GPS_UART_TIMEOUT 5000
 #define GPS_TRY_LOCK_TIMEOUT 5000
 
-#define GPS_SIMULATION true
+#define GPS_SIMULATION false
 #define GPS_SIM_LAT 42.36326
 #define GPS_SIM_LON -71.12650
 
@@ -44,21 +44,20 @@ typedef enum __GPS_MESSAGE_TYPES {
 	GPS_NUM_MSG_TYPES //Should always be the last element in the enum. Represents the number of message types. If you need to add a new type, put it before this element.
 }GPS_MsgTypes;
 
-//__attribute__ ((scalar_storage_order("little-endian")))
-typedef struct __attribute__((packed, scalar_storage_order("little-endian"))) __GPS_Data {
+typedef struct __attribute__((__packed__, scalar_storage_order("little-endian"))) __GPS_Data {
 
-	float latitude;
-	float longitude;
+	float latitude; //h00-h03
+	float longitude; //h04-h07
 
-	uint16_t timestamp[3]; //0 is hour, 1 is minute, 2 is second
+	uint16_t timestamp[3]; //h08- h0E //0 is hour, 1 is minute, 2 is second
 
-	bool is_dominica;
+	uint8_t is_dominica; //bool //h0e
 
-	bool is_valid_data;
+	uint8_t is_valid_data; //bool //h0f
 
-	GPS_MsgTypes msg_type;
+	uint8_t msg_type; //GPS_MsgTypes //h10
 
-	uint32_t quality;
+	uint32_t quality; //h11-h14
 
 }GPS_Data;
 

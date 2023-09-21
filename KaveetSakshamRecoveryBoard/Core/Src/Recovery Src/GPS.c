@@ -12,6 +12,7 @@
 #include "Lib Inc/minmea.h"
 #include <math.h>
 #include <string.h>
+#include "Comms Inc/PiComms.h"
 
 //For parsing GPS outputs
 static void parse_gps_output(GPS_HandleTypeDef* gps, uint8_t* buffer, uint8_t buffer_length);
@@ -27,39 +28,37 @@ HAL_StatusTypeDef initialize_gps(UART_HandleTypeDef* huart, GPS_HandleTypeDef* g
 
 
 bool read_gps_data(GPS_HandleTypeDef* gps){
-
-	uint8_t receive_buffer[256] = {0};
-
-	if (GPS_SIMULATION){
-
-		gps->data[GPS_SIM].is_valid_data = true;
-		gps->data[GPS_SIM].latitude = GPS_SIM_LAT;
-		gps->data[GPS_SIM].longitude = GPS_SIM_LON;
-		gps->data[GPS_SIM].is_dominica = is_in_dominica(GPS_SIM_LAT, GPS_SIM_LON);
-		gps->data[GPS_SIM].timestamp[0] = 0;
-		gps->data[GPS_SIM].timestamp[1] = 0;
-		gps->data[GPS_SIM].timestamp[2] = 0;
+#if GPS_SIMULATION
+		gps->data[GPS_SIM] = (GPS_Data){
+			.is_valid_data = true,
+			.latitude = GPS_SIM_LAT,
+			.longitude = GPS_SIM_LON,
+			.is_dominica = is_in_dominica(GPS_SIM_LAT, GPS_SIM_LON),
+		};
 
 		gps->is_pos_locked = true;
 
 		return true;
-	}
+#else
+	uint8_t receive_buffer[258] = {0};
 	HAL_UART_Receive(gps->huart, receive_buffer, 1, GPS_UART_TIMEOUT);
 
-	if (receive_buffer[0] == GPS_PACKET_START_CHAR){
+	if (receive_buffer[0] != GPS_PACKET_START_CHAR)
+		return false;
 
-		uint8_t read_index = 0;
+	uint8_t read_index = 0;
 
-		while (receive_buffer[read_index] != GPS_PACKET_END_CHAR){
-			read_index++;
-			HAL_UART_Receive(gps->huart, &receive_buffer[read_index], 1, GPS_UART_TIMEOUT);
-		}
-		parse_gps_output(gps, receive_buffer, read_index + 1);
-
-		return true;
+	while (receive_buffer[read_index] != GPS_PACKET_END_CHAR){
+		read_index++;
+		HAL_UART_Receive(gps->huart, &receive_buffer[read_index], 1, GPS_UART_TIMEOUT);
 	}
 
-	return false;
+	pi_comms_tx_forward_gps(receive_buffer, read_index + 1); //forward packet to pi
+	parse_gps_output(gps, receive_buffer, read_index + 1); //for APRS USE
+
+	return true;
+
+#endif
 }
 
 static void parse_gps_output(GPS_HandleTypeDef* gps, uint8_t* buffer, uint8_t buffer_length){

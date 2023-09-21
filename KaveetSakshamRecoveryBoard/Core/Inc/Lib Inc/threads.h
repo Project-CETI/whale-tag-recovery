@@ -23,8 +23,8 @@
 #include "Recovery Inc/FishTracker.h"
 #include "Sensor Inc/GPSCollection.h"
 #include "Sensor Inc/BatteryMonitoring.h"
-#include "Comms Inc/PiCommsRX.h"
-#include "Comms Inc/PiCommsTX.h"
+#include "Comms Inc/PiComms.h"
+#include "Comms Inc/PiComms.h"
 
 //Enum for all threads so we can easily keep track of the list + total number of threads.
 // If adding a new thread to the list, put it before the "NUM_THREADS" element, as it must always be the last element in the enum.

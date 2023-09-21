@@ -6,7 +6,7 @@
  */
 
 
-#include "Comms Inc/PiCommsRX.h"
+#include "Comms Inc/PiComms.h"
 #include "Lib Inc/state_machine.h"
 #include "Lib Inc/threads.h"
 #include "main.h"
@@ -64,29 +64,29 @@ void pi_comms_rx_thread_entry(ULONG thread_input){
 
 }
 
-void pi_comms_parse_message(Message_IDs message_id, uint8_t * payload_pointer, uint8_t payload_length){
+void pi_comms_parse_message(PiCommsMessageID message_id, uint8_t * payload_pointer, uint8_t payload_length){
 
 	switch (message_id) {
 
-		case START_RECOVERY:
+		case PI_COMM_MSG_START:
 
 			//Publish event flag to state machine to enter recovery
 			tx_event_flags_set(&state_machine_event_flags_group, STATE_COMMS_APRS_FLAG, TX_OR);
 			break;
 
-		case STOP:
+		case PI_COMM_MSG_STOP:
 
 			//Publish event flag to state machine to stop (and wait for more commands)
 			tx_event_flags_set(&state_machine_event_flags_group, STATE_COMMS_STOP_FLAG, TX_OR);
 			break;
 
-		case START_GPS_COLLECTION:
+		case PI_COMM_MSG_COLLECT_ONLY:
 
 			//Publish event flag to state machine to enter regular GPS collection
 			tx_event_flags_set(&state_machine_event_flags_group, STATE_COMMS_COLLECT_GPS_FLAG, TX_OR);
 			break;
 
-		case ENTER_CRITICAL:
+		case PI_COMM_MSG_CRITICAL:
 
 			//Publish event flag to state machien to enter a critical low power state (nothing runs)
 			tx_event_flags_set(&state_machine_event_flags_group, STATE_CRITICAL_LOW_BATTERY_FLAG, TX_OR);

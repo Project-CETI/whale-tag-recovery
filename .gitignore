@@ -55,3 +55,6 @@ RemoteSystemsTempFiles/
 *.su
 *.idb
 *.pdb
+
+#vscode metadata
+.vscode/
