@@ -9,6 +9,7 @@
 #define INC_LIB_INC_STATE_MACHINE_H_
 
 #include "tx_api.h"
+#include <stdint.h>
 
 #define IS_SIMULATING false
 
@@ -22,6 +23,9 @@
 #define STATE_CRITICAL_LOW_BATTERY_FLAG 0x8
 
 #define ALL_STATE_FLAGS (STATE_COMMS_STOP_FLAG | STATE_COMMS_APRS_FLAG | STATE_COMMS_COLLECT_GPS_FLAG | STATE_CRITICAL_LOW_BATTERY_FLAG)
+
+//How long USB_BOOT_EN must be held low to reset system and reset to enter bootloader
+#define USB_BOOTLOADER_HOLD_TIME_SECONDS (10)
 
 typedef enum {
 	STATE_CRITICAL = 0, //Do nothing and be in super low power

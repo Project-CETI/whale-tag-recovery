@@ -12,13 +12,40 @@
 //Event flags for signaling changes in state
 TX_EVENT_FLAGS_GROUP state_machine_event_flags_group;
 
+
+
 //Threads array
 extern Thread_HandleTypeDef threads[NUM_THREADS];
+
+
+static void state_machine_check_usb_boot(ULONG timer_input){
+	static uint16_t consecutive = 0;
+	if(HAL_GPIO_ReadPin(USB_BOOT_EN_GPIO_Port, USB_BOOT_EN_Pin) == GPIO_PIN_RESET){
+		consecutive++;
+	}else{
+		consecutive = 0;
+	}
+
+	/*reset system*/
+	if(consecutive == USB_BOOTLOADER_HOLD_TIME_SECONDS){
+		HAL_NVIC_SystemReset(); //reset system;
+	}
+}
 
 void state_machine_thread_entry(ULONG thread_input){
 
 	//Event flags for triggering state changes
 	tx_event_flags_create(&state_machine_event_flags_group, "State Machine Event Flags");
+	//attach USB_boot_enable
+	TX_TIMER bootloader_check_timer;
+	tx_timer_create(
+			&bootloader_check_timer,
+			"USB Bootloader Check",
+			state_machine_check_usb_boot,
+			0,
+			1, tx_s_to_ticks(1),
+			TX_AUTO_ACTIVATE
+	);
 
 	//If simulating, set the simulation state defined in the header file, else, enter data capture as a default
 	State state = STARTING_STATE;

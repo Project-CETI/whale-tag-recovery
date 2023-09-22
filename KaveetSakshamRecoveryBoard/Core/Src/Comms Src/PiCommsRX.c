@@ -90,6 +90,7 @@ void pi_comms_parse_message(PiCommsMessageID message_id, uint8_t * payload_point
 
 			//Publish event flag to state machien to enter a critical low power state (nothing runs)
 			tx_event_flags_set(&state_machine_event_flags_group, STATE_CRITICAL_LOW_BATTERY_FLAG, TX_OR);
+			break;
 
 		default:
 			//Bad message ID - do nothing

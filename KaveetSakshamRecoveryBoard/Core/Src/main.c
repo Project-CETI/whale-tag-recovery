@@ -37,7 +37,7 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-
+#define BOOTLOADER_ADDRESS     0x0BF90000
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -106,7 +106,41 @@ int main(void)
   SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
-
+	// configure PA10 as input
+	// read PIN PA10 value, if low enter bootloader
+	__HAL_RCC_GPIOA_CLK_ENABLE();
+	 GPIO_InitTypeDef GPIO_InitStruct = {
+			 .Pin = USB_BOOT_EN_Pin,
+			 .Mode = GPIO_MODE_INPUT,
+			 .Pull = GPIO_PULLUP
+	 };
+	 HAL_GPIO_Init(USB_BOOT_EN_GPIO_Port, &GPIO_InitStruct);
+	GPIO_PinState bootloader_val = HAL_GPIO_ReadPin(USB_BOOT_EN_GPIO_Port, USB_BOOT_EN_Pin);
+	HAL_GPIO_DeInit(USB_BOOT_EN_GPIO_Port, USB_BOOT_EN_Pin);
+	__HAL_RCC_GPIOA_CLK_DISABLE(); //disable GPIO clock
+	/* JUMP TO SYSTEM MEMORY BOOTLOADER IF PIN IS LOW*/
+	if (bootloader_val == GPIO_PIN_RESET) {
+		/*Configure GPIO pin Output Level */
+		__HAL_RCC_GPIOB_CLK_ENABLE();
+		HAL_GPIO_WritePin(PWR_LED_NEN_GPIO_Port, PWR_LED_NEN_Pin, GPIO_PIN_SET);
+		GPIO_InitStruct = (GPIO_InitTypeDef){
+			.Pin = PWR_LED_NEN_Pin,
+			.Mode = GPIO_MODE_OUTPUT_PP,
+			.Pull = GPIO_NOPULL,
+			.Speed = GPIO_SPEED_FREQ_LOW
+		};
+		HAL_GPIO_Init(PWR_LED_NEN_GPIO_Port, &GPIO_InitStruct);
+		for(int i = 0; i < 2*5; i++){
+			HAL_GPIO_TogglePin(PWR_LED_NEN_GPIO_Port, PWR_LED_NEN_Pin);
+			HAL_Delay(250);
+		}
+		HAL_GPIO_DeInit(PWR_LED_NEN_GPIO_Port, PWR_LED_NEN_Pin);
+		__HAL_RCC_GPIOB_CLK_DISABLE();
+		HAL_DeInit();
+		uint32_t BootloaderAddress = *(__IO uint32_t*) (BOOTLOADER_ADDRESS + 4);
+		void (* JumpToBootloader)(void) = (void(*)(void)) BootloaderAddress;
+		JumpToBootloader();
+	}
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
