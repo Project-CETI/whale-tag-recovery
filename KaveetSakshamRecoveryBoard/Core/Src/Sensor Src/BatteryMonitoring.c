@@ -8,6 +8,7 @@
 #include "Sensor Inc/BatteryMonitoring.h"
 #include "Lib Inc/state_machine.h"
 #include "main.h"
+#include "config.h"
 #include "stm32u5xx_hal_adc.h"
 
 //External variables
@@ -26,7 +27,7 @@ void battery_monitor_thread_entry(ULONG thread_input){
 		voltage_mon = battery_monitor_get_true_voltage();
 
 		//If our voltage is too low (low battery detected)
-		if (voltage_mon < BATT_MON_LOW_VOLTAGE_THRESHOLD){
+		if (voltage_mon < g_config.critical_voltage){
 			tx_event_flags_set(&state_machine_event_flags_group, STATE_CRITICAL_LOW_BATTERY_FLAG, TX_OR);
 		}
 

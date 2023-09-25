@@ -59,35 +59,47 @@
 /*** TYPE DEFINITIONS ********************************************************/
 
 typedef enum pi_comms_message_id_e {
-	PI_COMM_MSG_BAD          = 0,
-	PI_COMM_MSG_START        = 1, //pi --> rec: sets rec into recovery state
-	PI_COMM_MSG_STOP         = 2, //pi --> rec: sets rec into waiting state
-	PI_COMM_MSG_COLLECT_ONLY = 3, //pi --> rec: sets rec into rx gps state
-	PI_COMM_MSG_CRITICAL     = 4, //pi --> rec: sets rec into critical state
-	PI_COMM_MSG_GPS_PACKET   = 5, //rec --> pi: raw gps packet
-    PI_COMM_MSG_CONFIG       = 6, //pi --> rec: rec board configuration
-	NUM_RX_MESSAGES //NUM_RX_MESSAGES SHOULD ALWAYS BE THE LAST ELEMENT.
+    /* Set recovery state*/
+    PI_COMM_MSG_START        = 0x01, //pi --> rec: sets rec into recovery state
+    PI_COMM_MSG_STOP         = 0x02, //pi --> rec: sets rec into waiting state
+    PI_COMM_MSG_COLLECT_ONLY = 0x03, //pi --> rec: sets rec into rx gps state
+    PI_COMM_MSG_CRITICAL     = 0x04, //pi --> rec: sets rec into critical state
+
+    /* recovery packet */
+    PI_COMM_MSG_GPS_PACKET   = 0x10, //rec --> pi: raw gps packet
+
+    /* recovery configuration */
+    PI_COMM_MSG_CONFIG_CRITICAL_VOLTAGE = 0x20,
+    PI_COMM_MSG_CONFIG_VHF_POWER_LEVEL = 0x21,
 }PiCommsMessageID;
 
 typedef struct __PI_COMMS_PACKET {
-	uint8_t message_id; //PiCommsMessageID
-	uint8_t data_length;
-	uint8_t data_buffer[PI_COMMS_MAX_DATA_PAYLOAD];
+    uint8_t message_id; //PiCommsMessageID
+    uint8_t data_length;
+    uint8_t data_buffer[PI_COMMS_MAX_DATA_PAYLOAD];
 }RX_Message;
 
 typedef struct pi_comm_header_t {
-	uint8_t start_byte; //'$'
-	uint8_t id;         //PiCommsMessageID
-	uint8_t length;
+    uint8_t start_byte; //'$'
+    uint8_t id;         //PiCommsMessageID
+    uint8_t length;
 }PiCommHeader;
 
 typedef struct __GPS_TX_MESSAGE {
-	uint8_t start_byte; //'$'
-	uint8_t message_id; //PiCommsMessageID
-	uint8_t message_length;
-	GPS_Data data;
+    uint8_t start_byte; //'$'
+    uint8_t message_id; //PiCommsMessageID
+    uint8_t message_length;
+    GPS_Data data;
 }GPS_TX_Message;
 
+/* configuration packets */
+typedef struct __attribute__ ((__packed__, scalar_storage_order ("little-endian"))) {
+    float value;
+}PiCommCritVoltagePkt;
+
+typedef struct __attribute__ ((__packed__, scalar_storage_order ("little-endian"))) {
+    uint8_t value;
+}PiCommTxLevelPkt;
 
 /*** FUNCTION DECLARATIONS ***************************************************/
 

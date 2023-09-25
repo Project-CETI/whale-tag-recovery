@@ -71,7 +71,7 @@ UINT App_ThreadX_Init(VOID *memory_ptr)
 	for (uint8_t index = 0; index < NUM_THREADS; index++){
 
 	  VOID * pointer = threads[index].thread_stack_start;
-	// Allocate memory pool
+	  // Allocate memory pool
 	  TX_BYTE_POOL* byte_pool = (TX_BYTE_POOL*) memory_ptr;
 	  ret = tx_byte_allocate(byte_pool, &pointer, threads[index].config.thread_stack_size, TX_NO_WAIT);
 
@@ -91,12 +91,11 @@ UINT App_ThreadX_Init(VOID *memory_ptr)
 	}
 
 	//TEMP: start the correct thread
-	if (USE_FISHTRACKER){
+#if USE_FISHTRACKER
 		tx_thread_resume(&threads[FISHTRACKER_THREAD].thread);
-	}
-	else {
+#else
 		tx_thread_resume(&threads[STATE_MACHINE_THREAD].thread);
-	}
+#endif
   /* USER CODE END App_ThreadX_Init */
 
   return ret;

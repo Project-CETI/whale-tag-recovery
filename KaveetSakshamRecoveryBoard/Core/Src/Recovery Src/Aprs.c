@@ -11,6 +11,7 @@
 #include "Recovery Inc/AprsPacket.h"
 #include "Recovery Inc/AprsTransmit.h"
 #include "main.h"
+#include "config.h"
 #include <stdlib.h>
 
 //Extern variables for HAL UART handlers and message queues
@@ -31,8 +32,8 @@ void aprs_thread_entry(ULONG aprs_thread_input){
 	initialize_gps(&huart3, &gps);
 
 	//Initialize VHF module for transmission. Turn transmission off so we don't hog the frequency
-	initialize_vhf(huart4, false, TX_FREQ, RX_FREQ);
-	set_ptt(false);
+	vhf_initialize(huart4, g_config.vhf_power, TX_FREQ, RX_FREQ);
+	vhf_set_ptt(false);
 
 	//We arent in dominica by default
 	bool is_in_dominica = false;
@@ -61,7 +62,7 @@ void aprs_thread_entry(ULONG aprs_thread_input){
 			is_in_dominica = toggle_freq(gps_data.is_dominica, is_in_dominica);
 
 			//Start transmission
-			set_ptt(true);
+			vhf_set_ptt(true);
 
 			//Now, transmit the signal through the VHF module. Transmit a few times just for safety.
 			for (uint8_t transmits = 0; transmits < NUM_TX_ATTEMPTS; transmits++){
@@ -69,23 +70,19 @@ void aprs_thread_entry(ULONG aprs_thread_input){
 			}
 
 			//end transmission
-			set_ptt(false);
+			vhf_set_ptt(false);
 
 			//Set the sleep period for a successful APRS transmission
 			sleep_period = APRS_BASE_SLEEP_LENGTH;
 
 			//Add a random component to it so that we dont transmit at the same interval each time (to prevent bad timing drowning out other transmissions)
-			uint8_t random_num = rand() % 30;
+			uint8_t random_num = rand() % tx_s_to_ticks(30);
 
 			//Add a random amount of seconds to the sleep, from 0 to 29
-			sleep_period += tx_s_to_ticks(random_num);
+			sleep_period += random_num;
 
 			//Send our GPS data to the Pi Comms TX thread so we can send it to the tag
 			//tx_queue_send(&gps_tx_queue, &gps_data, TX_WAIT_FOREVER);
-		}
-		else{
-			
-			HAL_UART_Transmit(&huart2, (uint8_t *)"!No Lock!\n\r", 11, HAL_MAX_DELAY);
 		}
 
 		//Go to sleep now
@@ -106,7 +103,7 @@ static bool toggle_freq(bool is_gps_dominica, bool is_currently_dominica){
 	if (is_gps_dominica && !is_currently_dominica){
 
 		//Re-initialize for dominica frequencies
-		initialize_vhf(huart4, false, DOMINICA_TX_FREQ, DOMINICA_RX_FREQ);
+		vhf_initialize(huart4, g_config.vhf_power, DOMINICA_TX_FREQ, DOMINICA_RX_FREQ);
 
 		//Now configured for dominica, return to indicate that
 		return true;
@@ -115,7 +112,7 @@ static bool toggle_freq(bool is_gps_dominica, bool is_currently_dominica){
 	else if (!is_gps_dominica && is_currently_dominica){
 
 		//Re-initialize for default frequencies
-		initialize_vhf(huart4, false, TX_FREQ, RX_FREQ);
+		vhf_initialize(huart4, g_config.vhf_power, TX_FREQ, RX_FREQ);
 
 		//No longer on dominica freq, return to indicate that
 		return false;

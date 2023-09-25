@@ -9,6 +9,8 @@
 #include "Comms Inc/PiComms.h"
 #include "Lib Inc/state_machine.h"
 #include "Lib Inc/threads.h"
+#include "Recovery Inc/VHF.h"
+#include "config.h"
 #include "main.h"
 #include "stm32u5xx_hal_uart.h"
 
@@ -16,6 +18,9 @@
 extern UART_HandleTypeDef huart2;
 extern Thread_HandleTypeDef threads[NUM_THREADS];
 extern TX_EVENT_FLAGS_GROUP state_machine_event_flags_group;
+
+//Private typedef
+
 
 //Data buffer for receives
 uint8_t dataBuffer[256] = {0};
@@ -38,10 +43,11 @@ void pi_comms_rx_thread_entry(ULONG thread_input){
 
 	HAL_UART_RegisterCallback(&huart2, HAL_UART_RX_COMPLETE_CB_ID, comms_UART_RxCpltCallback);
 	HAL_GPIO_WritePin(APRS_PD_GPIO_Port, APRS_PD_Pin, GPIO_PIN_SET);
+	//Start a non-blocking 1 byte UART read. Let the RX complete callback handle the rest.
+	HAL_UART_Receive_IT(&huart2, (uint8_t *) dataBuffer, 1);
 	while (1) {
 
-		//Start a non-blocking 1 byte UART read. Let the RX complete callback handle the rest.
-		HAL_UART_Receive_IT(&huart2, (uint8_t *) dataBuffer, 1);
+
 
 		ULONG actual_flags;
 
@@ -56,8 +62,12 @@ void pi_comms_rx_thread_entry(ULONG thread_input){
 			//Now read the entire payload
 			HAL_UART_Receive(&huart2, &dataBuffer[3], dataBuffer[2], HAL_MAX_DELAY);
 
+			HAL_UART_Receive_IT(&huart2, (uint8_t *) dataBuffer, 1);
 			//parse the message and act accordingly
 			pi_comms_parse_message(dataBuffer[1], &dataBuffer[3], dataBuffer[2]);
+		}
+		else {
+			HAL_UART_Receive_IT(&huart2, (uint8_t *) dataBuffer, 1);
 		}
 
 	}
@@ -90,6 +100,19 @@ void pi_comms_parse_message(PiCommsMessageID message_id, uint8_t * payload_point
 
 			//Publish event flag to state machien to enter a critical low power state (nothing runs)
 			tx_event_flags_set(&state_machine_event_flags_group, STATE_CRITICAL_LOW_BATTERY_FLAG, TX_OR);
+			break;
+
+		case PI_COMM_MSG_CONFIG_CRITICAL_VOLTAGE: {
+				PiCommCritVoltagePkt *crit_voltage = (PiCommCritVoltagePkt *)payload_pointer;
+				g_config.critical_voltage = crit_voltage->value;
+			}
+			break;
+
+		case PI_COMM_MSG_CONFIG_VHF_POWER_LEVEL: {
+				PiCommTxLevelPkt *tx_pwr_lvl = (PiCommTxLevelPkt *)payload_pointer;
+				g_config.vhf_power = tx_pwr_lvl->value;
+				vhf_set_power_level(g_config.vhf_power);
+			}
 			break;
 
 		default:

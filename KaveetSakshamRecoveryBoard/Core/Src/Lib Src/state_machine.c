@@ -5,6 +5,7 @@
  *      Author: Kaveet
  */
 
+#include "config.h"
 #include "Lib Inc/state_machine.h"
 #include "Lib Inc/threads.h"
 #include "main.h"
@@ -17,7 +18,7 @@ TX_EVENT_FLAGS_GROUP state_machine_event_flags_group;
 //Threads array
 extern Thread_HandleTypeDef threads[NUM_THREADS];
 
-
+#if USB_BOOTLOADER_ENABLED
 static void state_machine_check_usb_boot(ULONG timer_input){
 	static uint16_t consecutive = 0;
 	if(HAL_GPIO_ReadPin(USB_BOOT_EN_GPIO_Port, USB_BOOT_EN_Pin) == GPIO_PIN_RESET){
@@ -31,11 +32,14 @@ static void state_machine_check_usb_boot(ULONG timer_input){
 		HAL_NVIC_SystemReset(); //reset system;
 	}
 }
+#endif
 
 void state_machine_thread_entry(ULONG thread_input){
 
 	//Event flags for triggering state changes
 	tx_event_flags_create(&state_machine_event_flags_group, "State Machine Event Flags");
+
+#if USB_BOOTLOADER_ENABLED
 	//attach USB_boot_enable
 	TX_TIMER bootloader_check_timer;
 	tx_timer_create(
@@ -46,6 +50,7 @@ void state_machine_thread_entry(ULONG thread_input){
 			1, tx_s_to_ticks(1),
 			TX_AUTO_ACTIVATE
 	);
+#endif
 
 	//If simulating, set the simulation state defined in the header file, else, enter data capture as a default
 	State state = STARTING_STATE;
@@ -139,6 +144,7 @@ void exit_aprs_recovery(){
 	tx_thread_suspend(&threads[APRS_THREAD].thread);
 
 	//TODO: Turn GPS off (through power FET)
+	HAL_GPIO_WritePin(PWR_LED_NEN_GPIO_Port, PWR_LED_NEN_Pin, GPIO_PIN_RESET);
 	HAL_GPIO_WritePin(GPS_NEN_GPIO_Port, GPS_NEN_Pin, GPIO_PIN_SET);
 }
 

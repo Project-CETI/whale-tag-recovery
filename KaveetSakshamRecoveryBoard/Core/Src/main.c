@@ -19,6 +19,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "app_threadx.h"
 #include "main.h"
+#include "config.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -106,6 +107,7 @@ int main(void)
   SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
+#if USB_BOOTLOADER_ENABLED
 	// configure PA10 as input
 	// read PIN PA10 value, if low enter bootloader
 	__HAL_RCC_GPIOA_CLK_ENABLE();
@@ -141,6 +143,7 @@ int main(void)
 		void (* JumpToBootloader)(void) = (void(*)(void)) BootloaderAddress;
 		JumpToBootloader();
 	}
+#endif
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */

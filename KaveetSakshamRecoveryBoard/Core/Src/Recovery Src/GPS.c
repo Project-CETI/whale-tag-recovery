@@ -53,8 +53,10 @@ bool read_gps_data(GPS_HandleTypeDef* gps){
 		HAL_UART_Receive(gps->huart, &receive_buffer[read_index], 1, GPS_UART_TIMEOUT);
 	}
 
-	pi_comms_tx_forward_gps(receive_buffer, read_index + 1); //forward packet to pi
-	parse_gps_output(gps, receive_buffer, read_index + 1); //for APRS USE
+	parse_gps_output(gps, receive_buffer, read_index + 2); //for APRS USE
+	if(gps->is_pos_locked){
+		pi_comms_tx_forward_gps(receive_buffer, read_index + 2); //forward packet to pi
+	}
 
 	return true;
 

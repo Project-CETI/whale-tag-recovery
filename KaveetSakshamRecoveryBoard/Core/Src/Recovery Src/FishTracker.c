@@ -10,6 +10,7 @@
 #include <stdint.h>
 #include "constants.h"
 #include "main.h"
+#include "config.h"
 #include <stdbool.h>
 
 //For our DAC values
@@ -27,8 +28,8 @@ void fishtracker_thread_entry(ULONG thread_input){
 	calcFishtrackerDacValues();
 
 	//Initialize VHF module for transmission. Turn transmission off so we don't hog the frequency
-	initialize_vhf(huart4, false, FISHTRACKER_CARRIER_FREQ_MHZ, FISHTRACKER_CARRIER_FREQ_MHZ);
-	set_ptt(false);
+	vhf_initialize(huart4, g_config.vhf_power, FISHTRACKER_CARRIER_FREQ_MHZ, FISHTRACKER_CARRIER_FREQ_MHZ);
+	vhf_set_ptt(false);
 
 	//We must use DMA since our DAC is configured that way in the IOC (See calcFishtrackerDacValues for the override)
 	HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, fishtracker_dac_input, FISHTRACKER_NUM_DAC_SAMPLES, DAC_ALIGN_8B_R);
@@ -41,13 +42,15 @@ void fishtracker_thread_entry(ULONG thread_input){
 		//Thus, we mimic this by turning on and off the PTT, to simulate an ON/OFF wave.
 		//
 		//Set PTT true to get the ON cycle.
-		set_ptt(true);
+		vhf_set_ptt(true);
+//		vhf_wake();
 
 		//Go to sleep for the ON period
 		tx_thread_sleep(FISHTRACKER_ON_TIME_TICKS);
 
 		//Start the OFF cycle
-		set_ptt(false);
+		 vhf_set_ptt(false);
+//		vhf_sleep();
 
 		//Go to sleep again for the off period.
 		tx_thread_sleep(FISHTRACKER_OFF_TIME_TICKS);

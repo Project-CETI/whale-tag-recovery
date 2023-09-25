@@ -3,20 +3,21 @@
  *
  *  Created on: Jun 10, 2023
  *      Author: Kaveet
+ * 			    Michael Salino-Hugg (msalinohugg@seas.harvard.edu)
  */
 
 #include "Recovery Inc/VHF.h"
 #include <stdio.h>
 #include <string.h>
 
-HAL_StatusTypeDef initialize_vhf(UART_HandleTypeDef huart, bool is_high, char * tx_freq, char * rx_freq){
+HAL_StatusTypeDef vhf_initialize(UART_HandleTypeDef huart, VHFPowerLevel power_level, char * tx_freq, char * rx_freq){
 
 	//Set the modes of the GPIO pins attached to the vhf module.
 	//Leave PTT floating, set appropriate power level and wake chip
 	HAL_Delay(1000);
-	set_ptt(true);
-	set_power_level(is_high);
-	wake_vhf();
+	vhf_set_ptt(true);
+	vhf_set_power_level(power_level);
+	vhf_wake();
 	HAL_Delay(1000);
 
 	return configure_dra818v(huart, false, false, false, tx_freq, rx_freq);
@@ -86,27 +87,27 @@ HAL_StatusTypeDef configure_dra818v(UART_HandleTypeDef huart, bool emphasis, boo
 }
 
 
-void set_ptt(bool is_tx){
+void vhf_set_ptt(bool is_tx){
 
 	//isTx determines if the GPIO is high or low, and thus if we are transmitting or not
 	HAL_GPIO_WritePin(VHF_PTT_GPIO_Port, VHF_PTT_Pin, is_tx);
 
 }
 
-void set_power_level(bool is_high){
+void vhf_set_power_level(VHFPowerLevel power_level){
 
 	//isHigh determines if we should use high power (1W) or low (0.5W)
-	HAL_GPIO_WritePin(APRS_H_L_GPIO_Port, APRS_H_L_Pin, is_high);
+	HAL_GPIO_WritePin(APRS_H_L_GPIO_Port, APRS_H_L_Pin, (power_level == VHF_POWER_HIGH)? GPIO_PIN_SET : GPIO_PIN_RESET);
 
 }
 
-void sleep_vhf(){
+void vhf_sleep(){
 
 	//Set the PD pin on the module to low to make the module sleep
 	HAL_GPIO_WritePin(APRS_PD_GPIO_Port, APRS_PD_Pin, GPIO_PIN_RESET);
 }
 
-void wake_vhf(){
+void vhf_wake(){
 
 	//Set the PD pin on the module to high to wake the module
 	HAL_GPIO_WritePin(APRS_PD_GPIO_Port, APRS_PD_Pin, GPIO_PIN_SET);
