@@ -17,13 +17,16 @@ Contents:
 
 1) Download the latest binary from releases or build an .elf file following the instructions in the [README](README.md) file.  
 
-1) Connect the USB-B end of the recovery board programming cable to your computer.
+1) Power on the tag using the magnetic power connector.
+     ***ToDo: add image of power connector on tag***
 
-1) Attach the magnetic connector to the tag as seen in this image:
+1) Connect the USB end of the recovery board programming cable to your computer.
+
+1) Attach the magnetic connector end of the programming cable to the tag.
     
-    ***ToDo: add image of connector on tag***
+    ***ToDo: add image of programming connector on tag***
 
-1) If the tag is off, turn it on; OR if the tag is already on, wait ~10 seconds with the programming cable attached to the tag. The red LED on the recovery board should flash 5 times an then turn off. You are now in USB bootloading mode.
+1) Wait ~10 seconds with the programming cable attached to the tag. The red LED on the recovery board should flash 5 times an then turn off.
 
 1) In STM32CubeProgrammer:
     
