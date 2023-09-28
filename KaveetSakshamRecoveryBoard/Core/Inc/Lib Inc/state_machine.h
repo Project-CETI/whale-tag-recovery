@@ -27,6 +27,8 @@
 //How long USB_BOOT_EN must be held low to reset system and reset to enter bootloader
 #define USB_BOOTLOADER_HOLD_TIME_SECONDS (10)
 
+#define HEARTRATE_SECONDS (10)
+
 typedef enum {
 	STATE_CRITICAL = 0, //Do nothing and be in super low power
 	STATE_WAITING = 1, //Do the bare minimum (comms and battery monitoring)

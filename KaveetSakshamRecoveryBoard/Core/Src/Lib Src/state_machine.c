@@ -34,6 +34,14 @@ static void state_machine_check_usb_boot(ULONG timer_input){
 }
 #endif
 
+static void priv__state_machine_heartbeat(ULONG heartbeat_input){
+	for(int i = 0; i < 15; i++){
+				HAL_GPIO_TogglePin(PWR_LED_NEN_GPIO_Port, PWR_LED_NEN_Pin);
+				HAL_Delay(33); //flash at ~15 Hz for 1 second
+	}
+	 HAL_GPIO_WritePin(PWR_LED_NEN_GPIO_Port, PWR_LED_NEN_Pin, GPIO_PIN_SET);//ensure light is off after strobe
+}
+
 void state_machine_thread_entry(ULONG thread_input){
 
 	//Event flags for triggering state changes
@@ -42,15 +50,24 @@ void state_machine_thread_entry(ULONG thread_input){
 #if USB_BOOTLOADER_ENABLED
 	//attach USB_boot_enable
 	TX_TIMER bootloader_check_timer;
+	TX_TIMER heartbeat_timer;
+
 	tx_timer_create(
 			&bootloader_check_timer,
 			"USB Bootloader Check",
-			state_machine_check_usb_boot,
-			0,
+			state_machine_check_usb_boot, 0,
 			1, tx_s_to_ticks(1),
 			TX_AUTO_ACTIVATE
 	);
 #endif
+
+	tx_timer_create(
+			&heartbeat_timer,
+			"Heartbeat LED Timer",
+			priv__state_machine_heartbeat, 0,
+			tx_s_to_ticks(30), tx_s_to_ticks(HEARTRATE_SECONDS),
+			TX_AUTO_ACTIVATE
+	); //heartbeat timer
 
 	//If simulating, set the simulation state defined in the header file, else, enter data capture as a default
 	State state = STARTING_STATE;
@@ -134,8 +151,8 @@ void enter_aprs_recovery(){
 	tx_thread_resume(&threads[APRS_THREAD].thread);
 
 	//TODO: Enable Power FET to turn GPS on
-	HAL_GPIO_WritePin(PWR_LED_NEN_GPIO_Port, PWR_LED_NEN_Pin, GPIO_PIN_SET); //only flash LED when transmitting
 	HAL_GPIO_WritePin(GPS_NEN_GPIO_Port, GPS_NEN_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(APRS_PD_GPIO_Port, APRS_PD_Pin, GPIO_PIN_SET);//wake aprs
 }
 
 //Suspends the APRS recovery thread
@@ -144,8 +161,8 @@ void exit_aprs_recovery(){
 	tx_thread_suspend(&threads[APRS_THREAD].thread);
 
 	//TODO: Turn GPS off (through power FET)
-	HAL_GPIO_WritePin(PWR_LED_NEN_GPIO_Port, PWR_LED_NEN_Pin, GPIO_PIN_RESET);
 	HAL_GPIO_WritePin(GPS_NEN_GPIO_Port, GPS_NEN_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(APRS_PD_GPIO_Port, APRS_PD_Pin, GPIO_PIN_RESET); //aprs -> sleep mode
 }
 
 //Starts the GPS data collection thread

@@ -20,7 +20,7 @@ float voltage_mon = 0;
 //Main thread entry for battery monitoring function
 void battery_monitor_thread_entry(ULONG thread_input){
 
-
+#if BATTERY_MONITOR_ENABLED
 	while (1){
 
 		//Get our battery voltage value
@@ -34,6 +34,7 @@ void battery_monitor_thread_entry(ULONG thread_input){
 		//Sleep and repeat the process once woken up
 		tx_thread_sleep(BATT_MON_SLEEP_TIME_TICKS);
 	}
+#endif
 }
 
 uint32_t battery_monitor_get_raw_adc_data(){
