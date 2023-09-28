@@ -26,7 +26,7 @@ Contents:
     
     ***ToDo: add image of programming connector on tag***
 
-1) Wait ~10 seconds with the programming cable attached to the tag. The red LED on the recovery board should flash 5 times an then turn off.
+1) Wait ~10 seconds with the programming cable attached to the tag. The red LED on the recovery board should flash 5 times and then turn off.
 
 1) In STM32CubeProgrammer:
     
