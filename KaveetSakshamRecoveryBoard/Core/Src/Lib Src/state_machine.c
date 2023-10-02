@@ -123,7 +123,7 @@ void state_machine_thread_entry(ULONG thread_input){
 			if (actual_flags & STATE_COMMS_COLLECT_GPS_FLAG){
 
 				//Start GPS collection. Stop APRS collection if its currently running (since only one thread should access GPS hardware)
-				if (state == STATE_GPS_COLLECT){
+				if (state == STATE_APRS){
 					exit_aprs_recovery();
 				}
 
@@ -153,6 +153,7 @@ void enter_aprs_recovery(){
 	//TODO: Enable Power FET to turn GPS on
 	HAL_GPIO_WritePin(GPS_NEN_GPIO_Port, GPS_NEN_Pin, GPIO_PIN_RESET);
 	HAL_GPIO_WritePin(APRS_PD_GPIO_Port, APRS_PD_Pin, GPIO_PIN_SET);//wake aprs
+	HAL_Delay(500);//wait for aprs to wake
 }
 
 //Suspends the APRS recovery thread
@@ -185,7 +186,9 @@ void exit_gps_collection(){
 
 //Starts the threads that are active while waiting (comms, battery monitoring)
 void enter_waiting(){
-
+#if RTC_ENABLED
+	tx_thread_resume(&threads[RTC_THREAD].thread);
+#endif
 	tx_thread_resume(&threads[BATTERY_MONITOR_THREAD].thread);
 	tx_thread_resume(&threads[PI_COMMS_TX_THREAD].thread);
 	tx_thread_resume(&threads[PI_COMMS_RX_THREAD].thread);
@@ -193,7 +196,9 @@ void enter_waiting(){
 
 //Exits the waiting threads
 void exit_waiting(){
-
+#if RTC_ENABLED
+	tx_thread_resume(&threads[RTC_THREAD].thread);
+#endif
 	tx_thread_suspend(&threads[BATTERY_MONITOR_THREAD].thread);
 	tx_thread_suspend(&threads[PI_COMMS_TX_THREAD].thread);
 	tx_thread_suspend(&threads[PI_COMMS_RX_THREAD].thread);

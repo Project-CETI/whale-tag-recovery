@@ -46,9 +46,6 @@ void pi_comms_rx_thread_entry(ULONG thread_input){
 	//Start a non-blocking 1 byte UART read. Let the RX complete callback handle the rest.
 	HAL_UART_Receive_IT(&huart2, (uint8_t *) dataBuffer, 1);
 	while (1) {
-
-
-
 		ULONG actual_flags;
 
 		//Wait for the Interrupt callback to fire and set the flag (telling us what to do further)
