@@ -16,6 +16,7 @@ extern UART_HandleTypeDef huart2;
 
 void RTC_thread_entry(ULONG thread_input) {
 
+#if RTC_ENABLED
 	//Create variable to track time
 	RTC_TimeTypeDef sTime = {0};
 	RTC_DateTypeDef sDate = {0};
@@ -60,4 +61,5 @@ void RTC_thread_entry(ULONG thread_input) {
 		//Sleep and repeat the process once woken up
 		tx_thread_sleep(RTC_SLEEP_TIME_TICKS);
 	}
+#endif
 }

@@ -121,3 +121,18 @@ static bool toggle_freq(bool is_gps_dominica, bool is_currently_dominica){
 	//else: do nothing
 	return is_currently_dominica;
 }
+
+void aprs_wake(void){
+	tx_thread_sleep(tx_s_to_ticks(1));
+	vhf_set_ptt(true);
+	vhf_set_power_level(g_config.vhf_power);
+	vhf_wake();
+	tx_thread_sleep(tx_s_to_ticks(1)); //wait for wake
+
+	configure_dra818v(huart4, false, false, false, (char *)g_config.aprs_freq, (char *)g_config.aprs_freq);
+	vhf_set_ptt(false);
+}
+
+void aprs_sleep(void){
+	vhf_sleep();
+}

@@ -7,6 +7,7 @@
 
 #include "Recovery Inc/AprsPacket.h"
 #include "main.h"
+#include "timing.h"
 #include <stdint.h>
 #include <string.h>
 #include <stdbool.h>
@@ -35,7 +36,6 @@ void aprs_generate_packet(uint8_t * buffer, float lat, float lon){
 	buffer[172] = APRS_PROTOCOL_ID;
 
 	//Attach the payload (including other control characters)
-	//TODO: Replace with real GPS data.
 	append_gps_data(&buffer[173], lat, lon); //42.3636 -71.1259
 
 	//Attach other information (course, speed and the comment)
@@ -45,7 +45,7 @@ void aprs_generate_packet(uint8_t * buffer, float lat, float lon){
 
 	append_flag(&buffer[221], 3);
 
-	HAL_Delay(100);
+	tx_thread_sleep(tx_ms_to_ticks(100));
 }
 
 //Appends the flag character (0x7E) to the buffer 'numFlags' times.

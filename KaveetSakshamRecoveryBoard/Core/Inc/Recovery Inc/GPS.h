@@ -29,8 +29,8 @@
 
 
 #define GPS_SIMULATION false
-#define GPS_SIM_LAT 60//42.36326
-#define GPS_SIM_LON -10//-71.12650
+#define GPS_SIM_LAT 42.0000
+#define GPS_SIM_LON -71.0000
 
 #define DEFAULT_LAT 15.31383
 #define DEFAULT_LON -61.30075
@@ -84,5 +84,9 @@ bool get_gps_lock(GPS_HandleTypeDef* gps, GPS_Data* gps_data);
 
 //Checks if a GPS location is in dominica based on the latitude and longitude
 bool is_in_dominica(float latitude, float longitude);
+
+//
+void gps_sleep(void);
+void gps_wake(void);
 
 #endif /* INC_RECOVERY_INC_GPS_H_ */

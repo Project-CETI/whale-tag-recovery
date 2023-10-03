@@ -35,9 +35,12 @@ typedef enum __TX_THREAD_LIST {
 	APRS_THREAD,
 	FISHTRACKER_THREAD,
 	GPS_COLLECTION_THREAD,
+#if BATTERY_MONITOR_ENABLED
 	BATTERY_MONITOR_THREAD,
+#endif
+#if UART_ENABLED
 	PI_COMMS_RX_THREAD,
-	PI_COMMS_TX_THREAD,
+#endif
 #if RTC_ENABLED
 	RTC_THREAD,
 #endif
@@ -122,6 +125,7 @@ static Thread_ConfigTypeDef threadConfigList[NUM_THREADS] = {
 				.timeslice = TX_NO_TIME_SLICE,
 				.start = TX_DONT_START
 		},
+#if BATTERY_MONITOR_ENABLED
 		[BATTERY_MONITOR_THREAD] = {
 				//GPS Collection
 				.thread_name = "Battery Monitoring Thread",
@@ -133,6 +137,8 @@ static Thread_ConfigTypeDef threadConfigList[NUM_THREADS] = {
 				.timeslice = TX_NO_TIME_SLICE,
 				.start = TX_DONT_START
 		},
+#endif
+#if UART_ENABLED
 		[PI_COMMS_RX_THREAD] = {
 				//Pi Comms RX Thread
 				.thread_name = "Pi Comms RX Thread",
@@ -144,17 +150,7 @@ static Thread_ConfigTypeDef threadConfigList[NUM_THREADS] = {
 				.timeslice = TX_NO_TIME_SLICE,
 				.start = TX_DONT_START
 		},
-		[PI_COMMS_TX_THREAD] = {
-				//Pi Comms TX Thread
-				.thread_name = "Pi Comms TX Thread",
-				.thread_entry_function = pi_comms_tx_thread_entry,
-				.thread_input = 0x1234,
-				.thread_stack_size = 2048,
-				.priority = 3,
-				.preempt_threshold = 3,
-				.timeslice = TX_NO_TIME_SLICE,
-				.start = TX_DONT_START
-		},
+#endif
 #if RTC_ENABLED
 		[RTC_THREAD] = {
 				// Power LED Thread

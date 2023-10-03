@@ -32,7 +32,9 @@
 
 #define NUM_TX_ATTEMPTS 3
 
+
 //Main thread entry
 void aprs_thread_entry(ULONG aprs_thread_input);
-
+void aprs_wake(void);
+void aprs_sleep(void);
 #endif /* INC_RECOVERY_INC_APRS_H_ */

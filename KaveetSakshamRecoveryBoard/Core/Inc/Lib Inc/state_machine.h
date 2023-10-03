@@ -14,15 +14,13 @@
 #define IS_SIMULATING false
 
 //Should correspond with the state types enum below
-#define STARTING_STATE STATE_WAITING
+#define STARTING_STATE STATE_APRS
 
 //Flags inside of our state machine event flags
-#define STATE_COMMS_STOP_FLAG 0x1
-#define STATE_COMMS_APRS_FLAG 0x2
-#define STATE_COMMS_COLLECT_GPS_FLAG 0x4
-#define STATE_CRITICAL_LOW_BATTERY_FLAG 0x8
+#define STATE_COMMS_MESSAGE_AVAILABLE_FLAG (1 << 0)
+#define STATE_CRITICAL_LOW_BATTERY_FLAG (1 << 1)
 
-#define ALL_STATE_FLAGS (STATE_COMMS_STOP_FLAG | STATE_COMMS_APRS_FLAG | STATE_COMMS_COLLECT_GPS_FLAG | STATE_CRITICAL_LOW_BATTERY_FLAG)
+ #define ALL_STATE_FLAGS (STATE_COMMS_MESSAGE_AVAILABLE_FLAG | STATE_CRITICAL_LOW_BATTERY_FLAG)
 
 //How long USB_BOOT_EN must be held low to reset system and reset to enter bootloader
 #define USB_BOOTLOADER_HOLD_TIME_SECONDS (10)
@@ -34,6 +32,7 @@ typedef enum {
 	STATE_WAITING = 1, //Do the bare minimum (comms and battery monitoring)
 	STATE_APRS = 2, //APRS Transmissions
 	STATE_GPS_COLLECT = 3, //Just GPS data collection
+	STATE_FISHTRACKER, //Just VHF Beacon
 	NUM_STATES //Add new states ABOVE this line
 }State;
 

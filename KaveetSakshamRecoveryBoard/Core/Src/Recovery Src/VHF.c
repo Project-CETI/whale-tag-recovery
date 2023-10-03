@@ -6,6 +6,8 @@
  * 			    Michael Salino-Hugg (msalinohugg@seas.harvard.edu)
  */
 
+#include "tx_api.h"
+#include "Lib Inc/timing.h"
 #include "Recovery Inc/VHF.h"
 #include <stdio.h>
 #include <string.h>
@@ -14,11 +16,14 @@ HAL_StatusTypeDef vhf_initialize(UART_HandleTypeDef huart, VHFPowerLevel power_l
 
 	//Set the modes of the GPIO pins attached to the vhf module.
 	//Leave PTT floating, set appropriate power level and wake chip
-	HAL_Delay(1000);
+	// HAL_Delay(1000);
+	tx_thread_sleep(tx_s_to_ticks(1));
 	vhf_set_ptt(true);
 	vhf_set_power_level(power_level);
 	vhf_wake();
-	HAL_Delay(1000);
+	// HAL_Delay(1000);
+	tx_thread_sleep(tx_s_to_ticks(1));
+
 
 	return configure_dra818v(huart, false, false, false, tx_freq, rx_freq);
 }
@@ -32,7 +37,8 @@ HAL_StatusTypeDef configure_dra818v(UART_HandleTypeDef huart, bool emphasis, boo
 	char transmit_data[100];
 	char response_data[100];
 
-	HAL_Delay(1000);
+	// HAL_Delay(1000);
+	tx_thread_sleep(tx_s_to_ticks(1));
 
 	//Start with the VHF handshake to confirm module is setup correctly
 	sprintf(transmit_data, "AT+DMOCONNECT \r\n");
@@ -44,7 +50,8 @@ HAL_StatusTypeDef configure_dra818v(UART_HandleTypeDef huart, bool emphasis, boo
 	if (strncmp(response_data, VHF_HANDSHAKE_EXPECTED_RESPONSE, HANDSHAKE_RESPONSE_LENGTH) != 0)
 		failed_config = true;
 
-	HAL_Delay(1000);
+	// HAL_Delay(1000);
+	tx_thread_sleep(tx_s_to_ticks(1));
 
 	//Now, set the parameters of the module
 	sprintf(transmit_data, "AT+DMOSETGROUP=0,%s,%s,0000,0,0000\r\n", tx_freq, rx_freq);
@@ -56,7 +63,8 @@ HAL_StatusTypeDef configure_dra818v(UART_HandleTypeDef huart, bool emphasis, boo
 	if (strncmp(response_data, VHF_SET_PARAMETERS_EXPECTED_RESPONSE, SET_PARAMETERS_RESPONSE_LENGTH) != 0)
 		failed_config = true;
 
-	HAL_Delay(1000);
+	// HAL_Delay(1000);
+	tx_thread_sleep(tx_s_to_ticks(1));
 
 	//Set the volume of the transmissions
 	sprintf(transmit_data, "AT+DMOSETVOLUME=%d\r\n", VHF_VOLUME_LEVEL);
@@ -68,7 +76,8 @@ HAL_StatusTypeDef configure_dra818v(UART_HandleTypeDef huart, bool emphasis, boo
 	if (strncmp(response_data, VHF_SET_VOLUME_EXPECTED_RESPONSE, SET_VOLUME_RESPONSE_LENGTH) != 0)
 		failed_config = true;
 
-	HAL_Delay(1000);
+	// HAL_Delay(1000);
+	tx_thread_sleep(tx_s_to_ticks(1));
 
 	//Set the filter parameters
 	//Invert all the bools passed in since the VHF module treats "0" as true
@@ -81,7 +90,8 @@ HAL_StatusTypeDef configure_dra818v(UART_HandleTypeDef huart, bool emphasis, boo
 	if (strncmp(response_data, VHF_SET_FILTER_EXPECTED_RESPONSE, SET_FILTER_RESPONSE_LENGTH) != 0)
 		failed_config = true;
 
-	HAL_Delay(1000);
+	// HAL_Delay(1000);
+	tx_thread_sleep(tx_s_to_ticks(1));
 
 	return failed_config;
 }
@@ -111,5 +121,7 @@ void vhf_wake(){
 
 	//Set the PD pin on the module to high to wake the module
 	HAL_GPIO_WritePin(APRS_PD_GPIO_Port, APRS_PD_Pin, GPIO_PIN_SET);
+	tx_thread_sleep(tx_ms_to_ticks(500));
+	// HAL_Delay(500); //wait for module to wake
 
 }

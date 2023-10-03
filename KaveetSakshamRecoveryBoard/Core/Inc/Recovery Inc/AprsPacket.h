@@ -23,7 +23,7 @@
 #define APRS_PROTOCOL_ID 0xF0
 
 #define APRS_SOURCE_CALLSIGN "J75Y"
-#define APRS_SOURCE_SSID 1
+#define APRS_SOURCE_SSID 6
 
 #define APRS_SYMBOL "/C"
 #define APRS_DESTINATION_CALLSIGN "APRS"
@@ -32,7 +32,7 @@
 #define APRS_DIGI_PATH "WIDE2"
 #define APRS_DIGI_SSID 2
 
-#define APRS_COMMENT "Build Demonstration"
+#define APRS_COMMENT "Project CETI GPS/APRS test"
 
 #define APRS_CALLSIGN_LENGTH 6
 

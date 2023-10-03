@@ -63,6 +63,9 @@ bool read_gps_data(GPS_HandleTypeDef* gps){
 #endif
 }
 
+#if GPS_SIMULATION
+__attribute__((unused))
+#endif
 static void parse_gps_output(GPS_HandleTypeDef* gps, uint8_t* buffer, uint8_t buffer_length){
 
 	enum minmea_sentence_id sentence_id = minmea_sentence_id((const char *)buffer, false);
@@ -214,4 +217,14 @@ bool get_gps_lock(GPS_HandleTypeDef* gps, GPS_Data* gps_data){
 
 bool is_in_dominica(float latitude, float longitude){
 	return (latitude < DOMINICA_LAT_BOUNDARY);
+}
+
+//Turn GPS off (through power FET)
+void gps_sleep(void){
+	HAL_GPIO_WritePin(GPS_NEN_GPIO_Port, GPS_NEN_Pin, GPIO_PIN_SET);
+}
+
+void gps_wake(void){
+	//Enable power to GPS module
+	HAL_GPIO_WritePin(GPS_NEN_GPIO_Port, GPS_NEN_Pin, GPIO_PIN_RESET);
 }

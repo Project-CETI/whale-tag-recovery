@@ -31,8 +31,9 @@
 #define PI_COMMS_MAX_DATA_PAYLOAD 255
 
 //Flags to indicate if we had a good start character or not
-#define PI_COMMS_VALID_START_FLAG 0x1
-#define PI_COMMS_BAD_START_FLAG 0x2
+#define PI_COMMS_VALID_START_FLAG (1 << 0)
+#define PI_COMMS_OVERFLOW_FLAG	  (1 << 1)
+//#define PI_COMMS_BAD_START_FLAG 0x2
 
 /*ThreadX queue sizes must always be expressed as 32-bits (ulong), not the normal 8-bits.
  * We receive the GPS_Data struct defined in GPS.h
@@ -54,7 +55,8 @@
 
 #define GPS_TX_MESSAGE_SIZE (sizeof(GPS_TX_Message))
 
-
+#define PI_COMM_RX_BUFFER_COUNT 4
+#define PI_COMM_RX_BUFFER_SIZE  8
 
 /*** TYPE DEFINITIONS ********************************************************/
 
@@ -92,6 +94,8 @@ typedef struct __GPS_TX_MESSAGE {
     GPS_Data data;
 }GPS_TX_Message;
 
+
+
 /* configuration packets */
 typedef struct __attribute__ ((__packed__, scalar_storage_order ("little-endian"))) {
     float value;
@@ -101,13 +105,23 @@ typedef struct __attribute__ ((__packed__, scalar_storage_order ("little-endian"
     uint8_t value;
 }PiCommTxLevelPkt;
 
+typedef struct __attribute__ ((__packed__, scalar_storage_order ("little-endian"))) {
+    PiCommHeader header;
+    union {
+        PiCommCritVoltagePkt critical_voltage;
+        PiCommTxLevelPkt    vhf_level;
+    } data;
+}PiRxCommMessage;
+
+/*** PUBLIC VARIABLES */
+extern uint8_t pi_comm_rx_buffer[PI_COMM_RX_BUFFER_COUNT][PI_COMM_RX_BUFFER_SIZE];
+extern volatile uint_fast8_t pi_comm_rx_buffer_start;
+extern volatile uint_fast8_t pi_comm_rx_buffer_end;
+
 /*** FUNCTION DECLARATIONS ***************************************************/
 
-void pi_comms_parse_message(PiCommsMessageID message_id, uint8_t * payload_pointer, uint8_t payload_length);
 void pi_comms_rx_thread_entry(ULONG thread_input);
 
-//forward gps
 void pi_comms_tx_forward_gps(uint8_t *buffer, uint8_t len);
-void pi_comms_tx_thread_entry(ULONG thread_entry);
 
 #endif //INC_COMMS_INC_PICOMMS_H_

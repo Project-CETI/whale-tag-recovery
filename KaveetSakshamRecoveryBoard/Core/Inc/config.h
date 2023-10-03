@@ -11,9 +11,10 @@
 #include "Recovery Inc/VHF.h"
 
 /* COMPILE-TIME CONFIGURATION */
-#define USB_BOOTLOADER_ENABLED 1
+#define USB_BOOTLOADER_ENABLED 0
 #define BATTERY_MONITOR_ENABLED 0
 #define RTC_ENABLED 0
+#define UART_ENABLED 0
 
 /* RUNTIME CONFIGURATION */
 
@@ -32,11 +33,13 @@ typedef struct config_t{
 	VHFPowerLevel 	vhf_power;
 	uint32_t 		vhf_tx_interval;
 	GeofenceRegion 	geofence_area;
+	char			aprs_freq[10];
 }Configuration;
 
 #define DEFAULT_CONFIGURATION (Configuration){\
-	.critical_voltage = 7.0,\
-	.vhf_power = VHF_POWER_LOW,\
+	.critical_voltage = 6.0,\
+	.vhf_power = VHF_POWER_HIGH,\
+	.aprs_freq = "144.3000",\
 }
 
 extern volatile Configuration g_config;
