@@ -23,6 +23,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "config.h"
+#include "Recovery Inc/Gps.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -59,7 +60,19 @@ UART_HandleTypeDef huart3;
 PCD_HandleTypeDef hpcd_USB_OTG_FS;
 
 /* USER CODE BEGIN PV */
-
+VHF_HandleTypdeDef vhf = {
+	.huart = &huart4,
+	.pd = 	{.port = APRS_PD_GPIO_Port, .pin = APRS_PD_Pin},
+	.h_l = 	{.port = APRS_H_L_GPIO_Port, .pin = APRS_H_L_Pin},
+	.ptt = 	{.port = VHF_PTT_GPIO_Port, .pin = VHF_PTT_Pin},
+	.state = VHF_STATE_SLEEP,
+	.power_level = VHF_POWER_HIGH,
+	.config = {
+		.tx_freq_MHz = 144.3900f,
+		.rx_freq_MHz = 144.3900f,
+		.volume = VHF_VOLUME_LEVEL,
+	},
+};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -170,7 +183,6 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */

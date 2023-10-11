@@ -19,30 +19,7 @@ static State state = STARTING_STATE;
 
 //Threads array
 extern Thread_HandleTypeDef threads[NUM_THREADS];
-
-#if USB_BOOTLOADER_ENABLED
-static void state_machine_check_usb_boot(ULONG timer_input){
-	static uint16_t consecutive = 0;
-	if(HAL_GPIO_ReadPin(USB_BOOT_EN_GPIO_Port, USB_BOOT_EN_Pin) == GPIO_PIN_RESET){
-		consecutive++;
-	}else{
-		consecutive = 0;
-	}
-
-	/*reset system*/
-	if(consecutive == USB_BOOTLOADER_HOLD_TIME_SECONDS){
-		HAL_NVIC_SystemReset(); //reset system;
-	}
-}
-#endif
-
-static void priv__state_machine_heartbeat(ULONG heartbeat_input){
-	for(int i = 0; i < 15; i++){
-				HAL_GPIO_TogglePin(PWR_LED_NEN_GPIO_Port, PWR_LED_NEN_Pin);
-				tx_thread_sleep(tx_ms_to_ticks(33));//flash at ~15 Hz for 1 second
-	}
-	 HAL_GPIO_WritePin(PWR_LED_NEN_GPIO_Port, PWR_LED_NEN_Pin, GPIO_PIN_SET);//ensure light is off after strobe
-}
+extern VHF_HandleTypdeDef vhf;
 
 void state_machine_set_state(State new_state){
 	//actions to take when exiting current state
@@ -74,7 +51,8 @@ void state_machine_set_state(State new_state){
 		case STATE_CRITICAL:
 			gps_sleep(); 	//GPS: OFF
 			aprs_sleep();	//VHF: OFF
-			//ToDo: enter very lowpower mode
+			//ToDo: enter shutdown Mode
+			HAL_PWREx_EnterSHUTDOWNMode();
 			break;
 
 		case STATE_WAITING:
@@ -85,7 +63,7 @@ void state_machine_set_state(State new_state){
 
 		case STATE_APRS:
 			gps_wake();		//GPS: ON
-			aprs_wake();     //VHF: ON
+			// aprs_wake();     //VHF: ON // aprs will wake vhf automatically if not awake already
 			tx_thread_resume(&threads[APRS_THREAD].thread);
 			break;
 
@@ -97,7 +75,7 @@ void state_machine_set_state(State new_state){
 
 		case STATE_FISHTRACKER:
 			gps_sleep();	//GPS: OFF
-			aprs_wake(); 	//GPS: ON
+			// aprs_wake();     //VHF: ON // aprs will wake vhf automatically if not awake already
 			tx_thread_resume(&threads[FISHTRACKER_THREAD].thread);
 			break;
 
@@ -107,32 +85,15 @@ void state_machine_set_state(State new_state){
 	state = new_state;
 }
 
+
+/*
+ * state_machine_thread_entry
+ * state machine update thread.
+ */
 void state_machine_thread_entry(ULONG thread_input){
 
 	//Event flags for triggering state changes
 	tx_event_flags_create(&state_machine_event_flags_group, "State Machine Event Flags");
-
-#if USB_BOOTLOADER_ENABLED
-	//attach USB_boot_enable
-	TX_TIMER bootloader_check_timer;
-
-	tx_timer_create(
-			&bootloader_check_timer,
-			"USB Bootloader Check",
-			state_machine_check_usb_boot, 0,
-			1, tx_s_to_ticks(1),
-			TX_AUTO_ACTIVATE
-	);
-#endif
-
-	TX_TIMER heartbeat_timer;
-	tx_timer_create(
-			&heartbeat_timer,
-			"Heartbeat LED Timer",
-			priv__state_machine_heartbeat, 0,
-			tx_s_to_ticks(30), tx_s_to_ticks(HEARTRATE_SECONDS),
-			TX_AUTO_ACTIVATE
-	); //heartbeat timer
 
 
 	//Check the initial state and start in the appropriate state
@@ -166,6 +127,7 @@ void state_machine_thread_entry(ULONG thread_input){
 			PiRxCommMessage *message = (PiRxCommMessage *)pi_comm_rx_buffer[pi_comm_rx_buffer_start];
 
 			switch (message->header.id) {
+				//State Change Message
 				case PI_COMM_MSG_START:
 					//enter recovery
 					state_machine_set_state(STATE_APRS);
@@ -186,6 +148,8 @@ void state_machine_thread_entry(ULONG thread_input){
 					state_machine_set_state(STATE_CRITICAL);
 					break;
 
+
+				//Configuration change message
 				case PI_COMM_MSG_CONFIG_CRITICAL_VOLTAGE: {
 						if(message->header.length < sizeof(PiCommCritVoltagePkt))
 								break; //ToDo: return error
@@ -198,7 +162,15 @@ void state_machine_thread_entry(ULONG thread_input){
 						if(message->header.length < sizeof(PiCommTxLevelPkt))
 								break; //ToDo: return error
 						g_config.vhf_power = message->data.vhf_level.value;
-						vhf_set_power_level(g_config.vhf_power);
+						vhf_set_power_level(&vhf, g_config.vhf_power);
+					}
+					break;
+
+				case PI_COMM_MSG_CONFIG_APRS_FREQUENCY: {
+						if(message->header.length < sizeof(PiCommAPRSFreq))
+							break; //ToDo: return error
+						g_config.aprs_freq = message->data.aprs_freq_MHz.value;
+						vhf_set_freq(&vhf, g_config.aprs_freq);
 					}
 					break;
 
@@ -206,81 +178,12 @@ void state_machine_thread_entry(ULONG thread_input){
 					//Bad message ID - do nothing
 					break;
 			}
+			pi_comm_rx_buffer_start =  (pi_comm_rx_buffer_start + 1) % PI_COMM_RX_BUFFER_COUNT;
 		}
 	}
 }
 
 
-//Starts the APRS recovery thread
-void enter_aprs_recovery(){
 
-	tx_thread_resume(&threads[APRS_THREAD].thread);
 
-	//TODO: Enable Power FET to turn GPS on
-	HAL_GPIO_WritePin(GPS_NEN_GPIO_Port, GPS_NEN_Pin, GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(APRS_PD_GPIO_Port, APRS_PD_Pin, GPIO_PIN_SET);//wake aprs
-	tx_thread_sleep(tx_ms_to_ticks(500)); //wait for aprs to wake
-}
 
-//Suspends the APRS recovery thread
-void exit_aprs_recovery(){
-
-	tx_thread_suspend(&threads[APRS_THREAD].thread);
-
-	//TODO: Turn GPS off (through power FET)
-	HAL_GPIO_WritePin(GPS_NEN_GPIO_Port, GPS_NEN_Pin, GPIO_PIN_SET);
-	HAL_GPIO_WritePin(APRS_PD_GPIO_Port, APRS_PD_Pin, GPIO_PIN_RESET); //aprs -> sleep mode
-}
-
-//Starts the GPS data collection thread
-void enter_gps_collection(){
-
-	tx_thread_resume(&threads[GPS_COLLECTION_THREAD].thread);
-
-	//TODO: Enable power FET to turn GPS on
-	HAL_GPIO_WritePin(GPS_NEN_GPIO_Port, GPS_NEN_Pin, GPIO_PIN_RESET);
-}
-
-//Exit GPS data collection thread
-void exit_gps_collection(){
-
-	tx_thread_suspend(&threads[GPS_COLLECTION_THREAD].thread);
-
-	//TODO: Turn GPS off (through power FET)
-	HAL_GPIO_WritePin(GPS_NEN_GPIO_Port, GPS_NEN_Pin, GPIO_PIN_SET);
-}
-
-//Starts the threads that are active while waiting (comms, battery monitoring)
-void enter_waiting(){
-#if RTC_ENABLED
-	tx_thread_resume(&threads[RTC_THREAD].thread);
-#endif
-#if BATTERY_MONITOR_ENABLED
-	tx_thread_resume(&threads[BATTERY_MONITOR_THREAD].thread);
-#endif
-#if UART_ENABLED
-	tx_thread_resume(&threads[PI_COMMS_RX_THREAD].thread);
-#endif
-}
-
-//Exits the waiting threads
-void exit_waiting(){
-#if RTC_ENABLED
-	tx_thread_resume(&threads[RTC_THREAD].thread);
-#endif
-#if BATTERY_MONITOR_ENABLED
-	tx_thread_suspend(&threads[BATTERY_MONITOR_THREAD].thread);
-#endif
-#if UART_ENABLED
-	tx_thread_suspend(&threads[PI_COMMS_RX_THREAD].thread);
-#endif
-}
-
-//Enters critical low power state (everything off). Once we enter this, we cant exit it.
-void enter_critical(){
-
-	//Exit everything
-	exit_aprs_recovery();
-	exit_gps_collection();
-	exit_waiting();
-}

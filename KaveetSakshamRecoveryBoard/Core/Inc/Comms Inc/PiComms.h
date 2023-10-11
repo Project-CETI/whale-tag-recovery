@@ -73,6 +73,8 @@ typedef enum pi_comms_message_id_e {
     /* recovery configuration */
     PI_COMM_MSG_CONFIG_CRITICAL_VOLTAGE = 0x20,
     PI_COMM_MSG_CONFIG_VHF_POWER_LEVEL = 0x21,
+    PI_COMM_MSG_CONFIG_APRS_FREQUENCY = 0x22,
+
 }PiCommsMessageID;
 
 typedef struct __PI_COMMS_PACKET {
@@ -106,10 +108,15 @@ typedef struct __attribute__ ((__packed__, scalar_storage_order ("little-endian"
 }PiCommTxLevelPkt;
 
 typedef struct __attribute__ ((__packed__, scalar_storage_order ("little-endian"))) {
+    float value;
+}PiCommAPRSFreq;
+
+typedef struct __attribute__ ((__packed__, scalar_storage_order ("little-endian"))) {
     PiCommHeader header;
     union {
         PiCommCritVoltagePkt critical_voltage;
-        PiCommTxLevelPkt    vhf_level;
+        PiCommTxLevelPkt     vhf_level;
+        PiCommAPRSFreq		 aprs_freq_MHz;
     } data;
 }PiRxCommMessage;
 

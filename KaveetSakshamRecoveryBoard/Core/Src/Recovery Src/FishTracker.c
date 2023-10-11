@@ -21,6 +21,7 @@ uint32_t fishtracker_dac_input[FISHTRACKER_NUM_DAC_SAMPLES] = {0};
 extern DAC_HandleTypeDef hdac1;
 extern TIM_HandleTypeDef htim2;
 extern UART_HandleTypeDef huart4;
+extern VHF_HandleTypdeDef vhf;
 
 void fishtracker_thread_entry(ULONG thread_input){
 
@@ -28,8 +29,8 @@ void fishtracker_thread_entry(ULONG thread_input){
 	calcFishtrackerDacValues();
 
 	//Initialize VHF module for transmission. Turn transmission off so we don't hog the frequency
-	vhf_initialize(huart4, g_config.vhf_power, FISHTRACKER_CARRIER_FREQ_MHZ, FISHTRACKER_CARRIER_FREQ_MHZ);
-	vhf_set_ptt(false);
+	vhf_set_freq(&vhf, FISHTRACKER_CARRIER_FREQ_MHZ);
+	vhf_set_power_level(&vhf, FISHTRACKER_POWER);
 
 	//We must use DMA since our DAC is configured that way in the IOC (See calcFishtrackerDacValues for the override)
 	HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, fishtracker_dac_input, FISHTRACKER_NUM_DAC_SAMPLES, DAC_ALIGN_8B_R);
@@ -42,18 +43,22 @@ void fishtracker_thread_entry(ULONG thread_input){
 		//Thus, we mimic this by turning on and off the PTT, to simulate an ON/OFF wave.
 		//
 		//Set PTT true to get the ON cycle.
-		vhf_set_ptt(true);
-//		vhf_wake();
+		vhf_tx(&vhf);
 
 		//Go to sleep for the ON period
-		tx_thread_sleep(FISHTRACKER_ON_TIME_TICKS);
+		HAL_Delay(FISHTRACKER_ON_TIME_MS);
+//		tx_thread_sleep(FISHTRACKER_ON_TIME_TICKS);
 
 		//Start the OFF cycle
-		 vhf_set_ptt(false);
-//		vhf_sleep();
-
-		//Go to sleep again for the off period.
-		tx_thread_sleep(FISHTRACKER_OFF_TIME_TICKS);
+		#if FISHTRACKER_OFF_TIME_MS > VHF_MAX_WAKE_TIME_MS
+			vhf_sleep(&vhf);
+			//Go to sleep again for the off period.
+			tx_thread_sleep(FISHTRACKER_OFF_TIME_TICKS - VHF_MAX_WAKE_TIME_MS);
+		#else
+			vhf_rx(&vhf);
+			//Go to sleep again for the off period.
+			tx_thread_sleep(FISHTRACKER_OFF_TIME_TICKS);
+		#endif
 	}
 }
 

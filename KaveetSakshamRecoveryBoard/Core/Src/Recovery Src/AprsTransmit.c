@@ -22,9 +22,13 @@ extern TIM_HandleTypeDef htim2;
 
 uint32_t dac_input[APRS_TRANSMIT_NUM_SINE_SAMPLES];
 
+void aprs_transmit_init(void){
+	calcSineValues();
+}
+
 bool aprs_transmit_send_data(uint8_t * packet_data, uint16_t packet_length){
 
-	calcSineValues();
+//	calcSineValues();
 
 	//Timer variables for transmitting bits
 	TX_TIMER bit_timer;

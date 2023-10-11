@@ -16,17 +16,19 @@
 
 #include "tx_api.h"
 #include "Lib Inc/timing.h"
+#include "Recovery Inc/VHF.h"
 #include <stdbool.h>
 
 #define USE_FISHTRACKER false
 
-#define FISHTRACKER_CARRIER_FREQ_MHZ "150.7750"
+#define FISHTRACKER_CARRIER_FREQ_MHZ (148.7000)
+#define FISHTRACKER_POWER VHF_POWER_LOW
 
 #define FISHTRACKER_INPUT_FREQ_HZ 1000
 
 #define FISHTRACKER_ON_TIME_MS 80
 
-#define FISHTRACKER_OFF_TIME_MS 1100
+#define FISHTRACKER_OFF_TIME_MS (1000 - FISHTRACKER_ON_TIME_MS)
 
 #define FISHTRACKER_ON_TIME_TICKS (tx_ms_to_ticks(FISHTRACKER_ON_TIME_MS))
 

@@ -11,21 +11,14 @@
 #include "tx_api.h"
 #include <stdint.h>
 
-#define IS_SIMULATING false
-
 //Should correspond with the state types enum below
-#define STARTING_STATE STATE_APRS
+#define STARTING_STATE STATE_WAITING
 
 //Flags inside of our state machine event flags
 #define STATE_COMMS_MESSAGE_AVAILABLE_FLAG (1 << 0)
 #define STATE_CRITICAL_LOW_BATTERY_FLAG (1 << 1)
 
- #define ALL_STATE_FLAGS (STATE_COMMS_MESSAGE_AVAILABLE_FLAG | STATE_CRITICAL_LOW_BATTERY_FLAG)
-
-//How long USB_BOOT_EN must be held low to reset system and reset to enter bootloader
-#define USB_BOOTLOADER_HOLD_TIME_SECONDS (10)
-
-#define HEARTRATE_SECONDS (10)
+#define ALL_STATE_FLAGS (STATE_COMMS_MESSAGE_AVAILABLE_FLAG | STATE_CRITICAL_LOW_BATTERY_FLAG)
 
 typedef enum {
 	STATE_CRITICAL = 0, //Do nothing and be in super low power
@@ -38,26 +31,5 @@ typedef enum {
 
 //Main thread entry for the state machine thread
 void state_machine_thread_entry(ULONG thread_input);
-
-//Starts the APRS recovery thread
-void enter_aprs_recovery();
-
-//Suspends the APRS recovery thread
-void exit_aprs_recovery();
-
-//Starts the GPS data collection thread
-void enter_gps_collection();
-
-//Exit GPS data collection thread
-void exit_gps_collection();
-
-//Starts the threads that are active while waiting (comms, battery monitoring)
-void enter_waiting();
-
-//Exits the waiting threads
-void exit_waiting();
-
-//Enters critical low power state (everything off)
-void enter_critical();
 
 #endif /* INC_LIB_INC_STATE_MACHINE_H_ */

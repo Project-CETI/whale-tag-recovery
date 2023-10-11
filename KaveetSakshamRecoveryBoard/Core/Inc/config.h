@@ -33,13 +33,13 @@ typedef struct config_t{
 	VHFPowerLevel 	vhf_power;
 	uint32_t 		vhf_tx_interval;
 	GeofenceRegion 	geofence_area;
-	char			aprs_freq[10];
+	float			aprs_freq;
 }Configuration;
 
 #define DEFAULT_CONFIGURATION (Configuration){\
 	.critical_voltage = 6.0,\
 	.vhf_power = VHF_POWER_HIGH,\
-	.aprs_freq = "144.3000",\
+	.aprs_freq = 144.3900f,\
 }
 
 extern volatile Configuration g_config;

@@ -28,6 +28,12 @@
 #include "Comms Inc/PiComms.h"
 #include "config.h"
 
+//How long USB_BOOT_EN must be held low to reset system and reset to enter bootloader
+#define USB_BOOTLOADER_HOLD_TIME_SECONDS (10)
+
+//How frequently the power LED blinks
+#define HEARTRATE_SECONDS 				 (10)
+
 //Enum for all threads so we can easily keep track of the list + total number of threads.
 // If adding a new thread to the list, put it before the "NUM_THREADS" element, as it must always be the last element in the enum.
 typedef enum __TX_THREAD_LIST {
@@ -87,8 +93,8 @@ static Thread_ConfigTypeDef threadConfigList[NUM_THREADS] = {
 				.thread_entry_function = state_machine_thread_entry,
 				.thread_input = 0x1234,
 				.thread_stack_size = 2048,
-				.priority = 2,
-				.preempt_threshold = 2,
+				.priority = 3,
+				.preempt_threshold = 3,
 				.timeslice = TX_NO_TIME_SLICE,
 				.start = TX_DONT_START
 		},
@@ -109,8 +115,8 @@ static Thread_ConfigTypeDef threadConfigList[NUM_THREADS] = {
 				.thread_entry_function = fishtracker_thread_entry,
 				.thread_input = 0x1234,
 				.thread_stack_size = 2048,
-				.priority = 8,
-				.preempt_threshold = 8,
+				.priority = 2,
+				.preempt_threshold = 2,
 				.timeslice = TX_NO_TIME_SLICE,
 				.start = TX_DONT_START
 		},
@@ -145,8 +151,8 @@ static Thread_ConfigTypeDef threadConfigList[NUM_THREADS] = {
 				.thread_entry_function = pi_comms_rx_thread_entry,
 				.thread_input = 0x1234,
 				.thread_stack_size = 2048,
-				.priority = 3,
-				.preempt_threshold = 3,
+				.priority = 2,
+				.preempt_threshold = 2,
 				.timeslice = TX_NO_TIME_SLICE,
 				.start = TX_DONT_START
 		},

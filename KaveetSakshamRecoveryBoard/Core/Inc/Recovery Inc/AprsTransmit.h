@@ -53,6 +53,7 @@
 #define aprs_transmit_read_bit(BYTE, BIT_POS) (((BYTE) >> (BIT_POS)) & 0x01)
 
 //Public functions
+void aprs_transmit_init(void);
 bool aprs_transmit_send_data(uint8_t * packet_data, uint16_t packet_length);
 void aprs_transmit_bit_timer_entry(ULONG bit_timer_input);
 
