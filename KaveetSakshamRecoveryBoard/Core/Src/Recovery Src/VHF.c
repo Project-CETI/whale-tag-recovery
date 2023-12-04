@@ -39,7 +39,7 @@ static inline HAL_StatusTypeDef __vhf_set_freq(VHF_HandleTypdeDef *vhf){
 
 static inline HAL_StatusTypeDef __vhf_set_volume(VHF_HandleTypdeDef *vhf){
 	HAL_StatusTypeDef status = HAL_OK;
-	uint8_t transmit_data[SET_VOLUME_TRANSMIT_LENGTH + 1];
+	uint8_t transmit_data[SET_VOLUME_TRANSMIT_LENGTH + 4];
 	uint8_t response_data[SET_VOLUME_RESPONSE_LENGTH];
 
 	//Set the volume of the transmissions
@@ -202,5 +202,6 @@ HAL_StatusTypeDef vhf_wake(VHF_HandleTypdeDef *vhf){
 	* order to work normally. 
 	*                                                        -DRA818V datasheet
 	*/
-	return configure_dra818v(vhf);
+	while(configure_dra818v(vhf) != HAL_OK){}
+	return HAL_OK;
 }

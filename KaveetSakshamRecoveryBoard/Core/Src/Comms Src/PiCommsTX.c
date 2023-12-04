@@ -26,4 +26,13 @@ void pi_comms_tx_forward_gps(uint8_t *buffer, uint8_t len){
 	HAL_UART_Transmit(&huart2, buffer, len, HAL_MAX_DELAY);
 }
 
+void pi_comms_tx_callsign(const char *callsign){
+	PiCommHeader pkt_header = {
+			.start_byte = PI_COMMS_START_CHAR,
+			.id = PI_COMM_MSG_CONFIG_APRS_CALL_SIGN,
+			.length = strlen(callsign),
+	};
+	HAL_UART_Transmit(&huart2, (uint8_t *) &pkt_header, sizeof(PiCommHeader), HAL_MAX_DELAY);
+	HAL_UART_Transmit(&huart2, (uint8_t *) callsign, strlen(callsign), HAL_MAX_DELAY); //this is not returning
+}
 

@@ -12,7 +12,7 @@
 
 /* COMPILE-TIME CONFIGURATION */
 #define USB_BOOTLOADER_ENABLED 1
-#define BATTERY_MONITOR_ENABLED 1
+#define BATTERY_MONITOR_ENABLED 0
 #define RTC_ENABLED 0
 #define UART_ENABLED 1
 
@@ -35,6 +35,8 @@ typedef struct config_t{
 	GeofenceRegion 	geofence_area;
 	float			aprs_freq;
 }Configuration;
+
+
 
 #define DEFAULT_CONFIGURATION (Configuration){\
 	.critical_voltage = 6.0,\

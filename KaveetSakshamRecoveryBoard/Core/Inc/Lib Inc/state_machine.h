@@ -12,7 +12,7 @@
 #include <stdint.h>
 
 //Should correspond with the state types enum below
-#define STARTING_STATE STATE_WAITING
+#define STARTING_STATE STATE_APRS
 
 //Flags inside of our state machine event flags
 #define STATE_COMMS_MESSAGE_AVAILABLE_FLAG (1 << 0)

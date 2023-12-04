@@ -3,6 +3,7 @@
  *
  *  Created on: Jul 5, 2023
  *      Author: Kaveet
+ *              Michael Salino-Hugg [KC1TUJ] (msalinohugg@seas.harvard.edu)
  *
  * This file contains the appropriate functions and definitons to create an APRS packet. Requires the caller to pass in a buffer and the latitude and longitude.
  *
@@ -22,8 +23,8 @@
 #define APRS_CONTROL_FIELD 0x03
 #define APRS_PROTOCOL_ID 0xF0
 
-#define APRS_SOURCE_CALLSIGN "J75Y"
-#define APRS_SOURCE_SSID 6
+#define APRS_SOURCE_CALLSIGN "KC1TUJ"
+#define APRS_SOURCE_SSID 4
 
 #define APRS_SYMBOL "/C"
 #define APRS_DESTINATION_CALLSIGN "APRS"
@@ -38,12 +39,20 @@
 
 #define APRS_DT_POS_CHARACTER '!'
 #define APRS_SYM_TABLE_CHAR '1'
-#define APRS_SYM_CODE_CHAR 's'
+#define APRS_SYM_CODE_CHAR 's' //boat
 
 #define APRS_LATITUDE_LENGTH 9
 #define APRS_LONGITUDE_LENGTH 10
 
+
 //generates an aprs packet given the latitude and longitude
 void aprs_generate_packet(uint8_t * buffer, float lat, float lon);
+void aprs_generate_message_packet(uint8_t *buffer, const char* message, size_t message_len);
+
+//set aprs source callsign
+int aprs_set_callsign(const char *callsign);
+
+//get aprs source callsign
+void aprs_get_callsign(char callsign[static 7]);
 
 #endif /* INC_RECOVERY_INC_APRSPACKET_H_ */

@@ -62,9 +62,9 @@ PCD_HandleTypeDef hpcd_USB_OTG_FS;
 /* USER CODE BEGIN PV */
 VHF_HandleTypdeDef vhf = {
 	.huart = &huart4,
-	.pd = 	{.port = APRS_PD_GPIO_Port, .pin = APRS_PD_Pin},
+	.pd = 	{.port = APRS_PD_GPIO_Port,  .pin = APRS_PD_Pin},
 	.h_l = 	{.port = APRS_H_L_GPIO_Port, .pin = APRS_H_L_Pin},
-	.ptt = 	{.port = VHF_PTT_GPIO_Port, .pin = VHF_PTT_Pin},
+	.ptt = 	{.port = VHF_PTT_GPIO_Port,  .pin = VHF_PTT_Pin},
 	.state = VHF_STATE_SLEEP,
 	.power_level = VHF_POWER_HIGH,
 	.config = {
@@ -170,9 +170,10 @@ int main(void)
   MX_USB_OTG_FS_PCD_Init();
   MX_ADC4_Init();
   /* USER CODE BEGIN 2 */
-
+#if BATTERY_MONITOR_ENABLED
   //********************************REQUIRED FOR ADC USE DO NOT REMOVE********************************
   HAL_PWREx_EnableVddA();
+#endif
   /* USER CODE END 2 */
 
   MX_ThreadX_Init();

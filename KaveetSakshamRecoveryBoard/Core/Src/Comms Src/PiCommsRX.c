@@ -61,12 +61,12 @@ void pi_comms_rx_thread_entry(ULONG thread_input){
 		}
 
 		//receive rest of header
-		HAL_UART_Receive(&huart2, end_buffer + 1, 2, HAL_MAX_DELAY);
+		HAL_UART_Receive(&huart2, end_buffer + 1, sizeof(PiCommHeader) - 1, HAL_MAX_DELAY);
 
 		//receive packet
-		uint_fast8_t message_length = end_buffer[2];
+		uint_fast8_t message_length = ((PiCommHeader *)end_buffer)->length;
 		if(message_length){ //??? Is this if needed or is it checked inside `HAL_UART_Receive` ?
-			HAL_UART_Receive(&huart2, end_buffer + 3, message_length, HAL_MAX_DELAY);
+			HAL_UART_Receive(&huart2, end_buffer + 4, message_length, HAL_MAX_DELAY);
 		}
 
 		//indicate parsing needed

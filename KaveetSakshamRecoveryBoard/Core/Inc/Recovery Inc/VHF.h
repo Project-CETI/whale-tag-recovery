@@ -41,13 +41,13 @@ extern UART_HandleTypeDef huart4;
 #define SET_PARAMETERS_TRANSMIT_LENGTH 48
 #define SET_PARAMETERS_RESPONSE_LENGTH 16
 
-#define SET_VOLUME_TRANSMIT_LENGTH 19
+#define SET_VOLUME_TRANSMIT_LENGTH 20
 #define SET_VOLUME_RESPONSE_LENGTH 17
 
 #define SET_FILTER_TRANSMIT_LENGTH 20
 #define SET_FILTER_RESPONSE_LENGTH 17
 
-#define VHF_MAX_WAKE_TIME_MS 1000
+#define VHF_MAX_WAKE_TIME_MS 2000
 #define VHF_TRANSITION_TIME_MS 20
 
 //Expected responses to transmitted messages
@@ -100,9 +100,7 @@ typedef struct vhf_handle_t {
  	 -huart - UART handler to talk to the module
  	 -isHigh: whether or not to use high power (1W) or low power (0.5W). Passing true means high power.
  	 -emphasis: whether or not to use emphasis on rf signals. True = use emphasis.
- 	 -lpf: Apply a low-pass-filter on the signals.
- 	 -hps: Apply a high-pass-filter on the signals.
-*/
+ 	 -lpf: Apply a low-pass-filter on the signals.                             */
 //HAL_StatusTypeDef configure_dra818v(UART_HandleTypeDef huart, bool emphasis, bool lpf, bool hpf, char * tx_freq, char * rx_freq);
 HAL_StatusTypeDef configure_dra818v(VHF_HandleTypdeDef *vhf);
 

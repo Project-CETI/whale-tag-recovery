@@ -3,6 +3,7 @@
  *
  *  Created on: May 26, 2023
  *      Author: Kaveet
+ *              Michael Salino-Hugg (msalinohugg@seas.harvard.edu) [KC1TUJ]
  *
  * This file contains the main APRS thread responsible for board recovery.
  *
@@ -24,7 +25,14 @@
 
 #define APRS_PACKET_MAX_LENGTH 255
 
-#define APRS_PACKET_LENGTH 224
+
+//send flag for entire ax25 transmit delay time
+#define APRS_BIT_RATE_BIT_PER_S (1200)
+#define APRS_BYTE_RATE_BYTEP_PER_S (APRS_BIT_RATE_BIT_PER_S / 8)
+#define AX25_TXDELAY_MS (1000)
+#define AX25_FLAG_COUNT (AX25_TXDELAY_MS * APRS_BYTE_RATE_BYTEP_PER_S / 1000)
+
+#define APRS_PACKET_LENGTH ((218 - 150) + AX25_FLAG_COUNT)
 
 #define GPS_SLEEP_LENGTH tx_s_to_ticks(10)
 
@@ -36,4 +44,5 @@
 //Main thread entry
 void aprs_thread_entry(ULONG aprs_thread_input);
 void aprs_sleep(void);
+void aprs_tx_message(const char* message, size_t message_len);
 #endif /* INC_RECOVERY_INC_APRS_H_ */

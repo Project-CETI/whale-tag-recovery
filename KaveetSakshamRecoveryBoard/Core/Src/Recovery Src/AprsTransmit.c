@@ -59,7 +59,7 @@ bool aprs_transmit_send_data(uint8_t * packet_data, uint16_t packet_length){
 	HAL_TIM_Base_Stop(&htim2);
 
 	//Reset the timer period for the next transmission
-	MX_TIM2_Fake_Init(APRS_TRANSMIT_PERIOD_2400HZ);
+	MX_TIM2_Fake_Init(APRS_TRANSMIT_PERIOD_2200HZ);
 	is_1200_hz = false;
 
 	return true;
@@ -83,7 +83,7 @@ void aprs_transmit_bit_timer_entry(ULONG bit_timer_input){
 	if (!aprs_transmit_read_bit(current_byte, bit_index) || is_stuffed_bit){
 
 		//Since the bit is 0, switch the frequency
-		uint8_t newPeriod = (is_1200_hz) ? (APRS_TRANSMIT_PERIOD_2400HZ) : (APRS_TRANSMIT_PERIOD_1200HZ);
+		uint8_t newPeriod = (is_1200_hz) ? (APRS_TRANSMIT_PERIOD_2200HZ) : (APRS_TRANSMIT_PERIOD_1200HZ);
 		is_1200_hz = !is_1200_hz;
 
 		//Use fake init function to re-initialize the timer with a new period

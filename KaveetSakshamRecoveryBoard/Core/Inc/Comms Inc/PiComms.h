@@ -74,12 +74,29 @@ typedef enum pi_comms_message_id_e {
     PI_COMM_MSG_CONFIG_CRITICAL_VOLTAGE = 0x20,
     PI_COMM_MSG_CONFIG_VHF_POWER_LEVEL = 0x21,
     PI_COMM_MSG_CONFIG_APRS_FREQUENCY = 0x22,
+    PI_COMM_MSG_CONFIG_APRS_CALL_SIGN,   // 0x23,
+    PI_COMM_MSG_CONFIG_APRS_MESSAGE,     // 0x24,
+    PI_COMM_MSG_CONFIG_APRS_TX_INTERVAL, // 0x25,
+    PI_COMM_MSG_CONFIG_APRS_SSID,
 
+    /* recovery query */
+    PI_COMM_MSG_QUERY_STATE             = 0x40,
+
+    PI_COMM_MSG_QUERY_CRITICAL_VOLTAGE  = 0x60,
+    PI_COMM_MSG_QUERY_VHF_POWER_LEVEL,  // 0x61,
+    PI_COMM_MSG_QUERY_APRS_FREQ,        // 0x62,
+    PI_COMM_MSG_QUERY_APRS_CALL_SIGN,   // 0x63,
+    PI_COMM_MSG_QUERY_APRS_MESSAGE,     // 0x64,
+    PI_COMM_MSG_QUERY_APRS_TX_INTERVAL, // 0x65,
+    PI_COMM_MSG_QUERY_APRS_SSID,
+    
+    PI_COMM_MSG_TX_NOW = 0xFF,
 }PiCommsMessageID;
 
 typedef struct __PI_COMMS_PACKET {
     uint8_t message_id; //PiCommsMessageID
     uint8_t data_length;
+    uint8_t __res;
     uint8_t data_buffer[PI_COMMS_MAX_DATA_PAYLOAD];
 }RX_Message;
 
@@ -87,12 +104,14 @@ typedef struct pi_comm_header_t {
     uint8_t start_byte; //'$'
     uint8_t id;         //PiCommsMessageID
     uint8_t length;
+    uint8_t __res;
 }PiCommHeader;
 
 typedef struct __GPS_TX_MESSAGE {
     uint8_t start_byte; //'$'
     uint8_t message_id; //PiCommsMessageID
     uint8_t message_length;
+    uint8_t __res;
     GPS_Data data;
 }GPS_TX_Message;
 
@@ -130,5 +149,7 @@ extern volatile uint_fast8_t pi_comm_rx_buffer_end;
 void pi_comms_rx_thread_entry(ULONG thread_input);
 
 void pi_comms_tx_forward_gps(uint8_t *buffer, uint8_t len);
+
+void pi_comms_tx_callsign(const char *callsign);
 
 #endif //INC_COMMS_INC_PICOMMS_H_

@@ -3,6 +3,8 @@
  *
  *  Created on: May 26, 2023
  *      Author: Kaveet
+ *              Michael Salino-Hugg [KC1TUJ] (msalinohugg@seas.harvard.edu)
+ *
  *
  * This file handles the transmission of the APRS sine wave to the VHF module.
  *
@@ -37,7 +39,7 @@
 
 //The hardware timer periods for 1200Hz and 2400Hz signals
 #define APRS_TRANSMIT_PERIOD_1200HZ 84
-#define APRS_TRANSMIT_PERIOD_2400HZ 45
+#define APRS_TRANSMIT_PERIOD_2200HZ 45
 
 //Max digital input to a dac for 8-bit inputs
 #define APRS_TRANSMIT_MAX_DAC_INPUT 256

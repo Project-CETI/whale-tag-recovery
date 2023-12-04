@@ -10,6 +10,8 @@
 #include "Lib Inc/threads.h"
 #include "Comms Inc/PiComms.h"
 #include "main.h"
+#include "Recovery Inc/AprsPacket.h"
+#include "Recovery Inc/Aprs.h"
 
 //Event flags for signaling changes in state
 TX_EVENT_FLAGS_GROUP state_machine_event_flags_group;
@@ -173,6 +175,83 @@ void state_machine_thread_entry(ULONG thread_input){
 						vhf_set_freq(&vhf, g_config.aprs_freq);
 					}
 					break;
+
+				case PI_COMM_MSG_CONFIG_APRS_CALL_SIGN: {
+					char callsign_buffer[7];
+					size_t len = message->header.length;
+					len = (6 < len) ? 6 : len;
+					memcpy(callsign_buffer, &message->data, len);
+					callsign_buffer[len] = '\0';
+
+					aprs_set_callsign(callsign_buffer);
+					break;
+				}
+
+				case PI_COMM_MSG_CONFIG_APRS_MESSAGE: {
+					char callsign_buffer[257];
+					size_t len = message->header.length;
+
+					memcpy(callsign_buffer, &message->data, len);
+					callsign_buffer[len] = '\0';
+
+					//ToDo: implement APRS message assignment
+					break;
+				}
+
+				case PI_COMM_MSG_CONFIG_APRS_TX_INTERVAL: {
+					//ToDo: set average time between messages
+					break;
+				}
+
+				case PI_COMM_MSG_CONFIG_APRS_SSID: {
+					//ToDo: implement
+					break;
+				}
+
+				case PI_COMM_MSG_QUERY_STATE: {
+					//ToDo: return recovery board state to pi
+					break;
+				}
+
+				case PI_COMM_MSG_QUERY_CRITICAL_VOLTAGE: {
+					//ToDo: return critical voltage setting to pi
+					break;
+				}
+
+				case PI_COMM_MSG_QUERY_VHF_POWER_LEVEL: {
+					//ToDo: return critical voltage setting to pi
+					break;
+				}
+
+				case PI_COMM_MSG_QUERY_APRS_FREQ: {
+					//ToDo: implement
+					break;
+				}
+
+				case PI_COMM_MSG_QUERY_APRS_CALL_SIGN: {
+					static char callsign[7] = "";
+					aprs_get_callsign(callsign);
+					pi_comms_tx_callsign(callsign);
+					break;
+				}
+
+				case PI_COMM_MSG_QUERY_APRS_MESSAGE: {
+					//ToDo: implement
+					break;
+				}
+
+				case PI_COMM_MSG_QUERY_APRS_TX_INTERVAL: {
+					//ToDo: implement
+					break;
+				}
+
+				case PI_COMM_MSG_TX_NOW: {
+					size_t len = message->header.length;
+					len = (67 < len) ? 67 : len;
+
+					aprs_tx_message((char *)&message->data, len);
+					break;
+				}
 
 				default:
 					//Bad message ID - do nothing
