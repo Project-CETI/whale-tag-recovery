@@ -29,8 +29,8 @@
 
 
 #define GPS_SIMULATION false
-#define GPS_SIM_LAT 42.0000
-#define GPS_SIM_LON -71.0000
+#define GPS_SIM_LAT 42.2000
+#define GPS_SIM_LON -71.0500
 
 #define DEFAULT_LAT 15.31383
 #define DEFAULT_LON -61.30075

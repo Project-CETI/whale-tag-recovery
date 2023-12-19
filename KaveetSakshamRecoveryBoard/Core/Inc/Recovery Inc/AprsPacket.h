@@ -23,8 +23,8 @@
 #define APRS_CONTROL_FIELD 0x03
 #define APRS_PROTOCOL_ID 0xF0
 
-#define APRS_SOURCE_CALLSIGN "KC1TUJ"
-#define APRS_SOURCE_SSID 4
+#define APRS_SOURCE_CALLSIGN "J75Y"
+#define APRS_SOURCE_SSID 15
 
 #define APRS_SYMBOL "/C"
 #define APRS_DESTINATION_CALLSIGN "APRS"
@@ -33,7 +33,8 @@
 #define APRS_DIGI_PATH "WIDE2"
 #define APRS_DIGI_SSID 2
 
-#define APRS_COMMENT "Project CETI GPS/APRS test"
+#define APRS_MAX_COMMENT_LEN 40
+#define APRS_COMMENT "CETI GPS/APRS test"
 
 #define APRS_CALLSIGN_LENGTH 6
 
@@ -54,5 +55,6 @@ int aprs_set_callsign(const char *callsign);
 
 //get aprs source callsign
 void aprs_get_callsign(char callsign[static 7]);
+void aprs_get_ssid(uint8_t *p_ssid);
 
 #endif /* INC_RECOVERY_INC_APRSPACKET_H_ */

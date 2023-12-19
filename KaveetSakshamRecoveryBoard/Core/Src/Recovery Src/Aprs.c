@@ -14,6 +14,7 @@
 #include "config.h"
 #include <stdlib.h>
 
+
 //Extern variables for HAL UART handlers and message queues
 extern VHF_HandleTypdeDef vhf;
 extern UART_HandleTypeDef huart3;
@@ -22,8 +23,10 @@ extern TX_QUEUE gps_tx_queue;
 
 static bool toggle_freq(bool is_gps_dominica, bool is_currently_dominica);
 
+//const char aprs_wake_message[] = "CETI Tag Wake";
 
 void aprs_thread_entry(ULONG aprs_thread_input){
+//    void aprs_tx_message(aprs_wake_message, strlen(aprs_wake_message));
 
     //buffer for packet data
     uint8_t packetBuffer[APRS_PACKET_MAX_LENGTH] = {0};
@@ -54,6 +57,11 @@ void aprs_thread_entry(ULONG aprs_thread_input){
         //If we did get a GPS lock, the sleep_period will correct itself by the end of the task (be appropriately assigned after succesful APRS transmission)
         uint32_t sleep_period = GPS_SLEEP_LENGTH;
 
+        for(int i = 0; i < 15; i++){
+        				HAL_GPIO_TogglePin(PWR_LED_NEN_GPIO_Port, PWR_LED_NEN_Pin);
+        				HAL_Delay(33);//flash at ~15 Hz for 1 second
+                    }
+		HAL_GPIO_WritePin(PWR_LED_NEN_GPIO_Port, PWR_LED_NEN_Pin, GPIO_PIN_RESET);//ensure light is off after strobe
         //If we've locked onto a position, we can start creating an APRS packet.
         if (is_locked){
 
@@ -65,11 +73,13 @@ void aprs_thread_entry(ULONG aprs_thread_input){
             is_in_dominica = toggle_freq(gps_data.is_dominica, is_in_dominica);
 
             //Start transmission
+            //increment aprs packet #
+
             if(vhf_tx(&vhf) == HAL_OK){
                 //Now, transmit the signal through the VHF module. Transmit a few times just for safety.
-                for (uint8_t transmits = 0; transmits < NUM_TX_ATTEMPTS; transmits++){
+//                for (uint8_t transmits = 0; transmits < NUM_TX_ATTEMPTS; transmits++){
                     aprs_transmit_send_data(packetBuffer, APRS_PACKET_LENGTH);
-                }
+//                }
             }
             //end transmission
             vhf_sleep(&vhf);
@@ -83,6 +93,8 @@ void aprs_thread_entry(ULONG aprs_thread_input){
             //Add a random amount of seconds to the sleep, from 0 to 29
             sleep_period += random_num;
         }
+        HAL_GPIO_WritePin(PWR_LED_NEN_GPIO_Port, PWR_LED_NEN_Pin, GPIO_PIN_SET);//ensure light is off after strobe
+
 
         //Go to sleep now
         tx_thread_sleep(sleep_period);

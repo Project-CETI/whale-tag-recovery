@@ -245,6 +245,13 @@ void state_machine_thread_entry(ULONG thread_input){
 					break;
 				}
 
+				case PI_COMM_MSG_QUERY_APRS_SSID: {
+					uint8_t ssid;
+					aprs_get_ssid(&ssid);
+					pi_comms_tx_ssid(ssid);
+					break;
+				}
+
 				case PI_COMM_MSG_TX_NOW: {
 					size_t len = message->header.length;
 					len = (67 < len) ? 67 : len;

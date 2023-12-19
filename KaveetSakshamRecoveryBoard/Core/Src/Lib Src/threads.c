@@ -16,6 +16,8 @@ Thread_HandleTypeDef threads[NUM_THREADS];
 TX_TIMER heartbeat_timer;
 TX_TIMER bootloader_check_timer;
 
+static void priv__heartbeat(ULONG heartbeat_input);
+
 #if USB_BOOTLOADER_ENABLED
 static void priv__check_usb_boot(ULONG timer_input){
 	static uint16_t consecutive = 0;
@@ -55,6 +57,7 @@ void threadListInit(void){
 #endif
 
 	//create heartbeat timer
+#if HEARTBEAT_ENABLED
 	tx_timer_create(
 			&heartbeat_timer,
 			"Heartbeat LED Timer",
@@ -62,6 +65,7 @@ void threadListInit(void){
 			tx_s_to_ticks(30), tx_s_to_ticks(HEARTRATE_SECONDS),
 			TX_AUTO_ACTIVATE
 	); 
+#endif
 
 
 	//create threads

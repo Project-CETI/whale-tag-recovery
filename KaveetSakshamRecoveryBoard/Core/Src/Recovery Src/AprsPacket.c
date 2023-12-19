@@ -18,7 +18,7 @@
 static struct {
 	char 	src_callsign[7];
 	uint8_t src_ssid;
-} aprs_packet_parameters = {
+} aprs_config = {
 	.src_callsign 	= APRS_SOURCE_CALLSIGN,
 	.src_ssid 		= APRS_SOURCE_SSID,
 };
@@ -39,7 +39,7 @@ void aprs_generate_packet(uint8_t * buffer, float lat, float lon){
     append_callsign(&buffer[offset], APRS_DESTINATION_CALLSIGN, APRS_DESTINATION_SSID);
     offset += 7;
 
-    append_callsign(&buffer[offset], aprs_packet_parameters.src_callsign, aprs_packet_parameters.src_ssid);
+    append_callsign(&buffer[offset], aprs_config.src_callsign, aprs_config.src_ssid);
     offset += 7;
 
     //We can also treat the digipeter as a callsign since it has the same format
@@ -53,7 +53,7 @@ void aprs_generate_packet(uint8_t * buffer, float lat, float lon){
 
     //Attach the payload (including other control characters)
     append_compressed_gps_data(&buffer[AX25_FLAG_COUNT + 23], lat, lon, APRS_COMMENT); //42.3636 -71.1259
-    offset += 14 + strlen(APRS_COMMENT);
+    offset += 14 + strlen(APRS_COMMENT) + 4;
 
     append_frame_check(buffer, offset);
     offset += 2;
@@ -70,7 +70,7 @@ void aprs_generate_message_packet(uint8_t *buffer, const char* message, size_t m
     append_callsign(&buffer[offset], APRS_DESTINATION_CALLSIGN, APRS_DESTINATION_SSID);
     offset += 7;
 
-    append_callsign(&buffer[offset], aprs_packet_parameters.src_callsign, aprs_packet_parameters.src_ssid);
+    append_callsign(&buffer[offset], APRS_SOURCE_CALLSIGN, aprs_config.src_ssid);
     offset += 7;
 
     //We can also treat the digipeter as a callsign since it has the same format
@@ -206,6 +206,8 @@ static void append_gps_data(uint8_t * buffer, float lat, float lon){
 }
 
 static void append_compressed_gps_data(uint8_t *buffer, float lat, float lon, char * comment){
+	static uint16_t message_index = 0;
+	char index_buffer[5];
     //indicate start of real-time transmission
     uint32_t temp_lat = (uint32_t)(380926.0 * (90.0 - lat));
     uint32_t temp_lon = (uint32_t)(190463.0 * (180.0 + lon));
@@ -228,7 +230,11 @@ static void append_compressed_gps_data(uint8_t *buffer, float lat, float lon, ch
     buffer[12] = 's';
     buffer[13] = 'T';
 
-    memcpy(&buffer[14], comment, strlen(comment));
+
+    sprintf(index_buffer, "%03d:", message_index);
+    memcpy(&buffer[14], index_buffer, 4);
+    memcpy(&buffer[14 + 4], comment, strlen(comment));
+    message_index++;
 }
 
 
@@ -280,10 +286,15 @@ int aprs_set_callsign(const char *callsign){
 	if (len > 6) // callsign too long
 		return - -1;
 
-	memcpy(aprs_packet_parameters.src_callsign, callsign, len + 1);
+	memcpy(aprs_config.src_callsign, callsign, len + 1);
 	return 0;
 }
 
 void aprs_get_callsign(char callsign[static 7]){
-	memcpy(callsign, aprs_packet_parameters.src_callsign, 7);
+	memcpy(callsign, aprs_config.src_callsign, 6);
+    callsign[6] = 0;
+}
+
+void aprs_get_ssid(uint8_t *ssid){
+    *ssid = aprs_config.src_ssid; 
 }
