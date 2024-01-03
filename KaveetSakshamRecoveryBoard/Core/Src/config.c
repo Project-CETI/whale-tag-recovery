@@ -6,4 +6,4 @@
  */
 #include "config.h"
 
-volatile Configuration g_config = DEFAULT_CONFIGURATION;
+Configuration g_config = DEFAULT_CONFIGURATION;

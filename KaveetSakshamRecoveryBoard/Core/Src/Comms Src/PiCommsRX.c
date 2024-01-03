@@ -45,9 +45,6 @@ void pi_comms_rx_thread_entry(ULONG thread_input){
 	tx_event_flags_create(&pi_comms_event_flags_group, "Pi Comms RX Event Flags");
 
 	HAL_UART_RegisterCallback(&huart2, HAL_UART_RX_COMPLETE_CB_ID, comms_UART_RxCpltCallback);
-	//Start a non-blocking 1 byte UART read. Let the RX complete callback handle the rest.
-	// HAL_UART_Receive_IT(&huart2, (uint8_t *) dataBuffer, 1);
-
 
 	while (1) {
 		uint8_t *end_buffer = pi_comm_rx_buffer[pi_comm_rx_buffer_end];

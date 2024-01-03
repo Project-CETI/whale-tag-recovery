@@ -35,6 +35,7 @@ typedef struct config_t{
 	uint32_t 		vhf_tx_interval;
 	GeofenceRegion 	geofence_area;
 	float			aprs_freq;
+	char 			pi_hostname[16];
 }Configuration;
 
 
@@ -43,8 +44,9 @@ typedef struct config_t{
 	.critical_voltage = 6.0,\
 	.vhf_power = VHF_POWER_HIGH,\
 	.aprs_freq = 144.3900f,\
+	.pi_hostname = "",\
 }
 
-extern volatile Configuration g_config;
+extern Configuration g_config;
 
 #endif /* INC_CONFIG_H_ */

@@ -56,7 +56,7 @@
 #define GPS_TX_MESSAGE_SIZE (sizeof(GPS_TX_Message))
 
 #define PI_COMM_RX_BUFFER_COUNT 4
-#define PI_COMM_RX_BUFFER_SIZE  8
+#define PI_COMM_RX_BUFFER_SIZE  (4 + 256)
 
 /*** TYPE DEFINITIONS ********************************************************/
 
@@ -69,27 +69,30 @@ typedef enum pi_comms_message_id_e {
 
     /* recovery packet */
     PI_COMM_MSG_GPS_PACKET   = 0x10, //rec --> pi: raw gps packet
+    PI_COMM_MSG_APRS_MESSAGE,
 
     /* recovery configuration */
     PI_COMM_MSG_CONFIG_CRITICAL_VOLTAGE = 0x20,
     PI_COMM_MSG_CONFIG_VHF_POWER_LEVEL = 0x21,
     PI_COMM_MSG_CONFIG_APRS_FREQUENCY = 0x22,
-    PI_COMM_MSG_CONFIG_APRS_CALL_SIGN,   // 0x23,
-    PI_COMM_MSG_CONFIG_APRS_MESSAGE,     // 0x24,
-    PI_COMM_MSG_CONFIG_APRS_TX_INTERVAL, // 0x25,
+    PI_COMM_MSG_CONFIG_APRS_CALLSIGN,   // 0x23,
+    PI_COMM_MSG_CONFIG_APRS_COMMENT,     // 0x24,
     PI_COMM_MSG_CONFIG_APRS_SSID,
-
+    PI_COMM_MSG_CONFIG_MSG_RCPT_CALLSIGN,
+    PI_COMM_MSG_CONFIG_MSG_RCPT_SSID,
+    PI_COMM_MSG_CONFIG_HOSTNAME,
+    
     /* recovery query */
     PI_COMM_MSG_QUERY_STATE             = 0x40,
 
     PI_COMM_MSG_QUERY_CRITICAL_VOLTAGE  = 0x60,
     PI_COMM_MSG_QUERY_VHF_POWER_LEVEL,  // 0x61,
     PI_COMM_MSG_QUERY_APRS_FREQ,        // 0x62,
-    PI_COMM_MSG_QUERY_APRS_CALL_SIGN,   // 0x63,
+    PI_COMM_MSG_QUERY_APRS_CALLSIGN,   // 0x63,
     PI_COMM_MSG_QUERY_APRS_MESSAGE,     // 0x64,
-    PI_COMM_MSG_QUERY_APRS_TX_INTERVAL, // 0x65,
     PI_COMM_MSG_QUERY_APRS_SSID,
     
+
     PI_COMM_MSG_TX_NOW = 0xFF,
 }PiCommsMessageID;
 
@@ -115,8 +118,6 @@ typedef struct __GPS_TX_MESSAGE {
     GPS_Data data;
 }GPS_TX_Message;
 
-
-
 /* configuration packets */
 typedef struct __attribute__ ((__packed__, scalar_storage_order ("little-endian"))) {
     float value;
@@ -136,6 +137,8 @@ typedef struct __attribute__ ((__packed__, scalar_storage_order ("little-endian"
         PiCommCritVoltagePkt critical_voltage;
         PiCommTxLevelPkt     vhf_level;
         PiCommAPRSFreq		 aprs_freq_MHz;
+        char                 string_pkt[256];
+        uint8_t              u8_pkt;
     } data;
 }PiRxCommMessage;
 

@@ -21,12 +21,11 @@ extern UART_HandleTypeDef huart3;
 extern UART_HandleTypeDef huart2;
 extern TX_QUEUE gps_tx_queue;
 
+TX_MUTEX vhf_mutex;
+
 static bool toggle_freq(bool is_gps_dominica, bool is_currently_dominica);
 
-//const char aprs_wake_message[] = "CETI Tag Wake";
-
 void aprs_thread_entry(ULONG aprs_thread_input){
-//    void aprs_tx_message(aprs_wake_message, strlen(aprs_wake_message));
 
     //buffer for packet data
     uint8_t packetBuffer[APRS_PACKET_MAX_LENGTH] = {0};
@@ -37,6 +36,7 @@ void aprs_thread_entry(ULONG aprs_thread_input){
 
     //Initialize VHF module for transmission. Turn transmission off so we don't hog the frequency
     vhf_sleep(&vhf);
+    tx_mutex_create(&vhf_mutex, "VHF mutex", 1);
 
     //Generate Aprs sine table
     aprs_transmit_init();
@@ -64,8 +64,9 @@ void aprs_thread_entry(ULONG aprs_thread_input){
 		HAL_GPIO_WritePin(PWR_LED_NEN_GPIO_Port, PWR_LED_NEN_Pin, GPIO_PIN_RESET);//ensure light is off after strobe
         //If we've locked onto a position, we can start creating an APRS packet.
         if (is_locked){
-
-            aprs_generate_packet(packetBuffer, gps_data.latitude, gps_data.longitude);
+            uint8_t *packet_end;
+            size_t packet_length;
+            aprs_generate_location_packet(packetBuffer, &packet_end, gps_data.latitude, gps_data.longitude);
 
             //We first initialized the VHF module with our default frequencies. If we are in Dominica, re-initialize the VHF module to use the dominica frequencies.
             //
@@ -74,15 +75,14 @@ void aprs_thread_entry(ULONG aprs_thread_input){
 
             //Start transmission
             //increment aprs packet #
-
+            tx_mutex_get(&vhf_mutex,TX_WAIT_FOREVER);
             if(vhf_tx(&vhf) == HAL_OK){
-                //Now, transmit the signal through the VHF module. Transmit a few times just for safety.
-//                for (uint8_t transmits = 0; transmits < NUM_TX_ATTEMPTS; transmits++){
-                    aprs_transmit_send_data(packetBuffer, APRS_PACKET_LENGTH);
-//                }
+                packet_length = packet_end - packetBuffer;
+				aprs_transmit_send_data(packetBuffer, packet_length);
             }
             //end transmission
             vhf_sleep(&vhf);
+            tx_mutex_put(&vhf_mutex);
 
             //Set the sleep period for a successful APRS transmission
             sleep_period = APRS_BASE_SLEEP_LENGTH - tx_ms_to_ticks(VHF_MAX_WAKE_TIME_MS);
@@ -92,6 +92,8 @@ void aprs_thread_entry(ULONG aprs_thread_input){
 
             //Add a random amount of seconds to the sleep, from 0 to 29
             sleep_period += random_num;
+        } else if (0 /*!(last tx < retransmit_timer)*/) {
+            //retransmit last position with timerstamp
         }
         HAL_GPIO_WritePin(PWR_LED_NEN_GPIO_Port, PWR_LED_NEN_Pin, GPIO_PIN_SET);//ensure light is off after strobe
 
@@ -139,15 +141,16 @@ static bool toggle_freq(bool is_gps_dominica, bool is_currently_dominica){
 void aprs_tx_message(const char* message, size_t message_len){
     uint8_t packetBuffer[APRS_PACKET_MAX_LENGTH] = {0};
     //buffer for packet data
-    aprs_generate_message_packet(packetBuffer, message, message_len);
+    uint8_t *packet_end;
+    aprs_generate_message_packet(packetBuffer, &packet_end, message, message_len);
 
     //Start transmission
+    tx_mutex_get(&vhf_mutex,TX_WAIT_FOREVER);
     if(vhf_tx(&vhf) == HAL_OK){
         //Now, transmit the signal through the VHF module. Transmit a few times just for safety.
-        for (uint8_t transmits = 0; transmits < NUM_TX_ATTEMPTS; transmits++){
-            aprs_transmit_send_data(packetBuffer, APRS_PACKET_LENGTH);
-        }
+        aprs_transmit_send_data(packetBuffer, packet_end - packetBuffer);
     }
     //end transmission
     vhf_sleep(&vhf);
+    tx_mutex_put(&vhf_mutex);
 }

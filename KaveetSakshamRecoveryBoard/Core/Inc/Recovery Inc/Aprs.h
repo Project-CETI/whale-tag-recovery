@@ -29,7 +29,7 @@
 //send flag for entire ax25 transmit delay time
 #define APRS_BIT_RATE_BIT_PER_S (1200)
 #define APRS_BYTE_RATE_BYTEP_PER_S (APRS_BIT_RATE_BIT_PER_S / 8)
-#define AX25_TXDELAY_MS (1000)
+#define AX25_TXDELAY_MS (300)
 #define AX25_FLAG_COUNT (AX25_TXDELAY_MS * APRS_BYTE_RATE_BYTEP_PER_S / 1000)
 
 #define APRS_PACKET_LENGTH ((218 - 150) + AX25_FLAG_COUNT)
@@ -39,6 +39,13 @@
 #define APRS_BASE_SLEEP_LENGTH tx_s_to_ticks(60)
 
 #define NUM_TX_ATTEMPTS 3
+
+//Events inside of our aprs state machine 
+#define APRS_EVENT_TRANSMIT_POSITION   (1 << 0)
+#define APRS_EVENT_RETRANSMIT_POSITION (1 << 1)
+#define APRS_EVENT_TRANSMIT_MESSAGE    (1 << 2)
+
+#define ARPS_ALL_EVENT_FLAGS (APRS_EVENT_TRANSMIT_POSITION | APRS_EVENT_RETRANSMIT_POSITION | APRS_EVENT_TRANSMIT_MESSAGE)
 
 
 //Main thread entry

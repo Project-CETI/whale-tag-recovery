@@ -35,7 +35,7 @@ void pi_comms_tx_callsign(const char *callsign){
 	Packet pkt = {
 			.header = {
 				.start_byte = PI_COMMS_START_CHAR,
-				.id = PI_COMM_MSG_CONFIG_APRS_CALL_SIGN,
+				.id = PI_COMM_MSG_CONFIG_APRS_CALLSIGN,
 				.length = strlen(callsign),
 			},
 	};

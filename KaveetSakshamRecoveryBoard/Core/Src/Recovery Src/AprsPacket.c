@@ -15,122 +15,211 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+typedef struct callsign_t {
+    char callsign[7];
+    uint8_t ssid;
+} Callsign;
+
 static struct {
-	char 	src_callsign[7];
-	uint8_t src_ssid;
+    Callsign src;
+    Callsign msg_recipient;
+    char comment[40];
 } aprs_config = {
-	.src_callsign 	= APRS_SOURCE_CALLSIGN,
-	.src_ssid 		= APRS_SOURCE_SSID,
+    .src = {
+        .callsign 	= APRS_SOURCE_CALLSIGN,
+        .ssid 		= APRS_SOURCE_SSID,
+    },
+	.msg_recipient = {
+		.callsign   = APRS_MESSAGE_RECIPIENT_CALLSIGN,
+		.ssid       = APRS_MESSAGE_RECIPIENT_SSID,
+	},
+    .comment = "",
+
 };
 
+typedef struct ax25_frame_t {
+	Callsign destination;
+	Callsign source;
+	Callsign digipeter[8];
+	struct {
+		uint8_t *value;
+		size_t len;
+	} information;
+} AX25Frame;
 
-static void append_flag(uint8_t * buffer, uint16_t numFlags);
-static void append_callsign(uint8_t * buffer, char * callsign, uint8_t ssid);
 static void append_gps_data(uint8_t * buffer, float lat, float lon);
-static void append_compressed_gps_data(uint8_t *buffer, float lat, float lon, char * comment);
-static void append_other_data(uint8_t * buffer, uint16_t course, uint16_t speed, char * comment);
-static void append_frame_check(uint8_t * buffer, uint8_t buffer_length);
+static void append_compressed_gps_data(uint8_t *buffer, float lat, float lon);
 
-void aprs_generate_packet(uint8_t * buffer, float lat, float lon){
-    uint_fast8_t offset = 0;
-    memset(buffer, APRS_FLAG, AX25_FLAG_COUNT);
-    offset += AX25_FLAG_COUNT;
-
-    append_callsign(&buffer[offset], APRS_DESTINATION_CALLSIGN, APRS_DESTINATION_SSID);
-    offset += 7;
-
-    append_callsign(&buffer[offset], aprs_config.src_callsign, aprs_config.src_ssid);
-    offset += 7;
-
-    //We can also treat the digipeter as a callsign since it has the same format
-    append_callsign(&buffer[offset], APRS_DIGI_PATH, APRS_DIGI_SSID);
-    offset += 6;
-    buffer[offset++] += 1;
-
-    //Add the control ID and protocol ID
-    buffer[offset++] = APRS_CONTROL_FIELD;
-    buffer[offset++] = APRS_PROTOCOL_ID;
-
-    //Attach the payload (including other control characters)
-    append_compressed_gps_data(&buffer[AX25_FLAG_COUNT + 23], lat, lon, APRS_COMMENT); //42.3636 -71.1259
-    offset += 14 + strlen(APRS_COMMENT) + 4;
-
-    append_frame_check(buffer, offset);
-    offset += 2;
-
-    append_flag(&buffer[offset], 3);
-    offset = 3;
-}
-
-void aprs_generate_message_packet(uint8_t *buffer, const char* message, size_t message_len){
-    uint_fast8_t offset = 0;
-    memset(buffer, APRS_FLAG, AX25_FLAG_COUNT);
-    offset += AX25_FLAG_COUNT;
-
-    append_callsign(&buffer[offset], APRS_DESTINATION_CALLSIGN, APRS_DESTINATION_SSID);
-    offset += 7;
-
-    append_callsign(&buffer[offset], APRS_SOURCE_CALLSIGN, aprs_config.src_ssid);
-    offset += 7;
-
-    //We can also treat the digipeter as a callsign since it has the same format
-    append_callsign(&buffer[offset], APRS_DIGI_PATH, APRS_DIGI_SSID);
-    offset += 6;
-    buffer[offset++] += 1;
-
-    //Add the control ID and protocol ID
-    buffer[offset++] = APRS_CONTROL_FIELD;
-    buffer[offset++] = APRS_PROTOCOL_ID;
-
-    /*** Message Format ***/
-    //addressee
-    buffer[offset++] = ':';
-    memcpy(buffer + offset, "KC1TUJ   ", 9);    
-    offset += 9;
-    buffer[offset++] = ':';
-
-    //message
-    memcpy(buffer + offset, message, message_len);
-    offset += message_len;
-
-    append_frame_check(buffer, offset);
-    offset += 2;
-
-    append_flag(&buffer[offset], 3);
-    offset = 3;
-}
-
-//Appends the flag character (0x7E) to the buffer 'numFlags' times.
-static void append_flag(uint8_t * buffer, uint16_t numFlags){
-
-    //Add numFlags flag characters to the buffer
-    for (uint_fast16_t index = 0; index < numFlags; index++){
-        buffer[index] = APRS_FLAG;
-    }
-}
-
-//Appends a callsign to the buffer with its SSID.
-static void append_callsign(uint8_t * buffer, char * callsign, uint8_t ssid){
-
+/* Callsign ******************************************************************/
+// generates a valid AX.25 address from a callsign
+static void callsign_to_ax25_address(const Callsign *self, uint8_t dst[static 7], uint8_t **dst_end){
     //Determine the length of the callsign
-    uint8_t length  = strlen(callsign);
+    uint8_t length  = strlen(self->callsign);
 
     //Append the callsign to the buffer. Note that ASCII characters must be left shifted by 1 bit as per APRS101 standard
     for (uint8_t index = 0; index < length; index++){
-        buffer[index] = (callsign[index] << 1);
+        dst[index] = (self->callsign[index] << 1);
     }
 
     //The callsign field must be atleast 6 characters long, so fill any missing spots with blanks
     if (length < APRS_CALLSIGN_LENGTH){
-        for (uint8_t index = length; index < APRS_CALLSIGN_LENGTH; index++){
-            //We still need to shift left by 1 bit
-            buffer[index] = (' ' << 1);
-        }
+        memset(dst + length, (' ' << 1), APRS_CALLSIGN_LENGTH - length);
     }
 
     //Now, we've filled the first 6 bytes with the callsign (index 0-5), so the SSID must be in the 6th index.
     //We can find its ASCII character by adding the integer value to the ascii value of '0'. Still need to shift left by 1 bit.
-    buffer[APRS_CALLSIGN_LENGTH] = (ssid + '0') << 1;
+    dst[APRS_CALLSIGN_LENGTH] = (self->ssid + '0') << 1;
+    *dst_end = dst + 7;
+}
+
+// converts callsign into a valid string
+static void callsign_to_string(const Callsign *self, char dst[static 10]) {
+    if (self->ssid != 0) {
+        snprintf(dst, 10, "%s-%d", self->callsign, self->ssid);
+    } else {
+        strcpy(dst, self->callsign);
+    }
+}
+
+/* AX25Frame *****************************************************************/
+static void ax25_frame_generate_bytes(const AX25Frame *self, uint8_t *dst, uint8_t **dst_end){
+	uint8_t *dst_next = dst;
+
+	callsign_to_ax25_address(&self->destination, dst_next, &dst_next);
+	callsign_to_ax25_address(&self->source, dst_next, &dst_next);
+	for(int i = 0;  (i < 8) && (self->digipeter[i].callsign[0] != 0); i++){
+		callsign_to_ax25_address(&self->digipeter[0], dst_next, &dst_next);
+		if(i == 0) {
+			dst_next[-1] += 1;
+		}
+	}
+
+	*(dst_next++) = APRS_CONTROL_FIELD;
+	*(dst_next++) = APRS_PROTOCOL_ID;
+
+    // fill in data
+	memcpy(dst_next, self->information.value, self->information.len);
+	dst_next += self->information.len;
+
+	//Calculates and appends the CRC frame checker. Follows the CRC-16 CCITT standard.
+    uint16_t crc = 0xFFFF;
+    for (uint8_t *i_byte = dst; i_byte < dst_next; i_byte++){
+        for (uint8_t bit_index = 0; bit_index < 8; bit_index++){
+            bool bit = (*i_byte >> bit_index) & 0x01;
+            //Bit magic for the CRC
+            unsigned short xorIn;
+            xorIn = crc ^ bit;
+            crc >>= 1;
+            if (xorIn & 0x01) crc ^= 0x8408;
+        }
+    }
+    *(dst_next++) = (crc & 0xFF) ^ 0xFF;
+    *(dst_next++) = (crc >> 8) ^ 0xFF;
+
+    if(dst_end != NULL){
+        *dst_end = dst_next;
+    }
+}
+
+static void __ax25_generate_packet(uint8_t *buffer, uint8_t **buffer_end, uint8_t *aprs_data, size_t aprs_data_size){
+    uint8_t *buffer_position = buffer;
+    AX25Frame frame = {
+        .destination = {.callsign = APRS_DESTINATION_CALLSIGN, .ssid = APRS_DESTINATION_SSID},
+        .source = aprs_config.src,
+        .digipeter = {
+                [0] = {.callsign = APRS_DIGI_PATH, .ssid = (APRS_DIGI_SSID)},
+        },
+        .information = {
+            .value = aprs_data,
+            .len = aprs_data_size,
+        },
+	};
+
+	//TXDelayFlags
+	memset(buffer_position, APRS_FLAG, AX25_FLAG_COUNT);
+	buffer_position += AX25_FLAG_COUNT;
+
+	ax25_frame_generate_bytes(&frame, buffer_position, &buffer_position);
+
+	//EndFlag
+	memset(buffer_position, APRS_FLAG, 3);
+	buffer_position += 3;
+    if(buffer_end != NULL) {
+        *buffer_end = buffer_position;
+    }
+}
+
+static uint16_t message_index = 0;
+
+void aprs_generate_location_packet(uint8_t * buffer, uint8_t **buffer_end, float lat, float lon){
+    char index_buffer[5];
+    uint8_t gps_data[256];
+	size_t  gps_data_size = 0;
+
+	//generate APRS gps packet
+    buffer[0] = APRS_DT_POS_CHARACTER;
+    gps_data_size += 1;
+
+	append_compressed_gps_data(&gps_data[gps_data_size], lat, lon);
+    gps_data_size += 13;
+
+    sprintf(index_buffer, "%04d:", message_index);
+    append_comment(&gps_data[gps_data_size], 40, index_buffer);
+    message_index++;
+    gps_data_size += 4;
+
+
+    append_comment(&gps_data[gps_data_size], 35, APRS_COMMENT);
+	gps_data_size = strlen(APRS_COMMENT);
+
+	//package inside AX.25 frame
+    __ax25_generate_packet(buffer, buffer_end, gps_data, gps_data_size);
+}
+
+void aprs_generate_location_packet_w_timestamp(uint8_t * buffer, uint8_t **buffer_end, float lat, float lon, uint16_t *timestamp){
+    char index_buffer[5];
+    uint8_t gps_data[256];
+	size_t  gps_data_size = 0;
+
+	//generate APRS gps packet
+    buffer[0] = '/';
+    gps_data_size += 1;
+
+    append_timestamp(&gps_data[gps_data_size], &timestamp);
+    gps_data_size += 7;
+
+	append_compressed_gps_data(&gps_data[gps_data_size], lat, lon);
+    gps_data_size += 13;
+
+    sprintf(index_buffer, "%04d:", message_index);
+    append_comment(&gps_data[gps_data_size], 40, index_buffer);
+    gps_data_size += 4;
+
+    append_comment(&gps_data[gps_data_size], 35, APRS_COMMENT);
+	gps_data_size = strlen(APRS_COMMENT);
+
+	//package inside AX.25 frame
+    __ax25_generate_packet(buffer, buffer_end, gps_data, gps_data_size);
+}
+
+void aprs_generate_message_packet(uint8_t *buffer, uint8_t **buffer_end, const char* message, size_t message_len){
+	char addressee[10];
+    uint8_t message_bytes[256] = {':'};
+	size_t  byte_len = 11 + message_len;
+    
+    //generate callsign string
+    callsign_to_string(&aprs_config.msg_recipient, addressee);
+
+	//address message
+    memset(message_bytes + 1, ' ', 9);
+    memcpy(message_bytes + 1, addressee, strlen(addressee));
+    message_bytes[10] = ':';
+
+    //append message
+    memcpy(message_bytes + 11, message, message_len);
+    
+    //package inside AX.25 frame
+	__ax25_generate_packet(buffer, buffer_end, message_bytes, byte_len);
 }
 
 //Appends the GPS data (latitude and longitude) to the buffer
@@ -205,15 +294,12 @@ static void append_gps_data(uint8_t * buffer, float lat, float lon){
     buffer[APRS_LATITUDE_LENGTH + APRS_LONGITUDE_LENGTH] = APRS_SYM_CODE_CHAR;
 }
 
-static void append_compressed_gps_data(uint8_t *buffer, float lat, float lon, char * comment){
-	static uint16_t message_index = 0;
-	char index_buffer[5];
+static void append_compressed_gps_data(uint8_t *buffer, float lat, float lon){
     //indicate start of real-time transmission
     uint32_t temp_lat = (uint32_t)(380926.0 * (90.0 - lat));
     uint32_t temp_lon = (uint32_t)(190463.0 * (180.0 + lon));
     
-    buffer[0] = APRS_DT_POS_CHARACTER;
-    buffer[1] = '/';
+    buffer[0] = '/';
 
     for(int i = 3; i >= 0; i--){
         buffer[2 + i] = '!' + temp_lat % 91;
@@ -225,59 +311,72 @@ static void append_compressed_gps_data(uint8_t *buffer, float lat, float lon, ch
         temp_lon /= 91;
     }
 
-    buffer[10] = APRS_SYM_CODE_CHAR;
-    buffer[11] = ' '; //c: ' ' means no course-speed/range/altitude
-    buffer[12] = 's';
-    buffer[13] = 'T';
-
-
-    sprintf(index_buffer, "%03d:", message_index);
-    memcpy(&buffer[14], index_buffer, 4);
-    memcpy(&buffer[14 + 4], comment, strlen(comment));
-    message_index++;
+    buffer[9] = APRS_SYM_CODE_CHAR;
+    buffer[10] = ' '; //c: ' ' means no course-speed/range/altitude
+    buffer[11] = 's';
+    buffer[12] = 'T';
 }
 
+static append_timestamp(uint8_t *buffer, const uint16_t timestamp[3]){
+    char timestamp_buffer[8];
+    sprintf("%02d%02d%02dh", timestamp[0], timestamp[1], timestamp[2]);
+    memcpy(buffer, timestamp_buffer, 7);
 
+}
 
-//Appends other extra data (course, speed and the comment)
+static void append_comment(uint8_t *buffer, size_t max_len, const char *comment){
+    size_t len = strlen(comment);
+    len = (len < max_len) ? len : max_len;
+    memcpy(buffer, comment, len);
+}
+
 __attribute((unused))
-static void append_other_data(uint8_t * buffer, uint16_t course, uint16_t speed, char * comment){
-
-    //Append the course and speed of the tag (course is the heading 0->360 degrees
-    uint8_t length = 8 + strlen(comment);
-    snprintf((char *)buffer, length, "%03d/%03d%s", course, speed, comment);
-}
-
-//Calculates and appends the CRC frame checker. Follows the CRC-16 CCITT standard.
-static void append_frame_check(uint8_t * buffer, uint8_t buffer_length){
-
-    uint16_t crc = 0xFFFF;
-
-    //Loop through each *bit* in the buffer. Only start after the starting flags.
-    for (uint8_t index = 150; index < buffer_length; index++){
-
-        uint8_t byte = buffer[index];
-
-        for (uint8_t bit_index = 0; bit_index < 8; bit_index++){
-
-            bool bit = (byte >> bit_index) & 0x01;
-
-            //Bit magic for the CRC
-            unsigned short xorIn;
-            xorIn = crc ^ bit;
-
-            crc >>= 1;
-
-            if (xorIn & 0x01) crc ^= 0x8408;
-
-        }
+static void append_comp_gps_w_timestamp(uint8_t *buffer, float lat, float lon, uint16_t timestamp[3]){
+    //indicate start of real-time transmission
+    uint32_t temp_lat = (uint32_t)(380926.0 * (90.0 - lat));
+    uint32_t temp_lon = (uint32_t)(190463.0 * (180.0 + lon));
+    
+    buffer[0] = '/';
+    //copy timestamp in HMS format;
+    sprintf((char *)(buffer + 1), "%02d%02d%02dh", timestamp[0], timestamp[1], timestamp[2]);
+    
+    buffer[8] = '/';
+    for(int i = 3; i >= 0; i--){
+        buffer[9 + i] = '!' + temp_lat % 91;
+        temp_lat /= 91;
     }
 
-    uint8_t crc_lo = (crc & 0xFF) ^ 0xFF;
-    uint8_t crc_hi = (crc >> 8) ^ 0xFF;
+    for(int i = 3; i >= 0; i--){
+        buffer[6 + i] = '!' + temp_lon % 91;
+        temp_lon /= 91;
+    }
 
-    buffer[buffer_length] = crc_lo;
-    buffer[buffer_length + 1] = crc_hi;
+    buffer[17] = APRS_SYM_CODE_CHAR;
+    buffer[18] = ' '; //c: ' ' means no course-speed/range/altitude
+    buffer[19] = 's';
+    buffer[20] = 'T';
+
+
+    sprintf(index_buffer, "%03d:");
+    memcpy(&buffer[21], index_buffer, 4);
+}
+
+int aprs_set_msg_recipient_callsign(const char *callsign) {
+	size_t len = strlen(callsign);
+
+	if (len > 6) // callsign too long
+		return - -1;
+
+	memcpy(aprs_config.msg_recipient.callsign, callsign, len + 1);
+	return 0;
+}
+
+int aprs_set_msg_recipient_ssid(uint8_t ssid) {
+    if( ssid > 15) //out of range
+        return -1;
+
+    aprs_config.msg_recipient.ssid = ssid;
+    return 0;
 }
 
 int aprs_set_callsign(const char *callsign){
@@ -286,15 +385,23 @@ int aprs_set_callsign(const char *callsign){
 	if (len > 6) // callsign too long
 		return - -1;
 
-	memcpy(aprs_config.src_callsign, callsign, len + 1);
+	memcpy(aprs_config.src.callsign, callsign, len + 1);
 	return 0;
 }
 
+int aprs_set_ssid(uint8_t ssid) {
+    if( ssid > 15) //out of range
+        return -1;
+
+    aprs_config.src.ssid = ssid;
+    return 0;
+}
+
 void aprs_get_callsign(char callsign[static 7]){
-	memcpy(callsign, aprs_config.src_callsign, 6);
+	memcpy(callsign, aprs_config.src.callsign, 6);
     callsign[6] = 0;
 }
 
 void aprs_get_ssid(uint8_t *ssid){
-    *ssid = aprs_config.src_ssid; 
+    *ssid = aprs_config.src.ssid; 
 }

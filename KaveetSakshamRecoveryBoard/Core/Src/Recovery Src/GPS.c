@@ -102,7 +102,7 @@ static void parse_gps_output(GPS_HandleTypeDef* gps, uint8_t* buffer, uint8_t bu
 
 				//save the time data into our struct.
 				uint16_t time_temp[3] = {frame.time.hours, frame.time.minutes, frame.time.seconds};
-				memcpy(gps->data[GPS_RMC].timestamp, time_temp, 3);
+				memcpy(gps->data[GPS_RMC].timestamp, time_temp, 6);
 			}
 		}
 
@@ -135,7 +135,7 @@ static void parse_gps_output(GPS_HandleTypeDef* gps, uint8_t* buffer, uint8_t bu
 
 				//save the time data into our struct.
 				uint16_t time_temp[3] = {frame.time.hours, frame.time.minutes, frame.time.seconds};
-				memcpy(gps->data[GPS_GLL].timestamp, time_temp, 3);
+				memcpy(gps->data[GPS_GLL].timestamp, time_temp, 6);
 			}
 		}
 
@@ -167,7 +167,7 @@ static void parse_gps_output(GPS_HandleTypeDef* gps, uint8_t* buffer, uint8_t bu
 
 				//save the time data into our struct.
 				uint16_t time_temp[3] = {frame.time.hours, frame.time.minutes, frame.time.seconds};
-				memcpy(gps->data[GPS_GGA].timestamp, time_temp, 3);
+				memcpy(gps->data[GPS_GGA].timestamp, time_temp, 6);
 			}
 		}
 

@@ -53,7 +53,6 @@ void state_machine_set_state(State new_state){
 		case STATE_CRITICAL:
 			gps_sleep(); 	//GPS: OFF
 			aprs_sleep();	//VHF: OFF
-			//ToDo: enter shutdown Mode
 			HAL_PWREx_EnterSHUTDOWNMode();
 			break;
 
@@ -65,7 +64,6 @@ void state_machine_set_state(State new_state){
 
 		case STATE_APRS:
 			gps_wake();		//GPS: ON
-			// aprs_wake();     //VHF: ON // aprs will wake vhf automatically if not awake already
 			tx_thread_resume(&threads[APRS_THREAD].thread);
 			break;
 
@@ -77,7 +75,6 @@ void state_machine_set_state(State new_state){
 
 		case STATE_FISHTRACKER:
 			gps_sleep();	//GPS: OFF
-			// aprs_wake();     //VHF: ON // aprs will wake vhf automatically if not awake already
 			tx_thread_resume(&threads[FISHTRACKER_THREAD].thread);
 			break;
 
@@ -112,9 +109,7 @@ void state_machine_thread_entry(ULONG thread_input){
 #endif
 
 	//Enter main thread execution loop ONLY if we arent simulating
-
 	while (1){
-
 		ULONG actual_flags = 0;
 
 		//wait for message or critical battery
@@ -130,26 +125,40 @@ void state_machine_thread_entry(ULONG thread_input){
 
 			switch (message->header.id) {
 				//State Change Message
-				case PI_COMM_MSG_START:
+				case PI_COMM_MSG_START: {
 					//enter recovery
 					state_machine_set_state(STATE_APRS);
 					break;
+				}
 
-				case PI_COMM_MSG_STOP:
+				case PI_COMM_MSG_STOP: {
 					//stop (and wait for more commands)
 					state_machine_set_state(STATE_WAITING);
 					break;
+				}
 
-				case PI_COMM_MSG_COLLECT_ONLY:
+				case PI_COMM_MSG_COLLECT_ONLY: {
 					//enter regular GPS collection
 					state_machine_set_state(STATE_GPS_COLLECT);
 					break;
+				}
 
-				case PI_COMM_MSG_CRITICAL:
+				case PI_COMM_MSG_CRITICAL: {
 					//enter a critical low power state (nothing runs)
 					state_machine_set_state(STATE_CRITICAL);
 					break;
+				}
 
+				case PI_COMM_MSG_APRS_MESSAGE: {
+					char msg_buffer[257];
+					size_t len = message->header.length;
+					len = (67 < len) ? 67 : len;
+
+					memcpy(msg_buffer, &message->data, len);
+					msg_buffer[len] = '\0';
+					aprs_tx_message(msg_buffer, strlen(msg_buffer));
+					break;
+				}
 
 				//Configuration change message
 				case PI_COMM_MSG_CONFIG_CRITICAL_VOLTAGE: {
@@ -176,7 +185,7 @@ void state_machine_thread_entry(ULONG thread_input){
 					}
 					break;
 
-				case PI_COMM_MSG_CONFIG_APRS_CALL_SIGN: {
+				case PI_COMM_MSG_CONFIG_APRS_CALLSIGN: {
 					char callsign_buffer[7];
 					size_t len = message->header.length;
 					len = (6 < len) ? 6 : len;
@@ -187,24 +196,43 @@ void state_machine_thread_entry(ULONG thread_input){
 					break;
 				}
 
-				case PI_COMM_MSG_CONFIG_APRS_MESSAGE: {
-					char callsign_buffer[257];
+				case PI_COMM_MSG_CONFIG_APRS_COMMENT: {
+					char comment_buffer[257];
 					size_t len = message->header.length;
 
-					memcpy(callsign_buffer, &message->data, len);
-					callsign_buffer[len] = '\0';
+					memcpy(comment_buffer, &message->data, len);
+					comment_buffer[len] = '\0';
 
-					//ToDo: implement APRS message assignment
-					break;
-				}
-
-				case PI_COMM_MSG_CONFIG_APRS_TX_INTERVAL: {
-					//ToDo: set average time between messages
+					//ToDo: implement APRS comment assignment
 					break;
 				}
 
 				case PI_COMM_MSG_CONFIG_APRS_SSID: {
-					//ToDo: implement
+					aprs_set_ssid(message->data.u8_pkt);
+					break;
+				}
+
+				case PI_COMM_MSG_CONFIG_MSG_RCPT_CALLSIGN: {
+					char callsign_buffer[7];
+					size_t len = message->header.length;
+					len = (6 < len) ? 6 : len;
+					memcpy(callsign_buffer, &message->data, len);
+					callsign_buffer[len] = '\0';
+
+					aprs_set_msg_recipient_callsign(callsign_buffer);
+					break;
+				}
+
+				case PI_COMM_MSG_CONFIG_MSG_RCPT_SSID: {
+					aprs_set_msg_recipient_ssid(message->data.u8_pkt);
+					break;
+				}
+
+				case PI_COMM_MSG_CONFIG_HOSTNAME: {
+					size_t len = message->header.length;
+					len = (len > sizeof(g_config.pi_hostname) - 1) ? (sizeof(g_config.pi_hostname) - 1) : len;
+					memcpy(g_config.pi_hostname, &message->data, len);
+					g_config.pi_hostname[len] = 0;
 					break;
 				}
 
@@ -228,7 +256,7 @@ void state_machine_thread_entry(ULONG thread_input){
 					break;
 				}
 
-				case PI_COMM_MSG_QUERY_APRS_CALL_SIGN: {
+				case PI_COMM_MSG_QUERY_APRS_CALLSIGN: {
 					static char callsign[7] = "";
 					aprs_get_callsign(callsign);
 					pi_comms_tx_callsign(callsign);
@@ -236,11 +264,6 @@ void state_machine_thread_entry(ULONG thread_input){
 				}
 
 				case PI_COMM_MSG_QUERY_APRS_MESSAGE: {
-					//ToDo: implement
-					break;
-				}
-
-				case PI_COMM_MSG_QUERY_APRS_TX_INTERVAL: {
 					//ToDo: implement
 					break;
 				}
@@ -255,7 +278,6 @@ void state_machine_thread_entry(ULONG thread_input){
 				case PI_COMM_MSG_TX_NOW: {
 					size_t len = message->header.length;
 					len = (67 < len) ? 67 : len;
-
 					aprs_tx_message((char *)&message->data, len);
 					break;
 				}
