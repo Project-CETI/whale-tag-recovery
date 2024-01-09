@@ -44,6 +44,10 @@
 
 #define BATT_MON_ADC_TIMEOUT_TICKS tx_ms_to_ticks(500)
 
+/* VARIABLES *****************************************************************/
+extern float voltage_mon;
+
+/* FUNCTIONS *****************************************************************/
 //Function to call to get an ADC conversion and return the raw digital value output
 uint32_t battery_monitor_get_raw_adc_data();
 

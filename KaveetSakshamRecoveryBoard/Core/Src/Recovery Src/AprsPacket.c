@@ -8,6 +8,7 @@
 
 #include "Recovery Inc/AprsPacket.h"
 #include "Recovery Inc/Aprs.h"
+#include "Sensor Inc/BatteryMonitoring.h"
 #include "main.h"
 #include "timing.h"
 #include <stdint.h>
@@ -23,7 +24,7 @@ typedef struct callsign_t {
 static struct {
     Callsign src;
     Callsign msg_recipient;
-    char comment[40];
+    char comment[41];
 } aprs_config = {
     .src = {
         .callsign 	= APRS_SOURCE_CALLSIGN,
@@ -34,7 +35,6 @@ static struct {
 		.ssid       = APRS_MESSAGE_RECIPIENT_SSID,
 	},
     .comment = "",
-
 };
 
 typedef struct ax25_frame_t {
@@ -49,6 +49,8 @@ typedef struct ax25_frame_t {
 
 static void append_gps_data(uint8_t * buffer, float lat, float lon);
 static void append_compressed_gps_data(uint8_t *buffer, float lat, float lon);
+static void append_timestamp(uint8_t *buffer, const uint16_t timestamp[3]);
+static void append_comment(uint8_t *buffer, size_t max_len, const char *comment);
 
 /* Callsign ******************************************************************/
 // generates a valid AX.25 address from a callsign
@@ -73,11 +75,11 @@ static void callsign_to_ax25_address(const Callsign *self, uint8_t dst[static 7]
 }
 
 // converts callsign into a valid string
-static void callsign_to_string(const Callsign *self, char dst[static 10]) {
-    if (self->ssid != 0) {
-        snprintf(dst, 10, "%s-%d", self->callsign, self->ssid);
+static void callsign_to_string(const Callsign *self, char str[static 10]) {
+    if(self->ssid == 0) {
+        strncpy(str, self->callsign, 6);
     } else {
-        strcpy(dst, self->callsign);
+        snprintf(str, 10, "%s-%d", self->callsign, self->ssid);
     }
 }
 
@@ -149,61 +151,65 @@ static void __ax25_generate_packet(uint8_t *buffer, uint8_t **buffer_end, uint8_
     }
 }
 
-static uint16_t message_index = 0;
-
+    static uint16_t message_index = 0;
 void aprs_generate_location_packet(uint8_t * buffer, uint8_t **buffer_end, float lat, float lon){
-    char index_buffer[5];
+    char index_buffer[6];
     uint8_t gps_data[256];
 	size_t  gps_data_size = 0;
 
 	//generate APRS gps packet
-    buffer[0] = APRS_DT_POS_CHARACTER;
+    gps_data[0] = APRS_DT_POS_CHARACTER;
     gps_data_size += 1;
 
 	append_compressed_gps_data(&gps_data[gps_data_size], lat, lon);
     gps_data_size += 13;
 
-    sprintf(index_buffer, "%04d:", message_index);
+    //message_index
+    sprintf(index_buffer, "%04x:", message_index);
     append_comment(&gps_data[gps_data_size], 40, index_buffer);
     message_index++;
+    gps_data_size += 5;
+
+    //voltage_level
+    sprintf(index_buffer, "%3.1f;", battery_monitor_get_true_voltage());
+    append_comment(&gps_data[gps_data_size], 35, index_buffer);
     gps_data_size += 4;
 
-
-    append_comment(&gps_data[gps_data_size], 35, APRS_COMMENT);
-	gps_data_size = strlen(APRS_COMMENT);
+    append_comment(&gps_data[gps_data_size], 31, aprs_config.comment);
+	gps_data_size += strlen(aprs_config.comment);
 
 	//package inside AX.25 frame
     __ax25_generate_packet(buffer, buffer_end, gps_data, gps_data_size);
 }
 
-void aprs_generate_location_packet_w_timestamp(uint8_t * buffer, uint8_t **buffer_end, float lat, float lon, uint16_t *timestamp){
-    char index_buffer[5];
+void aprs_generate_location_packet_w_timestamp(uint8_t * buffer, uint8_t **buffer_end, float lat, float lon, const uint16_t timestamp[3]){
+    char index_buffer[6];
     uint8_t gps_data[256];
 	size_t  gps_data_size = 0;
 
 	//generate APRS gps packet
-    buffer[0] = '/';
+    gps_data[0] = '/';
     gps_data_size += 1;
 
-    append_timestamp(&gps_data[gps_data_size], &timestamp);
+    append_timestamp(&gps_data[gps_data_size], timestamp);
     gps_data_size += 7;
 
 	append_compressed_gps_data(&gps_data[gps_data_size], lat, lon);
     gps_data_size += 13;
 
-    sprintf(index_buffer, "%04d:", message_index);
+    sprintf(index_buffer, "%04d:", (message_index - 1));
     append_comment(&gps_data[gps_data_size], 40, index_buffer);
-    gps_data_size += 4;
+    gps_data_size += 5;
 
     append_comment(&gps_data[gps_data_size], 35, APRS_COMMENT);
-	gps_data_size = strlen(APRS_COMMENT);
+	gps_data_size += strlen(APRS_COMMENT);
 
 	//package inside AX.25 frame
     __ax25_generate_packet(buffer, buffer_end, gps_data, gps_data_size);
 }
 
 void aprs_generate_message_packet(uint8_t *buffer, uint8_t **buffer_end, const char* message, size_t message_len){
-	char addressee[10];
+	char addressee[10] = "KC1QXQ-8";
     uint8_t message_bytes[256] = {':'};
 	size_t  byte_len = 11 + message_len;
     
@@ -302,12 +308,12 @@ static void append_compressed_gps_data(uint8_t *buffer, float lat, float lon){
     buffer[0] = '/';
 
     for(int i = 3; i >= 0; i--){
-        buffer[2 + i] = '!' + temp_lat % 91;
+        buffer[1 + i] = '!' + temp_lat % 91;
         temp_lat /= 91;
     }
 
     for(int i = 3; i >= 0; i--){
-        buffer[6 + i] = '!' + temp_lon % 91;
+        buffer[5 + i] = '!' + temp_lon % 91;
         temp_lon /= 91;
     }
 
@@ -317,9 +323,9 @@ static void append_compressed_gps_data(uint8_t *buffer, float lat, float lon){
     buffer[12] = 'T';
 }
 
-static append_timestamp(uint8_t *buffer, const uint16_t timestamp[3]){
+static void append_timestamp(uint8_t *buffer, const uint16_t timestamp[3]){
     char timestamp_buffer[8];
-    sprintf("%02d%02d%02dh", timestamp[0], timestamp[1], timestamp[2]);
+    sprintf(timestamp_buffer, "%02d%02d%02dh", timestamp[0], timestamp[1], timestamp[2]);
     memcpy(buffer, timestamp_buffer, 7);
 
 }
@@ -355,10 +361,6 @@ static void append_comp_gps_w_timestamp(uint8_t *buffer, float lat, float lon, u
     buffer[18] = ' '; //c: ' ' means no course-speed/range/altitude
     buffer[19] = 's';
     buffer[20] = 'T';
-
-
-    sprintf(index_buffer, "%03d:");
-    memcpy(&buffer[21], index_buffer, 4);
 }
 
 int aprs_set_msg_recipient_callsign(const char *callsign) {
@@ -404,4 +406,10 @@ void aprs_get_callsign(char callsign[static 7]){
 
 void aprs_get_ssid(uint8_t *ssid){
     *ssid = aprs_config.src.ssid; 
+}
+
+void aprs_set_comment(const char *comment, size_t comment_len) {
+    comment_len = (comment_len < APRS_MAX_COMMENT_LEN) ? comment_len : APRS_MAX_COMMENT_LEN;
+    memcpy(aprs_config.comment, comment, comment_len);
+    aprs_config.comment[comment_len] = '\0';
 }

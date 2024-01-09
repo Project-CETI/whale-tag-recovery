@@ -164,7 +164,6 @@ HAL_StatusTypeDef vhf_rx(VHF_HandleTypdeDef *vhf){
 HAL_StatusTypeDef vhf_wake(VHF_HandleTypdeDef *vhf){
 
 	//set VHF_TX as usart
-//	HAL_GPIO_WritePin(VHF_TX_GPIO_Port, VHF_TX_Pin, GPIO_PIN_SET);
 	uint32_t reg = VHF_TX_GPIO_Port->MODER;
 	reg &= ~0b11; //mask off pin 0: VHF_TX_Pin
 	reg |= (0b10); //set as alternative
@@ -172,8 +171,6 @@ HAL_StatusTypeDef vhf_wake(VHF_HandleTypdeDef *vhf){
 
 	//Set the PD pin on the module to high to wake the module
 	HAL_GPIO_WritePin(vhf->ptt.port, vhf->ptt.pin, GPIO_PIN_RESET);
-//	HAL_GPIO_WritePin(vhf->pd.port, vhf->pd.pin, GPIO_PIN_SET);
-//	tx_thread_sleep(tx_ms_to_ticks(500)); //wait for module to wake
 
 	//Start with the VHF handshake to confirm module is setup correctly
 	/* 

@@ -90,13 +90,14 @@ void state_machine_set_state(State new_state){
  * state machine update thread.
  */
 void state_machine_thread_entry(ULONG thread_input){
-
+	
 	//Event flags for triggering state changes
 	tx_event_flags_create(&state_machine_event_flags_group, "State Machine Event Flags");
 
 
 	//Check the initial state and start in the appropriate state
 	state_machine_set_state(state);
+	vhf_set_freq(&vhf, g_config.aprs_freq);
 
 #if BATTERY_MONITOR_ENABLED
 	tx_thread_resume(&threads[BATTERY_MONITOR_THREAD].thread);

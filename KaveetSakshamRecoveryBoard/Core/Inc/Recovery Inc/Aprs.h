@@ -29,7 +29,7 @@
 //send flag for entire ax25 transmit delay time
 #define APRS_BIT_RATE_BIT_PER_S (1200)
 #define APRS_BYTE_RATE_BYTEP_PER_S (APRS_BIT_RATE_BIT_PER_S / 8)
-#define AX25_TXDELAY_MS (300)
+#define AX25_TXDELAY_MS (500)
 #define AX25_FLAG_COUNT (AX25_TXDELAY_MS * APRS_BYTE_RATE_BYTEP_PER_S / 1000)
 
 #define APRS_PACKET_LENGTH ((218 - 150) + AX25_FLAG_COUNT)

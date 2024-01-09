@@ -17,6 +17,14 @@
 #define UART_ENABLED 1
 #define HEARTBEAT_ENABLED 0
 
+#define IN_DOMINICA 1
+
+#if IN_DOMINICA
+#define TX_FREQ_MHZ 145.050
+#else
+#define TX_FREQ_MHZ 144.390
+#endif
+
 /* RUNTIME CONFIGURATION */
 
 typedef struct global_position_t{
@@ -43,7 +51,7 @@ typedef struct config_t{
 #define DEFAULT_CONFIGURATION (Configuration){\
 	.critical_voltage = 6.0,\
 	.vhf_power = VHF_POWER_HIGH,\
-	.aprs_freq = 144.3900f,\
+	.aprs_freq = TX_FREQ_MHZ,\
 	.pi_hostname = "",\
 }
 

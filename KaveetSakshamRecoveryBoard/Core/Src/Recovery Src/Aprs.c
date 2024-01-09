@@ -42,7 +42,7 @@ void aprs_thread_entry(ULONG aprs_thread_input){
     aprs_transmit_init();
 
     //We arent in dominica by default
-    bool is_in_dominica = false;
+    bool is_in_dominica = true;
 
     //Main task loop
     while(1){
@@ -50,17 +50,19 @@ void aprs_thread_entry(ULONG aprs_thread_input){
         //GPS data struct
         GPS_Data gps_data;
 
+
         //Attempt to get a GPS lock
-        bool is_locked = get_gps_lock(&gps, &gps_data);
+        // bool is_locked = gps_read(&gps_data);
+       bool is_locked = get_gps_lock(&gps, &gps_data);
 
         //The time we will eventually put this task to sleep for. We assign this assuming the GPS lock has failed (only sleep for a shorter, fixed period of time).
         //If we did get a GPS lock, the sleep_period will correct itself by the end of the task (be appropriately assigned after succesful APRS transmission)
         uint32_t sleep_period = GPS_SLEEP_LENGTH;
 
         for(int i = 0; i < 15; i++){
-        				HAL_GPIO_TogglePin(PWR_LED_NEN_GPIO_Port, PWR_LED_NEN_Pin);
-        				HAL_Delay(33);//flash at ~15 Hz for 1 second
-                    }
+			HAL_GPIO_TogglePin(PWR_LED_NEN_GPIO_Port, PWR_LED_NEN_Pin);
+			HAL_Delay(33);//flash at ~15 Hz for 1 second
+		}
 		HAL_GPIO_WritePin(PWR_LED_NEN_GPIO_Port, PWR_LED_NEN_Pin, GPIO_PIN_RESET);//ensure light is off after strobe
         //If we've locked onto a position, we can start creating an APRS packet.
         if (is_locked){
@@ -71,7 +73,7 @@ void aprs_thread_entry(ULONG aprs_thread_input){
             //We first initialized the VHF module with our default frequencies. If we are in Dominica, re-initialize the VHF module to use the dominica frequencies.
             //
             //The function also handles switching back to the default frequency if we leave dominica
-            is_in_dominica = toggle_freq(gps_data.is_dominica, is_in_dominica);
+//            is_in_dominica = toggle_freq(gps_data.is_dominica, is_in_dominica);
 
             //Start transmission
             //increment aprs packet #
@@ -83,6 +85,7 @@ void aprs_thread_entry(ULONG aprs_thread_input){
             //end transmission
             vhf_sleep(&vhf);
             tx_mutex_put(&vhf_mutex);
+            //gps_invalidate();
 
             //Set the sleep period for a successful APRS transmission
             sleep_period = APRS_BASE_SLEEP_LENGTH - tx_ms_to_ticks(VHF_MAX_WAKE_TIME_MS);

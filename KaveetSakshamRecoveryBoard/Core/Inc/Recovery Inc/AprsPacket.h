@@ -23,8 +23,8 @@
 #define APRS_CONTROL_FIELD 0x03
 #define APRS_PROTOCOL_ID 0xF0
 
-#define APRS_SOURCE_CALLSIGN "KC1TUJ"
-#define APRS_SOURCE_SSID 1
+#define APRS_SOURCE_CALLSIGN "J75Y"
+#define APRS_SOURCE_SSID 4
 
 #define APRS_MESSAGE_RECIPIENT_CALLSIGN "KC1QXQ"
 #define APRS_MESSAGE_RECIPIENT_SSID 8
@@ -53,6 +53,10 @@
 void aprs_generate_location_packet(uint8_t * buffer, uint8_t **buffer_end, float lat, float lon);
 void aprs_generate_message_packet(uint8_t *buffer, uint8_t **buffer_end, const char* message, size_t message_len);
 
+//get aprs source callsign
+void aprs_get_callsign(char callsign[static 7]);
+void aprs_get_ssid(uint8_t *p_ssid);
+
 int aprs_set_msg_recipient_callsign(const char *callsign);
 int aprs_set_msg_recipient_ssid(uint8_t ssid);
 
@@ -60,9 +64,6 @@ int aprs_set_msg_recipient_ssid(uint8_t ssid);
 int aprs_set_callsign(const char *callsign);
 int aprs_set_ssid(uint8_t ssid);
 
-//get aprs source callsign
-void aprs_get_callsign(char callsign[static 7]);
-void aprs_get_ssid(uint8_t *p_ssid);
-
+void aprs_set_comment(const char *comment, size_t comment_len);
 
 #endif /* INC_RECOVERY_INC_APRSPACKET_H_ */
