@@ -77,8 +77,6 @@ void MX_TIM2_Fake_Init(uint8_t newPeriod);
 #define PWR_LED_NEN_GPIO_Port GPIOB
 #define VSYS_SENSE_Pin GPIO_PIN_11
 #define VSYS_SENSE_GPIO_Port GPIOD
-#define USB_BOOT_EN_Pin GPIO_PIN_10
-#define USB_BOOT_EN_GPIO_Port GPIOA
 #define VHF_PTT_Pin GPIO_PIN_5
 #define VHF_PTT_GPIO_Port GPIOD
 
