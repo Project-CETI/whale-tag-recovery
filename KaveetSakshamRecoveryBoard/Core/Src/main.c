@@ -77,6 +77,7 @@ VHF_HandleTypdeDef vhf = {
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
+static void SystemPower_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_GPDMA1_Init(void);
 static void MX_DAC1_Init(void);
@@ -117,6 +118,9 @@ int main(void)
 
   /* Configure the system clock */
   SystemClock_Config();
+
+  /* Configure the System Power */
+  SystemPower_Config();
 
   /* USER CODE BEGIN SysInit */
 #if USB_BOOTLOADER_ENABLED
@@ -251,6 +255,21 @@ void SystemClock_Config(void)
 }
 
 /**
+  * @brief Power Configuration
+  * @retval None
+  */
+static void SystemPower_Config(void)
+{
+
+  /*
+   * Disable the internal Pull-Up in Dead Battery pins of UCPD peripheral
+   */
+  HAL_PWREx_DisableUCPDDeadBattery();
+/* USER CODE BEGIN PWR */
+/* USER CODE END PWR */
+}
+
+/**
   * @brief ADC4 Initialization Function
   * @param None
   * @retval None
@@ -261,8 +280,6 @@ static void MX_ADC4_Init(void)
   /* USER CODE BEGIN ADC4_Init 0 */
 
   /* USER CODE END ADC4_Init 0 */
-
-  ADC_ChannelConfTypeDef sConfig = {0};
 
   /* USER CODE BEGIN ADC4_Init 1 */
 
@@ -290,18 +307,6 @@ static void MX_ADC4_Init(void)
   hadc4.Init.SamplingTimeCommon2 = ADC4_SAMPLETIME_1CYCLE_5;
   hadc4.Init.OversamplingMode = DISABLE;
   if (HAL_ADC_Init(&hadc4) != HAL_OK)
-  {
-    Error_Handler();
-  }
-
-  /** Configure Regular Channel
-  */
-  sConfig.Channel = ADC_CHANNEL_15;
-  sConfig.Rank = ADC4_RANK_CHANNEL_NUMBER;
-  sConfig.SamplingTime = ADC4_SAMPLINGTIME_COMMON_1;
-  sConfig.OffsetNumber = ADC_OFFSET_NONE;
-  sConfig.Offset = 0;
-  if (HAL_ADC_ConfigChannel(&hadc4, &sConfig) != HAL_OK)
   {
     Error_Handler();
   }
@@ -581,7 +586,7 @@ static void MX_USART2_UART_Init(void)
   {
     Error_Handler();
   }
-  if (HAL_UARTEx_EnableFifoMode(&huart2) != HAL_OK)
+  if (HAL_UARTEx_DisableFifoMode(&huart2) != HAL_OK)
   {
     Error_Handler();
   }
@@ -663,6 +668,7 @@ static void MX_USB_OTG_FS_PCD_Init(void)
   hpcd_USB_OTG_FS.Init.battery_charging_enable = ENABLE;
   hpcd_USB_OTG_FS.Init.use_dedicated_ep1 = DISABLE;
   hpcd_USB_OTG_FS.Init.vbus_sensing_enable = ENABLE;
+  hpcd_USB_OTG_FS.Init.dma_enable = DISABLE;
   if (HAL_PCD_Init(&hpcd_USB_OTG_FS) != HAL_OK)
   {
     Error_Handler();
@@ -696,10 +702,13 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPS_NEN_GPIO_Port, GPS_NEN_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, VHF_PTT_Pin|APRS_PD_Pin|APRS_H_L_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, APRS_PD_Pin|APRS_H_L_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(PWR_LED_NEN_GPIO_Port, PWR_LED_NEN_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(VHF_PTT_GPIO_Port, VHF_PTT_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pins : PE2 PE3 PE4 PE5
                            PE6 PE7 PE8 PE9
@@ -730,8 +739,8 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPS_NEN_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : VHF_PTT_Pin APRS_PD_Pin APRS_H_L_Pin */
-  GPIO_InitStruct.Pin = VHF_PTT_Pin|APRS_PD_Pin|APRS_H_L_Pin;
+  /*Configure GPIO pins : APRS_PD_Pin APRS_H_L_Pin */
+  GPIO_InitStruct.Pin = APRS_PD_Pin|APRS_H_L_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -783,6 +792,13 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(USB_BOOT_EN_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : VHF_PTT_Pin */
+  GPIO_InitStruct.Pin = VHF_PTT_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(VHF_PTT_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : PH3 */
   GPIO_InitStruct.Pin = GPIO_PIN_3;

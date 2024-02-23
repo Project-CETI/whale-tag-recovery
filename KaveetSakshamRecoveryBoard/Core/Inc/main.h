@@ -63,10 +63,6 @@ void MX_TIM2_Fake_Init(uint8_t newPeriod);
 #define VHF_TX_GPIO_Port GPIOA
 #define VHF_RX_Pin GPIO_PIN_1
 #define VHF_RX_GPIO_Port GPIOA
-#define VHF_PTT_Pin GPIO_PIN_2
-#define VHF_PTT_GPIO_Port GPIOA
-#define EXT_RX_Pin GPIO_PIN_3
-#define EXT_RX_GPIO_Port GPIOA
 #define APRS_PD_Pin GPIO_PIN_5
 #define APRS_PD_GPIO_Port GPIOA
 #define APRS_H_L_Pin GPIO_PIN_6
@@ -83,8 +79,8 @@ void MX_TIM2_Fake_Init(uint8_t newPeriod);
 #define VSYS_SENSE_GPIO_Port GPIOD
 #define USB_BOOT_EN_Pin GPIO_PIN_10
 #define USB_BOOT_EN_GPIO_Port GPIOA
-#define EXT_TX_Pin GPIO_PIN_5
-#define EXT_TX_GPIO_Port GPIOD
+#define VHF_PTT_Pin GPIO_PIN_5
+#define VHF_PTT_GPIO_Port GPIOD
 
 /* USER CODE BEGIN Private defines */
 
