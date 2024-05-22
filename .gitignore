@@ -23,7 +23,6 @@ RemoteSystemsTempFiles/
 *.ko
 *.obj
 *.elf
-!KaveetSakshamRecoveryBoard.elf
 
 # Linker output
 *.ilk
