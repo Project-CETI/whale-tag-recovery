@@ -14,6 +14,8 @@ RemoteSystemsTempFiles/
 */Middlewares/
 */Drivers/
 */AZURE_RTOS/
+WhaleTagRecovery.pdf
+WhaleTagRecovery.txt
 
 # Prerequisites
 *.d

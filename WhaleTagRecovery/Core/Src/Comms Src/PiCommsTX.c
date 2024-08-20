@@ -21,6 +21,15 @@ typedef struct __attribute__ ((__packed__, scalar_storage_order ("little-endian"
 	uint8_t msg[256];
 } Packet;
 
+void pi_comms_tx_pong(void){
+	PiCommHeader gps_header = {
+		.start_byte = PI_COMMS_START_CHAR,
+		.id = PI_COMM_PONG,
+		.length = 0,
+	};
+	HAL_UART_Transmit(&huart2, (uint8_t *) &gps_header, sizeof(PiCommHeader), HAL_MAX_DELAY);
+}
+
 void pi_comms_tx_forward_gps(uint8_t *buffer, uint8_t len){
 	PiCommHeader gps_header = {
 			.start_byte = PI_COMMS_START_CHAR,

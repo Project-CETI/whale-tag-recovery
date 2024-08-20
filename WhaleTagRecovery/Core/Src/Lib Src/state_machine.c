@@ -94,7 +94,6 @@ void state_machine_thread_entry(ULONG thread_input){
 	//Event flags for triggering state changes
 	tx_event_flags_create(&state_machine_event_flags_group, "State Machine Event Flags");
 
-
 	//Check the initial state and start in the appropriate state
 	state_machine_set_state(state);
 	vhf_set_freq(&vhf, g_config.aprs_freq);
@@ -158,6 +157,11 @@ void state_machine_thread_entry(ULONG thread_input){
 					memcpy(msg_buffer, &message->data, len);
 					msg_buffer[len] = '\0';
 					aprs_tx_message(msg_buffer, strlen(msg_buffer));
+					break;
+				}
+
+				case PI_COMM_PING: {
+					pi_comms_tx_pong();
 					break;
 				}
 
@@ -273,13 +277,6 @@ void state_machine_thread_entry(ULONG thread_input){
 					uint8_t ssid;
 					aprs_get_ssid(&ssid);
 					pi_comms_tx_ssid(ssid);
-					break;
-				}
-
-				case PI_COMM_MSG_TX_NOW: {
-					size_t len = message->header.length;
-					len = (67 < len) ? 67 : len;
-					aprs_tx_message((char *)&message->data, len);
 					break;
 				}
 

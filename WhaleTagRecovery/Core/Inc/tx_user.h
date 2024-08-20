@@ -112,7 +112,7 @@
 
 /*#define TX_MINIMUM_STACK                200*/
 
-/* Determine if timer expirations (application timers, timeouts, and tx_thread_sleep calls
+/* Determine if timer expirations (application timers, timeouts, and tx_thread_sleep) calls
    should be processed within the a system timer thread or directly in the timer ISR.
    By default, the timer thread is used. When the following is defined, the timer expiration
    processing is done directly from the timer ISR, thereby eliminating the timer thread control
@@ -223,18 +223,6 @@
 */
 
 /*#define TX_NO_FILEX_POINTER*/
-
-/* Determinate if the basic alignment type is defined. */
-
-/*#define ALIGN_TYPE_DEFINED*/
-
-/* Define basic alignment type used in block and byte pool operations. */
-
-/*#define ALIGN_TYPE  ULONG*/
-
-/* Define the TX_MEMSET macro to the standard library function. */
-
-/*#define TX_MEMSET  memset((a),(b),(c))*/
 
 /* Define if the safety critical configuration is enabled. */
 

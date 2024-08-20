@@ -15,7 +15,6 @@ extern UART_HandleTypeDef huart3;
 extern TX_QUEUE gps_tx_queue;
 
 void gps_collection_thread_entry(ULONG thread_input){
-
 	//Initialize GPS struct
 	GPS_HandleTypeDef gps;
 	initialize_gps(&huart3, &gps);

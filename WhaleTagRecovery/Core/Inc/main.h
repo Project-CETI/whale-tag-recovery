@@ -63,6 +63,10 @@ void MX_TIM2_Fake_Init(uint8_t newPeriod);
 #define VHF_TX_GPIO_Port GPIOA
 #define VHF_RX_Pin GPIO_PIN_1
 #define VHF_RX_GPIO_Port GPIOA
+#define EXT_TX_Pin GPIO_PIN_2
+#define EXT_TX_GPIO_Port GPIOA
+#define EXT_RX_Pin GPIO_PIN_3
+#define EXT_RX_GPIO_Port GPIOA
 #define APRS_PD_Pin GPIO_PIN_5
 #define APRS_PD_GPIO_Port GPIOA
 #define APRS_H_L_Pin GPIO_PIN_6
