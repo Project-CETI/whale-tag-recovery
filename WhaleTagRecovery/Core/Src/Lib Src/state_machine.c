@@ -107,6 +107,7 @@ void state_machine_thread_entry(ULONG thread_input){
 #if RTC_ENABLED
 	tx_thread_resume(&threads[RTC_THREAD].thread);
 #endif
+	tx_thread_resume(&threads[GPS_BUFFER_THREAD].thread);
 
 	//Enter main thread execution loop ONLY if we arent simulating
 	while (1){

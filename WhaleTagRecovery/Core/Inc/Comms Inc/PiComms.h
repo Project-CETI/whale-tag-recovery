@@ -150,7 +150,7 @@ extern volatile uint_fast8_t pi_comm_rx_buffer_end;
 
 void pi_comms_rx_thread_entry(ULONG thread_input);
 
-void pi_comms_tx_forward_gps(uint8_t *buffer, uint8_t len);
+void pi_comms_tx_forward_gps(const uint8_t *buffer, uint8_t len);
 void pi_comms_tx_pong(void);
 void pi_comms_tx_callsign(const char *callsign);
 void pi_comms_tx_ssid(uint8_t ssid);

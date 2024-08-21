@@ -2,7 +2,7 @@
  * GpsGeofencing.c
  *
  *  Created on: Aug 9, 2023
- *      Author: Kaveet
+ *      Author: Kaveet, Michael Salino-Hugg
  */
 
 #include "Sensor Inc/GPSCollection.h"

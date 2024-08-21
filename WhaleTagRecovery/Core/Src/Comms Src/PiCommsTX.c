@@ -30,7 +30,7 @@ void pi_comms_tx_pong(void){
 	HAL_UART_Transmit(&huart2, (uint8_t *) &gps_header, sizeof(PiCommHeader), HAL_MAX_DELAY);
 }
 
-void pi_comms_tx_forward_gps(uint8_t *buffer, uint8_t len){
+void pi_comms_tx_forward_gps(const uint8_t *buffer, uint8_t len){
 	PiCommHeader gps_header = {
 			.start_byte = PI_COMMS_START_CHAR,
 			.id = PI_COMM_MSG_GPS_PACKET,
