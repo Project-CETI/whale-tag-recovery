@@ -36,7 +36,6 @@ void comms_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 	if (pi_comm_rx_buffer[pi_comm_rx_buffer_end][0] == PI_COMMS_START_CHAR){
 		tx_event_flags_set(&pi_comms_event_flags_group, PI_COMMS_VALID_START_FLAG, TX_OR);
 	}
-
 }
 
 void pi_comms_rx_thread_entry(ULONG thread_input){

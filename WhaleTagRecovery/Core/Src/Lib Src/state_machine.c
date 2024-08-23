@@ -36,10 +36,6 @@ void state_machine_set_state(State new_state){
 			tx_thread_suspend(&threads[APRS_THREAD].thread);
 			break;
 
-		case STATE_GPS_COLLECT:
-			tx_thread_suspend(&threads[GPS_COLLECTION_THREAD].thread);
-			break;
-
 		case STATE_FISHTRACKER:
 			tx_thread_suspend(&threads[FISHTRACKER_THREAD].thread);
 			break;
@@ -51,26 +47,23 @@ void state_machine_set_state(State new_state){
 	//actions to take when entering the new_state
 	switch(new_state){
 		case STATE_CRITICAL:
+			tx_thread_suspend(&threads[GPS_BUFFER_THREAD].thread);
 			gps_sleep(); 	//GPS: OFF
 			aprs_sleep();	//VHF: OFF
 			HAL_PWREx_EnterSHUTDOWNMode();
 			break;
 
 		case STATE_WAITING:
+			tx_thread_suspend(&threads[GPS_BUFFER_THREAD].thread);
 			gps_sleep(); 	//GPS: OFF
 			aprs_sleep();	//VHF: OFF
 			//ToDo: Low Power Mode - UART wakeup
 			break;
 
 		case STATE_APRS:
+			tx_thread_resume(&threads[GPS_BUFFER_THREAD].thread);
 			gps_wake();		//GPS: ON
 			tx_thread_resume(&threads[APRS_THREAD].thread);
-			break;
-
-		case STATE_GPS_COLLECT:
-			gps_wake();		//GPS: ON
-			aprs_sleep();	//VHF: OFF
-			tx_thread_resume(&threads[GPS_COLLECTION_THREAD].thread);
 			break;
 
 		case STATE_FISHTRACKER:
@@ -135,12 +128,6 @@ void state_machine_thread_entry(ULONG thread_input){
 				case PI_COMM_MSG_STOP: {
 					//stop (and wait for more commands)
 					state_machine_set_state(STATE_WAITING);
-					break;
-				}
-
-				case PI_COMM_MSG_COLLECT_ONLY: {
-					//enter regular GPS collection
-					state_machine_set_state(STATE_GPS_COLLECT);
 					break;
 				}
 

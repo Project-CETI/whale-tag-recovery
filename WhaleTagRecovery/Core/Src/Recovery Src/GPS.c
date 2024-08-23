@@ -6,13 +6,20 @@
  *
  * The C file for parsing and storing the GPS outputs for board recovery. See matching header file for more info.
  */
-
-
+#include "tx_api.h"
 #include "Recovery Inc/GPS.h"
 #include "Lib Inc/minmea.h"
 #include <math.h>
 #include <string.h>
 #include "Comms Inc/PiComms.h"
+#include "stm32u5xx_hal_uart.h"
+#include "main.h"
+
+//#define GPS_INTERRUPT_DRIVEN
+
+#ifdef GPS_COMM_DEBUG
+#include "Lib Inc/timing.h"
+#endif
 
 //For parsing GPS outputs
 static void parse_gps_output(GPS_HandleTypeDef* gps, const char* buffer, uint8_t buffer_length);
@@ -25,7 +32,7 @@ extern UART_HandleTypeDef huart3;
 #define NMEA_MAX_SIZE   (82)
 
 #define GPS_BUFFER_SIZE (NMEA_MAX_SIZE + 16)
-#define GPS_BUFFER_COUNT (16)
+#define GPS_BUFFER_COUNT (128)
 
 #define GPS_BUFFER_VALID_START (1 << 0)
 
@@ -42,7 +49,7 @@ uint8_t gps_buffer[GPS_BUFFER_COUNT][GPS_BUFFER_SIZE] = {};
 size_t gpsBuffer_write_index = 0;
 size_t gpsBuffer_read_index = 0;
 Option_size_t gpsBuffer_newest_index = {.some = 0}; 
-
+volatile uint8_t found_start = 0;
 
 // === PRIVATE METHODS ===
 
@@ -54,7 +61,8 @@ Option_size_t gpsBuffer_newest_index = {.some = 0};
  */
 void gpsBuffer_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 	if (gps_buffer[gpsBuffer_write_index][0] == NMEA_START_CHAR){
-		tx_event_flags_set(&gpsBuffer_event_flags_group, GPS_BUFFER_VALID_START, TX_OR);
+		found_start = 1;
+//		tx_event_flags_set(&gpsBuffer_event_flags_group, GPS_BUFFER_VALID_START, TX_OR);
 	}
 }
 
@@ -81,25 +89,40 @@ const uint8_t * gpsBuffer_pop_latest(void) {
  */
 void gpsBuffer_thread(ULONG thread_input) {
 #ifndef GPS_COMM_DEBUG 
+#ifdef GPS_INTERRUPT_DRIVEN
+//	tx_event_flags_create(&gpsBuffer_event_flags_group, "GPS Buffer Event Flags");
+
 	//attach interrupt uart interrupt
 	HAL_UART_RegisterCallback(&huart3, HAL_UART_RX_COMPLETE_CB_ID, gpsBuffer_UART_RxCpltCallback);
-
+#endif
 	while(1) {
         uint8_t *rx_buffer = gps_buffer[gpsBuffer_write_index];
+        *rx_buffer = 0;
         //wait for gps message start
         ULONG actual_flags = 0;
-        while(!(actual_flags & GPS_BUFFER_VALID_START)) {
-            HAL_UART_Receive_IT(&huart3, rx_buffer, 1); //receive one bit at a time
-            //Wait for the Interrupt callback to fire and set the flag (telling us what to do further)
-			tx_event_flags_get(&gpsBuffer_event_flags_group, GPS_BUFFER_VALID_START , TX_OR_CLEAR, &actual_flags, TX_WAIT_FOREVER);
+#ifndef GPS_INTERRUPT_DRIVEN
+
+        while(*rx_buffer != NMEA_START_CHAR){
+            HAL_UART_Receive(&huart3, rx_buffer, 1, GPS_UART_TIMEOUT); //receive one bit at a time
         }
+#else
+        found_start = 0;
+        while (!found_start){
+//        while(!(actual_flags & GPS_BUFFER_VALID_START)) {
+            HAL_UART_Receive_IT(&huart3, rx_buffer, 1); //receive one bit at a time
+
+            // Wait for the Interrupt callback to fire and set the flag (telling us what to do further)
+//			tx_event_flags_get(&gpsBuffer_event_flags_group, GPS_BUFFER_VALID_START , TX_OR_CLEAR, &actual_flags, TX_WAIT_FOREVER);
+        }
+        found_start = 0;
+#endif
 
         //receive until end character
         size_t char_index = 0;
         do{
             char_index++; //advance write head read next byte
             if (char_index == GPS_BUFFER_SIZE-2) {
-                // TODO error handle 
+                break;
             }
             HAL_UART_Receive(&huart3, &rx_buffer[char_index], 1, GPS_UART_TIMEOUT);
         } while(rx_buffer[char_index] != NMEA_END_CHAR);
@@ -107,31 +130,46 @@ void gpsBuffer_thread(ULONG thread_input) {
         rx_buffer[char_index] = 0;
         size_t message_length = char_index + 1;
 
-        //check if valid position data type
+
+		//only maintain valid messages
+		//check if valid position data type
         enum minmea_sentence_id sentence_id = minmea_sentence_id((const char *)rx_buffer, false);
         if ((sentence_id == MINMEA_SENTENCE_RMC)
-            && (sentence_id == MINMEA_SENTENCE_GLL)
-            && (sentence_id == MINMEA_SENTENCE_GGA)
+            || (sentence_id == MINMEA_SENTENCE_GLL)
+            || (sentence_id == MINMEA_SENTENCE_GGA)
         ){
             //advance latest and write head
             gpsBuffer_newest_index = (Option_size_t){.some = 1, .value = gpsBuffer_write_index};
-            size_t next_index = (gpsBuffer_write_index + 1) % GPS_BUFFER_COUNT;
-            if (next_index == gpsBuffer_read_index){
-                //TODO handle overflow condition
-            }
-            
-            //transmit values to pi
-            //Note: Move transmission to it's own thread to not block GPS UART communication
-            pi_comms_tx_forward_gps(rx_buffer, message_length);
-            gpsBuffer_read_index = (gpsBuffer_read_index + 1) % GPS_BUFFER_COUNT;
+
+			size_t next_index = (gpsBuffer_write_index + 1) % GPS_BUFFER_COUNT;
+			if (next_index == gpsBuffer_read_index){
+				//TODO handle overflow condition
+			}
+			gpsBuffer_write_index = next_index;
+
+			//transmit values to pi
+			//Note: Move transmission to it's own thread to not block GPS UART communication
+			gpsBuffer_read_index = (gpsBuffer_read_index + 1) % GPS_BUFFER_COUNT;
+			//forawrd messages
+			pi_comms_tx_forward_gps(rx_buffer, message_length);
         }
+//        else if ((sentence_id != MINMEA_INVALID)
+//        		&& (sentence_id != MINMEA_UNKNOWN)
+//		){
+//        	//forward, but don't store
+//			pi_comms_tx_forward_gps(rx_buffer, message_length);
+//        }
 	}
 #else
 	// buffer a indexed packet every second
-	static packet_index = 0;
+	static uint32_t packet_index = 0;
     while(1){
         //create fake message to be buffered and logged
-
+		snprintf((char *)gps_buffer[gpsBuffer_write_index], GPS_BUFFER_SIZE, "%08lxh\r\n", packet_index);
+		pi_comms_tx_forward_gps(gps_buffer[gpsBuffer_write_index], 12);
+		gpsBuffer_write_index = (gpsBuffer_write_index + 1) % GPS_BUFFER_COUNT;
+		packet_index++;
+		tx_thread_sleep(tx_s_to_ticks(1));
     }
 #endif
 }

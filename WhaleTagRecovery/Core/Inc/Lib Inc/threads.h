@@ -21,7 +21,7 @@
 #include "Lib Inc/state_machine.h"
 #include "Recovery Inc/Aprs.h"
 #include "Recovery Inc/FishTracker.h"
-#include "RECOVERY Inc/GPS.h"
+#include "Recovery Inc/GPS.h"
 #include "Sensor Inc/GPSCollection.h"
 #include "Sensor Inc/BatteryMonitoring.h"
 #include "Sensor Inc/RTC.h"
@@ -40,8 +40,7 @@
 typedef enum __TX_THREAD_LIST {
 	STATE_MACHINE_THREAD,
 	APRS_THREAD,
-	FISHTRACKER_THREAD,
-	GPS_COLLECTION_THREAD,
+	GPS_BUFFER_THREAD,
 #if BATTERY_MONITOR_ENABLED
 	BATTERY_MONITOR_THREAD,
 #endif
@@ -51,7 +50,7 @@ typedef enum __TX_THREAD_LIST {
 #if RTC_ENABLED
 	RTC_THREAD,
 #endif
-	GPS_BUFFER_THREAD,
+	FISHTRACKER_THREAD,
 	NUM_THREADS //DO NOT ADD THREAD ENUMS BELOW THIS
 }Thread;
 
@@ -130,17 +129,6 @@ static Thread_ConfigTypeDef threadConfigList[NUM_THREADS] = {
 				.thread_stack_size = 2048,
 				.priority = 2,
 				.preempt_threshold = 2,
-				.timeslice = TX_NO_TIME_SLICE,
-				.start = TX_DONT_START
-		},
-		[GPS_COLLECTION_THREAD] = {
-				//GPS Collection
-				.thread_name = "GPS Collection Thread",
-				.thread_entry_function = gps_collection_thread_entry,
-				.thread_input = 0x1234,
-				.thread_stack_size = 2048,
-				.priority = 7,
-				.preempt_threshold = 7,
 				.timeslice = TX_NO_TIME_SLICE,
 				.start = TX_DONT_START
 		},
