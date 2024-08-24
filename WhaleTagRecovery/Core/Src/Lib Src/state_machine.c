@@ -193,10 +193,7 @@ void state_machine_thread_entry(ULONG thread_input){
 					char comment_buffer[257];
 					size_t len = message->header.length;
 
-					memcpy(comment_buffer, &message->data, len);
-					comment_buffer[len] = '\0';
-
-					//ToDo: implement APRS comment assignment
+					aprs_set_comment(&message->data,  message->header.length);
 					break;
 				}
 

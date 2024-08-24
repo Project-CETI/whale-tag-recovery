@@ -22,7 +22,6 @@
 #include "Recovery Inc/Aprs.h"
 #include "Recovery Inc/FishTracker.h"
 #include "Recovery Inc/GPS.h"
-#include "Sensor Inc/GPSCollection.h"
 #include "Sensor Inc/BatteryMonitoring.h"
 #include "Sensor Inc/RTC.h"
 #include "Comms Inc/PiComms.h"
