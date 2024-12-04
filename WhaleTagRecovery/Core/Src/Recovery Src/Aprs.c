@@ -23,8 +23,6 @@ extern TX_QUEUE gps_tx_queue;
 
 TX_MUTEX vhf_mutex;
 
-static bool toggle_freq(bool is_gps_dominica, bool is_currently_dominica);
-
 void aprs_thread_entry(ULONG aprs_thread_input){
 
     //buffer for packet data
@@ -40,9 +38,6 @@ void aprs_thread_entry(ULONG aprs_thread_input){
 
     //Generate Aprs sine table
     aprs_transmit_init();
-
-    //We arent in dominica by default
-    bool is_in_dominica = true;
 
     //Main task loop
     while(1){
@@ -69,11 +64,6 @@ void aprs_thread_entry(ULONG aprs_thread_input){
             uint8_t *packet_end;
             size_t packet_length;
             aprs_generate_location_packet(packetBuffer, &packet_end, gps_data.latitude, gps_data.longitude);
-
-            //We first initialized the VHF module with our default frequencies. If we are in Dominica, re-initialize the VHF module to use the dominica frequencies.
-            //
-            //The function also handles switching back to the default frequency if we leave dominica
-//            is_in_dominica = toggle_freq(gps_data.is_dominica, is_in_dominica);
 
             //Start transmission
             //increment aprs packet #
@@ -108,37 +98,6 @@ void aprs_thread_entry(ULONG aprs_thread_input){
 
 void aprs_sleep(void){
     vhf_sleep(&vhf);
-}
-
-/*Reconfigures the VHF module to change the transmission frequency based on where the GPS is.
- *
- * is_gps_dominica: whether or not the current gps data is in dominica
- * is_currently_dominica: whether or not our VHF module is configured to the dominica frequency
- *
- * Returns: the current state of our configuration (whether or not VHF is configured for dominica
- */
-static bool toggle_freq(bool is_gps_dominica, bool is_currently_dominica){
-
-    //If the GPS is in dominica, but we are not configured for it, switch to dominica
-    if (is_gps_dominica && !is_currently_dominica){
-        //Re-initialize for dominica frequencies
-        vhf_set_freq(&vhf, 145.0500f);
-
-        //Now configured for dominica, return to indicate that
-        return true;
-    }
-    //elseif, we are not in dominica, but we are configured for dominica. Switch back to the regular frequencies
-    else if (!is_gps_dominica && is_currently_dominica){
-
-        //Re-initialize for default frequencies
-        vhf_set_freq(&vhf, 144.3900f);
-
-        //No longer on dominica freq, return to indicate that
-        return false;
-    }
-
-    //else: do nothing
-    return is_currently_dominica;
 }
 
 void aprs_tx_message(const char* message, size_t message_len){

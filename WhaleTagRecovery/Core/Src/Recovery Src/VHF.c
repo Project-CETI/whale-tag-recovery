@@ -29,7 +29,7 @@ static inline HAL_StatusTypeDef __vhf_set_freq(VHF_HandleTypdeDef *vhf){
 	uint8_t transmit_data[SET_PARAMETERS_TRANSMIT_LENGTH + 1];
 	uint8_t response_data[SET_PARAMETERS_RESPONSE_LENGTH];
 
-	sprintf((char *)transmit_data, "AT+DMOSETGROUP=0,%8.4f,%8.4f,0000,0,0000\r\n", vhf->config.tx_freq_MHz, vhf->config.rx_freq_MHz);
+	sprintf((char *)transmit_data, "AT+DMOSETGROUP=0,%8.4f,%8.4f,0000,0,0000\r\n", vhf->config.tx_freq_MHz, vhf->config.rx_freq_MHz); // @suppress("Float formatting support")
 
 	status |= HAL_UART_Transmit(vhf->huart, transmit_data, SET_PARAMETERS_TRANSMIT_LENGTH, HAL_MAX_DELAY);
 	status |= HAL_UART_Receive(vhf->huart,  response_data, SET_PARAMETERS_RESPONSE_LENGTH, 500);

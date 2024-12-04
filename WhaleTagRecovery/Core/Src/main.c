@@ -56,6 +56,7 @@ TIM_HandleTypeDef htim2;
 UART_HandleTypeDef huart4;
 UART_HandleTypeDef huart2;
 UART_HandleTypeDef huart3;
+DMA_HandleTypeDef handle_GPDMA1_Channel0;
 
 /* USER CODE BEGIN PV */
 VHF_HandleTypdeDef vhf = {
@@ -100,6 +101,7 @@ static void MX_ADC4_Init(void);
   */
 int main(void)
 {
+
   /* USER CODE BEGIN 1 */
 
   /* USER CODE END 1 */
@@ -179,6 +181,7 @@ int main(void)
   MX_ThreadX_Init();
 
   /* We should never get here as control is now taken by the scheduler */
+
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
@@ -276,6 +279,8 @@ static void MX_ADC4_Init(void)
 
   /* USER CODE END ADC4_Init 0 */
 
+  ADC_ChannelConfTypeDef sConfig = {0};
+
   /* USER CODE BEGIN ADC4_Init 1 */
 
   /* USER CODE END ADC4_Init 1 */
@@ -302,6 +307,18 @@ static void MX_ADC4_Init(void)
   hadc4.Init.SamplingTimeCommon2 = ADC4_SAMPLETIME_1CYCLE_5;
   hadc4.Init.OversamplingMode = DISABLE;
   if (HAL_ADC_Init(&hadc4) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure Regular Channel
+  */
+  sConfig.Channel = ADC_CHANNEL_15;
+  sConfig.Rank = ADC4_RANK_CHANNEL_NUMBER;
+  sConfig.SamplingTime = ADC4_SAMPLINGTIME_COMMON_1;
+  sConfig.OffsetNumber = ADC_OFFSET_NONE;
+  sConfig.Offset = 0;
+  if (HAL_ADC_ConfigChannel(&hadc4, &sConfig) != HAL_OK)
   {
     Error_Handler();
   }
@@ -382,6 +399,8 @@ static void MX_GPDMA1_Init(void)
   __HAL_RCC_GPDMA1_CLK_ENABLE();
 
   /* GPDMA1 interrupt Init */
+    HAL_NVIC_SetPriority(GPDMA1_Channel0_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(GPDMA1_Channel0_IRQn);
     HAL_NVIC_SetPriority(GPDMA1_Channel1_IRQn, 0, 0);
     HAL_NVIC_EnableIRQ(GPDMA1_Channel1_IRQn);
 
@@ -581,7 +600,7 @@ static void MX_USART2_UART_Init(void)
   {
     Error_Handler();
   }
-  if (HAL_UARTEx_DisableFifoMode(&huart2) != HAL_OK)
+  if (HAL_UARTEx_EnableFifoMode(&huart2) != HAL_OK)
   {
     Error_Handler();
   }
@@ -602,6 +621,8 @@ static void MX_USART3_UART_Init(void)
   /* USER CODE BEGIN USART3_Init 0 */
 
   /* USER CODE END USART3_Init 0 */
+
+  UART_AutonomousModeConfTypeDef sConfigUart3 = {0};
 
   /* USER CODE BEGIN USART3_Init 1 */
 
@@ -629,7 +650,16 @@ static void MX_USART3_UART_Init(void)
   {
     Error_Handler();
   }
-  if (HAL_UARTEx_DisableFifoMode(&huart3) != HAL_OK)
+  if (HAL_UARTEx_EnableFifoMode(&huart3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigUart3.AutonomousModeState = UART_AUTONOMOUS_MODE_ENABLE;
+  sConfigUart3.TriggerSelection = UART_GPDMA1_CH0_TCF_TRG;
+  sConfigUart3.TriggerPolarity = UART_TRIG_POLARITY_RISING;
+  sConfigUart3.DataSize = 0;
+  sConfigUart3.IdleFrame = UART_IDLE_FRAME_ENABLE;
+  if (HAL_UARTEx_SetConfigAutonomousMode(&huart3, &sConfigUart3) != HAL_OK)
   {
     Error_Handler();
   }

@@ -36,10 +36,6 @@ void state_machine_set_state(State new_state){
 			tx_thread_suspend(&threads[APRS_THREAD].thread);
 			break;
 
-		case STATE_GPS_COLLECT:
-			tx_thread_suspend(&threads[GPS_COLLECTION_THREAD].thread);
-			break;
-
 		case STATE_FISHTRACKER:
 			tx_thread_suspend(&threads[FISHTRACKER_THREAD].thread);
 			break;
@@ -51,26 +47,23 @@ void state_machine_set_state(State new_state){
 	//actions to take when entering the new_state
 	switch(new_state){
 		case STATE_CRITICAL:
+			tx_thread_suspend(&threads[GPS_BUFFER_THREAD].thread);
 			gps_sleep(); 	//GPS: OFF
 			aprs_sleep();	//VHF: OFF
 			HAL_PWREx_EnterSHUTDOWNMode();
 			break;
 
 		case STATE_WAITING:
+			tx_thread_suspend(&threads[GPS_BUFFER_THREAD].thread);
 			gps_sleep(); 	//GPS: OFF
 			aprs_sleep();	//VHF: OFF
 			//ToDo: Low Power Mode - UART wakeup
 			break;
 
 		case STATE_APRS:
+			tx_thread_resume(&threads[GPS_BUFFER_THREAD].thread);
 			gps_wake();		//GPS: ON
 			tx_thread_resume(&threads[APRS_THREAD].thread);
-			break;
-
-		case STATE_GPS_COLLECT:
-			gps_wake();		//GPS: ON
-			aprs_sleep();	//VHF: OFF
-			tx_thread_resume(&threads[GPS_COLLECTION_THREAD].thread);
 			break;
 
 		case STATE_FISHTRACKER:
@@ -94,7 +87,6 @@ void state_machine_thread_entry(ULONG thread_input){
 	//Event flags for triggering state changes
 	tx_event_flags_create(&state_machine_event_flags_group, "State Machine Event Flags");
 
-
 	//Check the initial state and start in the appropriate state
 	state_machine_set_state(state);
 	vhf_set_freq(&vhf, g_config.aprs_freq);
@@ -108,6 +100,7 @@ void state_machine_thread_entry(ULONG thread_input){
 #if RTC_ENABLED
 	tx_thread_resume(&threads[RTC_THREAD].thread);
 #endif
+	tx_thread_resume(&threads[GPS_BUFFER_THREAD].thread);
 
 	//Enter main thread execution loop ONLY if we arent simulating
 	while (1){
@@ -138,12 +131,6 @@ void state_machine_thread_entry(ULONG thread_input){
 					break;
 				}
 
-				case PI_COMM_MSG_COLLECT_ONLY: {
-					//enter regular GPS collection
-					state_machine_set_state(STATE_GPS_COLLECT);
-					break;
-				}
-
 				case PI_COMM_MSG_CRITICAL: {
 					//enter a critical low power state (nothing runs)
 					state_machine_set_state(STATE_CRITICAL);
@@ -158,6 +145,11 @@ void state_machine_thread_entry(ULONG thread_input){
 					memcpy(msg_buffer, &message->data, len);
 					msg_buffer[len] = '\0';
 					aprs_tx_message(msg_buffer, strlen(msg_buffer));
+					break;
+				}
+
+				case PI_COMM_PING: {
+					pi_comms_tx_pong();
 					break;
 				}
 
@@ -201,10 +193,7 @@ void state_machine_thread_entry(ULONG thread_input){
 					char comment_buffer[257];
 					size_t len = message->header.length;
 
-					memcpy(comment_buffer, &message->data, len);
-					comment_buffer[len] = '\0';
-
-					//ToDo: implement APRS comment assignment
+					aprs_set_comment(&message->data,  message->header.length);
 					break;
 				}
 
@@ -273,13 +262,6 @@ void state_machine_thread_entry(ULONG thread_input){
 					uint8_t ssid;
 					aprs_get_ssid(&ssid);
 					pi_comms_tx_ssid(ssid);
-					break;
-				}
-
-				case PI_COMM_MSG_TX_NOW: {
-					size_t len = message->header.length;
-					len = (67 < len) ? 67 : len;
-					aprs_tx_message((char *)&message->data, len);
 					break;
 				}
 

@@ -20,6 +20,8 @@
 #include "main.h"
 #include "stm32u5xx_hal_uart.h"
 #include <stdbool.h>
+#include <stdint.h> //for uint8_t
+#include "tx_api.h" //for ULONG
 
 #define GPS_PACKET_START_CHAR '$'
 #define GPS_PACKET_END_CHAR '\r'
@@ -85,7 +87,9 @@ bool get_gps_lock(GPS_HandleTypeDef* gps, GPS_Data* gps_data);
 //Checks if a GPS location is in dominica based on the latitude and longitude
 bool is_in_dominica(float latitude, float longitude);
 
-//
+// public methods 
+const uint8_t * gpsBuffer_pop_latest(void);
+void gpsBuffer_thread(ULONG thread_input);
 void gps_sleep(void);
 void gps_wake(void);
 

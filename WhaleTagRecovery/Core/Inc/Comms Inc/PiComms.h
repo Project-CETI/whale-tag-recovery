@@ -70,6 +70,8 @@ typedef enum pi_comms_message_id_e {
     /* recovery packet */
     PI_COMM_MSG_GPS_PACKET   = 0x10, //rec --> pi: raw gps packet
     PI_COMM_MSG_APRS_MESSAGE,
+    PI_COMM_PING,
+    PI_COMM_PONG,
 
     /* recovery configuration */
     PI_COMM_MSG_CONFIG_CRITICAL_VOLTAGE = 0x20,
@@ -91,9 +93,6 @@ typedef enum pi_comms_message_id_e {
     PI_COMM_MSG_QUERY_APRS_CALLSIGN,   // 0x63,
     PI_COMM_MSG_QUERY_APRS_MESSAGE,     // 0x64,
     PI_COMM_MSG_QUERY_APRS_SSID,
-    
-
-    PI_COMM_MSG_TX_NOW = 0xFF,
 }PiCommsMessageID;
 
 typedef struct __PI_COMMS_PACKET {
@@ -151,8 +150,8 @@ extern volatile uint_fast8_t pi_comm_rx_buffer_end;
 
 void pi_comms_rx_thread_entry(ULONG thread_input);
 
-void pi_comms_tx_forward_gps(uint8_t *buffer, uint8_t len);
-
+void pi_comms_tx_forward_gps(const uint8_t *buffer, uint8_t len);
+void pi_comms_tx_pong(void);
 void pi_comms_tx_callsign(const char *callsign);
 void pi_comms_tx_ssid(uint8_t ssid);
 
