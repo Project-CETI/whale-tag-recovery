@@ -154,14 +154,14 @@ void gpsBuffer_thread(ULONG thread_input) {
         while(gpsBuffer_read_index != gpsBuffer_write_index){
 			NmeaString *read_sentence = &gps_buffer[gpsBuffer_read_index];
 			//quick validation
-        	if ((memcmp(&read_sentence->sentence[3], "GLL,", 4) == 0)
-        		|| (memcmp(&read_sentence->sentence[3], "GGA,", 4) == 0)
-				|| (memcmp(&read_sentence->sentence[3], "RMC,", 4) == 0)
-        	){
+        	//if ((memcmp(&read_sentence->sentence[3], "GLL,", 4) == 0)
+        	//	|| (memcmp(&read_sentence->sentence[3], "GGA,", 4) == 0)
+			//	|| (memcmp(&read_sentence->sentence[3], "RMC,", 4) == 0)
+        	//){
         		pi_comms_tx_forward_gps(read_sentence->sentence, read_sentence->length);
 				gpsBuffer_newest_index.value = gpsBuffer_read_index;
 				gpsBuffer_newest_index.some = 1;
-        	}
+        	//}
 
             gpsBuffer_read_index = (gpsBuffer_read_index + 1) % GPS_BUFFER_COUNT;
         }
