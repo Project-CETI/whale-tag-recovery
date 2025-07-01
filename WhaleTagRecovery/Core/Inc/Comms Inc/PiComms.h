@@ -55,7 +55,7 @@
 
 #define GPS_TX_MESSAGE_SIZE (sizeof(GPS_TX_Message))
 
-#define PI_COMM_RX_BUFFER_COUNT 4
+#define PI_COMM_RX_BUFFER_COUNT 16
 #define PI_COMM_RX_BUFFER_SIZE  (4 + 256)
 
 /*** TYPE DEFINITIONS ********************************************************/
@@ -148,11 +148,13 @@ extern volatile uint_fast8_t pi_comm_rx_buffer_end;
 
 /*** FUNCTION DECLARATIONS ***************************************************/
 
-void pi_comms_rx_thread_entry(ULONG thread_input);
+void pi_comms_rx_init(void);
+void pi_comms_tx_init(void);
 
 void pi_comms_tx_forward_gps(const uint8_t *buffer, uint8_t len);
 void pi_comms_tx_pong(void);
 void pi_comms_tx_callsign(const char *callsign);
 void pi_comms_tx_ssid(uint8_t ssid);
+void Pi_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size);
 
 #endif //INC_COMMS_INC_PICOMMS_H_

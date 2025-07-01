@@ -24,6 +24,7 @@
 /* USER CODE BEGIN Includes */
 #include "config.h"
 #include "Recovery Inc/Gps.h"
+#include "Comms Inc/PiComms.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -49,13 +50,12 @@ DMA_NodeTypeDef Node_GPDMA1_Channel1;
 DMA_QListTypeDef List_GPDMA1_Channel1;
 DMA_HandleTypeDef handle_GPDMA1_Channel1;
 
-RTC_HandleTypeDef hrtc;
-
 TIM_HandleTypeDef htim2;
 
 UART_HandleTypeDef huart4;
 UART_HandleTypeDef huart2;
 UART_HandleTypeDef huart3;
+DMA_HandleTypeDef handle_GPDMA1_Channel2;
 DMA_HandleTypeDef handle_GPDMA1_Channel0;
 
 /* USER CODE BEGIN PV */
@@ -81,18 +81,26 @@ static void MX_GPIO_Init(void);
 static void MX_GPDMA1_Init(void);
 static void MX_DAC1_Init(void);
 static void MX_TIM2_Init(void);
-static void MX_RTC_Init(void);
 static void MX_UART4_Init(void);
 static void MX_USART3_UART_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_ADC4_Init(void);
+static void MX_ICACHE_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size){
+	//restarts the DMA listening of the UART rx (next 247 bytes)
+	if(huart->Instance == USART3){
+		GPS_RxEventCallback(huart, Size);
+	} else if ( huart->Instance == USART2 ) {
+		Pi_RxEventCallback(huart, Size);
+	}
+	return;
+}
 /* USER CODE END 0 */
 
 /**
@@ -115,11 +123,11 @@ int main(void)
 
   /* USER CODE END Init */
 
-  /* Configure the system clock */
-  SystemClock_Config();
-
   /* Configure the System Power */
   SystemPower_Config();
+
+  /* Configure the system clock */
+  SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
 #if USB_BOOTLOADER_ENABLED
@@ -166,11 +174,11 @@ int main(void)
   MX_GPDMA1_Init();
   MX_DAC1_Init();
   MX_TIM2_Init();
-  MX_RTC_Init();
   MX_UART4_Init();
   MX_USART3_UART_Init();
   MX_USART2_UART_Init();
   MX_ADC4_Init();
+  MX_ICACHE_Init();
   /* USER CODE BEGIN 2 */
 #if BATTERY_MONITOR_ENABLED
   //********************************REQUIRED FOR ADC USE DO NOT REMOVE********************************
@@ -403,6 +411,8 @@ static void MX_GPDMA1_Init(void)
     HAL_NVIC_EnableIRQ(GPDMA1_Channel0_IRQn);
     HAL_NVIC_SetPriority(GPDMA1_Channel1_IRQn, 0, 0);
     HAL_NVIC_EnableIRQ(GPDMA1_Channel1_IRQn);
+    HAL_NVIC_SetPriority(GPDMA1_Channel2_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(GPDMA1_Channel2_IRQn);
 
   /* USER CODE BEGIN GPDMA1_Init 1 */
 
@@ -414,57 +424,34 @@ static void MX_GPDMA1_Init(void)
 }
 
 /**
-  * @brief RTC Initialization Function
+  * @brief ICACHE Initialization Function
   * @param None
   * @retval None
   */
-static void MX_RTC_Init(void)
+static void MX_ICACHE_Init(void)
 {
 
-  /* USER CODE BEGIN RTC_Init 0 */
+  /* USER CODE BEGIN ICACHE_Init 0 */
 
-  /* USER CODE END RTC_Init 0 */
+  /* USER CODE END ICACHE_Init 0 */
 
-  RTC_PrivilegeStateTypeDef privilegeState = {0};
+  /* USER CODE BEGIN ICACHE_Init 1 */
 
-  /* USER CODE BEGIN RTC_Init 1 */
+  /* USER CODE END ICACHE_Init 1 */
 
-  /* USER CODE END RTC_Init 1 */
-
-  /** Initialize RTC Only
+  /** Enable instruction cache in 1-way (direct mapped cache)
   */
-  hrtc.Instance = RTC;
-  hrtc.Init.HourFormat = RTC_HOURFORMAT_24;
-  hrtc.Init.AsynchPrediv = 127;
-  hrtc.Init.SynchPrediv = 255;
-  hrtc.Init.OutPut = RTC_OUTPUT_DISABLE;
-  hrtc.Init.OutPutRemap = RTC_OUTPUT_REMAP_NONE;
-  hrtc.Init.OutPutPolarity = RTC_OUTPUT_POLARITY_HIGH;
-  hrtc.Init.OutPutType = RTC_OUTPUT_TYPE_OPENDRAIN;
-  hrtc.Init.OutPutPullUp = RTC_OUTPUT_PULLUP_NONE;
-  hrtc.Init.BinMode = RTC_BINARY_NONE;
-  if (HAL_RTC_Init(&hrtc) != HAL_OK)
+  if (HAL_ICACHE_ConfigAssociativityMode(ICACHE_1WAY) != HAL_OK)
   {
     Error_Handler();
   }
-  privilegeState.rtcPrivilegeFull = RTC_PRIVILEGE_FULL_NO;
-  privilegeState.backupRegisterPrivZone = RTC_PRIVILEGE_BKUP_ZONE_NONE;
-  privilegeState.backupRegisterStartZone2 = RTC_BKP_DR0;
-  privilegeState.backupRegisterStartZone3 = RTC_BKP_DR0;
-  if (HAL_RTCEx_PrivilegeModeSet(&hrtc, &privilegeState) != HAL_OK)
+  if (HAL_ICACHE_Enable() != HAL_OK)
   {
     Error_Handler();
   }
+  /* USER CODE BEGIN ICACHE_Init 2 */
 
-  /** Enable the reference Clock input
-  */
-  if (HAL_RTCEx_SetRefClock(&hrtc) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN RTC_Init 2 */
-
-  /* USER CODE END RTC_Init 2 */
+  /* USER CODE END ICACHE_Init 2 */
 
 }
 
@@ -489,7 +476,7 @@ static void MX_TIM2_Init(void)
   htim2.Instance = TIM2;
   htim2.Init.Prescaler = 16-1;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 45;
+  htim2.Init.Period = 44;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
@@ -622,8 +609,6 @@ static void MX_USART3_UART_Init(void)
 
   /* USER CODE END USART3_Init 0 */
 
-  UART_AutonomousModeConfTypeDef sConfigUart3 = {0};
-
   /* USER CODE BEGIN USART3_Init 1 */
 
   /* USER CODE END USART3_Init 1 */
@@ -651,15 +636,6 @@ static void MX_USART3_UART_Init(void)
     Error_Handler();
   }
   if (HAL_UARTEx_EnableFifoMode(&huart3) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sConfigUart3.AutonomousModeState = UART_AUTONOMOUS_MODE_ENABLE;
-  sConfigUart3.TriggerSelection = UART_GPDMA1_CH0_TCF_TRG;
-  sConfigUart3.TriggerPolarity = UART_TRIG_POLARITY_RISING;
-  sConfigUart3.DataSize = 0;
-  sConfigUart3.IdleFrame = UART_IDLE_FRAME_ENABLE;
-  if (HAL_UARTEx_SetConfigAutonomousMode(&huart3, &sConfigUart3) != HAL_OK)
   {
     Error_Handler();
   }
@@ -712,15 +688,23 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PC13 PC0 PC2 PC3
-                           PC6 PC7 PC8 PC9
-                           PC10 PC11 PC12 */
-  GPIO_InitStruct.Pin = GPIO_PIN_13|GPIO_PIN_0|GPIO_PIN_2|GPIO_PIN_3
-                          |GPIO_PIN_6|GPIO_PIN_7|GPIO_PIN_8|GPIO_PIN_9
-                          |GPIO_PIN_10|GPIO_PIN_11|GPIO_PIN_12;
+  /*Configure GPIO pins : PC13 PC14 PC15 PC0
+                           PC2 PC3 PC6 PC7
+                           PC8 PC9 PC10 PC11
+                           PC12 */
+  GPIO_InitStruct.Pin = GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15|GPIO_PIN_0
+                          |GPIO_PIN_2|GPIO_PIN_3|GPIO_PIN_6|GPIO_PIN_7
+                          |GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10|GPIO_PIN_11
+                          |GPIO_PIN_12;
   GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : PH0 PH1 PH3 */
+  GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_3;
+  GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOH, &GPIO_InitStruct);
 
   /*Configure GPIO pin : GPS_NEN_Pin */
   GPIO_InitStruct.Pin = GPS_NEN_Pin;
@@ -751,11 +735,11 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(GPS_EXTINT_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : PB1 PB10 PB12 PB13
-                           PB14 PB4 PB5 PB6
-                           PB7 PB8 PB9 */
+                           PB14 PB15 PB4 PB5
+                           PB6 PB7 PB8 PB9 */
   GPIO_InitStruct.Pin = GPIO_PIN_1|GPIO_PIN_10|GPIO_PIN_12|GPIO_PIN_13
-                          |GPIO_PIN_14|GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6
-                          |GPIO_PIN_7|GPIO_PIN_8|GPIO_PIN_9;
+                          |GPIO_PIN_14|GPIO_PIN_15|GPIO_PIN_4|GPIO_PIN_5
+                          |GPIO_PIN_6|GPIO_PIN_7|GPIO_PIN_8|GPIO_PIN_9;
   GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
@@ -785,12 +769,6 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(VHF_PTT_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : PH3 */
-  GPIO_InitStruct.Pin = GPIO_PIN_3;
-  GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOH, &GPIO_InitStruct);
 
 /* USER CODE BEGIN MX_GPIO_Init_2 */
 /* USER CODE END MX_GPIO_Init_2 */

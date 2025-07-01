@@ -43,9 +43,6 @@ typedef enum __TX_THREAD_LIST {
 #if BATTERY_MONITOR_ENABLED
 	BATTERY_MONITOR_THREAD,
 #endif
-#if UART_ENABLED
-	PI_COMMS_RX_THREAD,
-#endif
 #if RTC_ENABLED
 	RTC_THREAD,
 #endif
@@ -140,19 +137,6 @@ static Thread_ConfigTypeDef threadConfigList[NUM_THREADS] = {
 				.thread_stack_size = 2048,
 				.priority = 9,
 				.preempt_threshold = 9,
-				.timeslice = TX_NO_TIME_SLICE,
-				.start = TX_DONT_START
-		},
-#endif
-#if UART_ENABLED
-		[PI_COMMS_RX_THREAD] = {
-				//Pi Comms RX Thread
-				.thread_name = "Pi Comms RX Thread",
-				.thread_entry_function = pi_comms_rx_thread_entry,
-				.thread_input = 0x1234,
-				.thread_stack_size = 2048,
-				.priority = 2,
-				.preempt_threshold = 2,
 				.timeslice = TX_NO_TIME_SLICE,
 				.start = TX_DONT_START
 		},

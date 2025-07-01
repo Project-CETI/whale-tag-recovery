@@ -86,16 +86,16 @@ void state_machine_thread_entry(ULONG thread_input){
 	
 	//Event flags for triggering state changes
 	tx_event_flags_create(&state_machine_event_flags_group, "State Machine Event Flags");
-
 	//Check the initial state and start in the appropriate state
 	state_machine_set_state(state);
 	vhf_set_freq(&vhf, g_config.aprs_freq);
-
+	
 #if BATTERY_MONITOR_ENABLED
 	tx_thread_resume(&threads[BATTERY_MONITOR_THREAD].thread);
 #endif
 #if UART_ENABLED
-	tx_thread_resume(&threads[PI_COMMS_RX_THREAD].thread);
+	pi_comms_rx_init();
+	pi_comms_tx_init();
 #endif
 #if RTC_ENABLED
 	tx_thread_resume(&threads[RTC_THREAD].thread);
@@ -114,162 +114,164 @@ void state_machine_thread_entry(ULONG thread_input){
 			state_machine_set_state(STATE_CRITICAL);
 		}
 		else if(actual_flags & STATE_COMMS_MESSAGE_AVAILABLE_FLAG){
-			//parse message from pi
-			PiRxCommMessage *message = (PiRxCommMessage *)pi_comm_rx_buffer[pi_comm_rx_buffer_start];
+			while(pi_comm_rx_buffer_start != pi_comm_rx_buffer_end) {
+				//parse message from pi
+				PiRxCommMessage *message = (PiRxCommMessage *)pi_comm_rx_buffer[pi_comm_rx_buffer_start];
 
-			switch (message->header.id) {
-				//State Change Message
-				case PI_COMM_MSG_START: {
-					//enter recovery
-					state_machine_set_state(STATE_APRS);
-					break;
-				}
+				switch (message->header.id) {
+					//State Change Message
+					case PI_COMM_MSG_START: {
+						//enter recovery
+						state_machine_set_state(STATE_APRS);
+						break;
+					}
 
-				case PI_COMM_MSG_STOP: {
-					//stop (and wait for more commands)
-					state_machine_set_state(STATE_WAITING);
-					break;
-				}
+					case PI_COMM_MSG_STOP: {
+						//stop (and wait for more commands)
+						state_machine_set_state(STATE_WAITING);
+						break;
+					}
 
-				case PI_COMM_MSG_CRITICAL: {
-					//enter a critical low power state (nothing runs)
-					state_machine_set_state(STATE_CRITICAL);
-					break;
-				}
+					case PI_COMM_MSG_CRITICAL: {
+						//enter a critical low power state (nothing runs)
+						state_machine_set_state(STATE_CRITICAL);
+						break;
+					}
 
-				case PI_COMM_MSG_APRS_MESSAGE: {
-					char msg_buffer[257];
-					size_t len = message->header.length;
-					len = (67 < len) ? 67 : len;
+					case PI_COMM_MSG_APRS_MESSAGE: {
+						char msg_buffer[257];
+						size_t len = message->header.length;
+						len = (67 < len) ? 67 : len;
 
-					memcpy(msg_buffer, &message->data, len);
-					msg_buffer[len] = '\0';
-					aprs_tx_message(msg_buffer, strlen(msg_buffer));
-					break;
-				}
+						memcpy(msg_buffer, &message->data, len);
+						msg_buffer[len] = '\0';
+						aprs_tx_message(msg_buffer, strlen(msg_buffer));
+						break;
+					}
 
-				case PI_COMM_PING: {
-					pi_comms_tx_pong();
-					break;
-				}
+					case PI_COMM_PING: {
+						pi_comms_tx_pong();
+						break;
+					}
 
-				//Configuration change message
-				case PI_COMM_MSG_CONFIG_CRITICAL_VOLTAGE: {
-						if(message->header.length < sizeof(PiCommCritVoltagePkt))
+					//Configuration change message
+					case PI_COMM_MSG_CONFIG_CRITICAL_VOLTAGE: {
+							if(message->header.length < sizeof(PiCommCritVoltagePkt))
+									break; //ToDo: return error
+
+							g_config.critical_voltage = message->data.critical_voltage.value;
+						}
+						break;
+
+					case PI_COMM_MSG_CONFIG_VHF_POWER_LEVEL: {
+							if(message->header.length < sizeof(PiCommTxLevelPkt))
+									break; //ToDo: return error
+							g_config.vhf_power = message->data.vhf_level.value;
+							vhf_set_power_level(&vhf, g_config.vhf_power);
+						}
+						break;
+
+					case PI_COMM_MSG_CONFIG_APRS_FREQUENCY: {
+							if(message->header.length < sizeof(PiCommAPRSFreq))
 								break; //ToDo: return error
+							g_config.aprs_freq = message->data.aprs_freq_MHz.value;
+							vhf_set_freq(&vhf, g_config.aprs_freq);
+						}
+						break;
 
-						g_config.critical_voltage = message->data.critical_voltage.value;
+					case PI_COMM_MSG_CONFIG_APRS_CALLSIGN: {
+						char callsign_buffer[7];
+						size_t len = message->header.length;
+						len = (6 < len) ? 6 : len;
+						memcpy(callsign_buffer, &message->data, len);
+						callsign_buffer[len] = '\0';
+
+						aprs_set_callsign(callsign_buffer);
+						break;
 					}
-					break;
 
-				case PI_COMM_MSG_CONFIG_VHF_POWER_LEVEL: {
-						if(message->header.length < sizeof(PiCommTxLevelPkt))
-								break; //ToDo: return error
-						g_config.vhf_power = message->data.vhf_level.value;
-						vhf_set_power_level(&vhf, g_config.vhf_power);
+					case PI_COMM_MSG_CONFIG_APRS_COMMENT: {
+						char comment_buffer[257];
+						size_t len = message->header.length;
+
+						aprs_set_comment(&message->data,  message->header.length);
+						break;
 					}
-					break;
 
-				case PI_COMM_MSG_CONFIG_APRS_FREQUENCY: {
-						if(message->header.length < sizeof(PiCommAPRSFreq))
-							break; //ToDo: return error
-						g_config.aprs_freq = message->data.aprs_freq_MHz.value;
-						vhf_set_freq(&vhf, g_config.aprs_freq);
+					case PI_COMM_MSG_CONFIG_APRS_SSID: {
+						aprs_set_ssid(message->data.u8_pkt);
+						break;
 					}
-					break;
 
-				case PI_COMM_MSG_CONFIG_APRS_CALLSIGN: {
-					char callsign_buffer[7];
-					size_t len = message->header.length;
-					len = (6 < len) ? 6 : len;
-					memcpy(callsign_buffer, &message->data, len);
-					callsign_buffer[len] = '\0';
+					case PI_COMM_MSG_CONFIG_MSG_RCPT_CALLSIGN: {
+						char callsign_buffer[7];
+						size_t len = message->header.length;
+						len = (6 < len) ? 6 : len;
+						memcpy(callsign_buffer, &message->data, len);
+						callsign_buffer[len] = '\0';
 
-					aprs_set_callsign(callsign_buffer);
-					break;
+						aprs_set_msg_recipient_callsign(callsign_buffer);
+						break;
+					}
+
+					case PI_COMM_MSG_CONFIG_MSG_RCPT_SSID: {
+						aprs_set_msg_recipient_ssid(message->data.u8_pkt);
+						break;
+					}
+
+					case PI_COMM_MSG_CONFIG_HOSTNAME: {
+						size_t len = message->header.length;
+						len = (len > sizeof(g_config.pi_hostname) - 1) ? (sizeof(g_config.pi_hostname) - 1) : len;
+						memcpy(g_config.pi_hostname, &message->data, len);
+						g_config.pi_hostname[len] = 0;
+						break;
+					}
+
+					case PI_COMM_MSG_QUERY_STATE: {
+						//ToDo: return recovery board state to pi
+						break;
+					}
+
+					case PI_COMM_MSG_QUERY_CRITICAL_VOLTAGE: {
+						//ToDo: return critical voltage setting to pi
+						break;
+					}
+
+					case PI_COMM_MSG_QUERY_VHF_POWER_LEVEL: {
+						//ToDo: return critical voltage setting to pi
+						break;
+					}
+
+					case PI_COMM_MSG_QUERY_APRS_FREQ: {
+						//ToDo: implement
+						break;
+					}
+
+					case PI_COMM_MSG_QUERY_APRS_CALLSIGN: {
+						static char callsign[7] = "";
+						aprs_get_callsign(callsign);
+						pi_comms_tx_callsign(callsign);
+						break;
+					}
+
+					case PI_COMM_MSG_QUERY_APRS_MESSAGE: {
+						//ToDo: implement
+						break;
+					}
+
+					case PI_COMM_MSG_QUERY_APRS_SSID: {
+						uint8_t ssid;
+						aprs_get_ssid(&ssid);
+						pi_comms_tx_ssid(ssid);
+						break;
+					}
+
+					default:
+						//Bad message ID - do nothing
+						break;
 				}
-
-				case PI_COMM_MSG_CONFIG_APRS_COMMENT: {
-					char comment_buffer[257];
-					size_t len = message->header.length;
-
-					aprs_set_comment(&message->data,  message->header.length);
-					break;
-				}
-
-				case PI_COMM_MSG_CONFIG_APRS_SSID: {
-					aprs_set_ssid(message->data.u8_pkt);
-					break;
-				}
-
-				case PI_COMM_MSG_CONFIG_MSG_RCPT_CALLSIGN: {
-					char callsign_buffer[7];
-					size_t len = message->header.length;
-					len = (6 < len) ? 6 : len;
-					memcpy(callsign_buffer, &message->data, len);
-					callsign_buffer[len] = '\0';
-
-					aprs_set_msg_recipient_callsign(callsign_buffer);
-					break;
-				}
-
-				case PI_COMM_MSG_CONFIG_MSG_RCPT_SSID: {
-					aprs_set_msg_recipient_ssid(message->data.u8_pkt);
-					break;
-				}
-
-				case PI_COMM_MSG_CONFIG_HOSTNAME: {
-					size_t len = message->header.length;
-					len = (len > sizeof(g_config.pi_hostname) - 1) ? (sizeof(g_config.pi_hostname) - 1) : len;
-					memcpy(g_config.pi_hostname, &message->data, len);
-					g_config.pi_hostname[len] = 0;
-					break;
-				}
-
-				case PI_COMM_MSG_QUERY_STATE: {
-					//ToDo: return recovery board state to pi
-					break;
-				}
-
-				case PI_COMM_MSG_QUERY_CRITICAL_VOLTAGE: {
-					//ToDo: return critical voltage setting to pi
-					break;
-				}
-
-				case PI_COMM_MSG_QUERY_VHF_POWER_LEVEL: {
-					//ToDo: return critical voltage setting to pi
-					break;
-				}
-
-				case PI_COMM_MSG_QUERY_APRS_FREQ: {
-					//ToDo: implement
-					break;
-				}
-
-				case PI_COMM_MSG_QUERY_APRS_CALLSIGN: {
-					static char callsign[7] = "";
-					aprs_get_callsign(callsign);
-					pi_comms_tx_callsign(callsign);
-					break;
-				}
-
-				case PI_COMM_MSG_QUERY_APRS_MESSAGE: {
-					//ToDo: implement
-					break;
-				}
-
-				case PI_COMM_MSG_QUERY_APRS_SSID: {
-					uint8_t ssid;
-					aprs_get_ssid(&ssid);
-					pi_comms_tx_ssid(ssid);
-					break;
-				}
-
-				default:
-					//Bad message ID - do nothing
-					break;
+				pi_comm_rx_buffer_start =  (pi_comm_rx_buffer_start + 1) % PI_COMM_RX_BUFFER_COUNT;
 			}
-			pi_comm_rx_buffer_start =  (pi_comm_rx_buffer_start + 1) % PI_COMM_RX_BUFFER_COUNT;
 		}
 	}
 }

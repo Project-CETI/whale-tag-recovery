@@ -8,7 +8,6 @@
 
 #include "Comms Inc/PiComms.h"
 #include "Lib Inc/state_machine.h"
-#include "Lib Inc/threads.h"
 #include "Recovery Inc/VHF.h"
 #include "config.h"
 #include "main.h"
@@ -16,66 +15,72 @@
 
 //External variables
 extern UART_HandleTypeDef huart2;
-extern Thread_HandleTypeDef threads[NUM_THREADS];
+extern DMA_HandleTypeDef handle_GPDMA1_Channel2;
+
+
 extern TX_EVENT_FLAGS_GROUP state_machine_event_flags_group;
 
 //Private typedef
 
 
 //Data buffer for receives
+uint8_t raw_buffer[PI_COMM_RX_BUFFER_COUNT * PI_COMM_RX_BUFFER_SIZE] = {0};
 uint8_t pi_comm_rx_buffer[PI_COMM_RX_BUFFER_COUNT][PI_COMM_RX_BUFFER_SIZE] = {0}; //max rx size = 3 + 4 = 7
 volatile uint_fast8_t pi_comm_rx_buffer_start = 0;
 volatile uint_fast8_t pi_comm_rx_buffer_end = 0;
 volatile bool pi_comm_rx_buffer_overflow = false;
 
+void Pi_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size){
+	int pi_comm_start = -1;
+	int new = 0;
+	for (int i = 0; i < Size; ) {
+		// find command start character
+		if (raw_buffer[i] != PI_COMMS_START_CHAR) {
+			i++;
+			continue;
+		}
 
+		// grab header
+		pi_comm_start = i;
+		i += sizeof(PiCommHeader);
+		if (i > Size) {
+			// incomplete message
+			break;
+		}
 
-TX_EVENT_FLAGS_GROUP pi_comms_event_flags_group;
+		// grab message
+		i += ((PiCommHeader *)&raw_buffer[pi_comm_start])->length;
+		if (i > Size) {
+			// incomplete message
+			break;
+		}
 
-void comms_UART_RxCpltCallback(UART_HandleTypeDef *huart){
-	if (pi_comm_rx_buffer[pi_comm_rx_buffer_end][0] == PI_COMMS_START_CHAR){
-		tx_event_flags_set(&pi_comms_event_flags_group, PI_COMMS_VALID_START_FLAG, TX_OR);
+		// move full message in buffer
+		memcpy(&pi_comm_rx_buffer[pi_comm_rx_buffer_end][0], &raw_buffer[pi_comm_start], (i - pi_comm_start));
+		pi_comm_rx_buffer_end = (pi_comm_rx_buffer_end + 1) % PI_COMM_RX_BUFFER_COUNT;
+		new = 1;
+		pi_comm_start = -1;
 	}
+
+	// shift remaining data
+	int remaining = 0;
+	if (pi_comm_start > 0) {
+		remaining = sizeof(raw_buffer) - pi_comm_start;
+		memmove(&raw_buffer[0], &raw_buffer[pi_comm_start], remaining);
+	}
+
+	// indicate new messages available
+	if(new) {
+		tx_event_flags_set(&state_machine_event_flags_group, STATE_COMMS_MESSAGE_AVAILABLE_FLAG, TX_OR);
+	}
+
+	//restart DMA
+	HAL_UARTEx_ReceiveToIdle_DMA(&huart2, &raw_buffer[remaining], sizeof(raw_buffer) - remaining); //initiate next transfer
+	__HAL_DMA_DISABLE_IT(&handle_GPDMA1_Channel2,DMA_IT_HT);//we don't want the half done transaction interrupt
 }
 
-void pi_comms_rx_thread_entry(ULONG thread_input){
-
-	#if UART_ENABLED
-	tx_event_flags_create(&pi_comms_event_flags_group, "Pi Comms RX Event Flags");
-
-	HAL_UART_RegisterCallback(&huart2, HAL_UART_RX_COMPLETE_CB_ID, comms_UART_RxCpltCallback);
-
-	while (1) {
-		uint8_t *end_buffer = pi_comm_rx_buffer[pi_comm_rx_buffer_end];
-		ULONG actual_flags = 0;
-
-		//Wait for start symbol
-		while(!(actual_flags & PI_COMMS_VALID_START_FLAG)){
-			HAL_UART_Receive_IT(&huart2, end_buffer, 1);
-			//Wait for the Interrupt callback to fire and set the flag (telling us what to do further)
-			tx_event_flags_get(&pi_comms_event_flags_group, PI_COMMS_VALID_START_FLAG , TX_OR_CLEAR, &actual_flags, TX_WAIT_FOREVER);
-		}
-
-		//receive rest of header
-		HAL_UART_Receive(&huart2, end_buffer + 1, sizeof(PiCommHeader) - 1, HAL_MAX_DELAY);
-
-		//receive packet
-		uint_fast8_t message_length = ((PiCommHeader *)end_buffer)->length;
-		if(message_length){ //??? Is this if needed or is it checked inside `HAL_UART_Receive` ?
-			HAL_UART_Receive(&huart2, end_buffer + 4, message_length, HAL_MAX_DELAY);
-		}
-
-		//indicate parsing needed
-		uint_fast8_t next_end = (pi_comm_rx_buffer_end + 1) % PI_COMM_RX_BUFFER_COUNT;
-		if(next_end == pi_comm_rx_buffer_start){
-//			tx_event_flags_set(&state_machine_event_flags_group, STATE_COMMS_MESSAGE_AVAILABLE_FLAG, TX_OR);
-			//ToDo: buffer overflow handling!!!
-		} else {
-			pi_comm_rx_buffer_end = next_end; //advance end of buffer
-			tx_event_flags_set(&state_machine_event_flags_group, STATE_COMMS_MESSAGE_AVAILABLE_FLAG, TX_OR);
-		}
-	}
-	#endif
-
+void pi_comms_rx_init(void){
+	HAL_UARTEx_ReceiveToIdle_DMA(&huart2, &raw_buffer[0], sizeof(raw_buffer)); //initiate next transfer
+	__HAL_DMA_DISABLE_IT(&handle_GPDMA1_Channel2, DMA_IT_HT);//we don't want the half done transaction interrupt
 }
 

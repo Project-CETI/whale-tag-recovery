@@ -10,12 +10,14 @@
 #include "main.h"
 
 //External variables
+#if RTC_ENABLED
+
 extern RTC_HandleTypeDef hrtc;
 extern TX_EVENT_FLAGS_GROUP state_machine_event_flags_group;
 extern UART_HandleTypeDef huart2;
+#endif
 
 void RTC_thread_entry(ULONG thread_input) {
-
 #if RTC_ENABLED
 	//Create variable to track time
 	RTC_TimeTypeDef sTime = {0};
