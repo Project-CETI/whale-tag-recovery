@@ -31,6 +31,7 @@
 #include <stdint.h>
 #include "tx_api.h"
 #include "Lib Inc/timing.h"
+#include "stm32u5xx_hal.h"
 
 //Defines
 //The time to transmit each bit for

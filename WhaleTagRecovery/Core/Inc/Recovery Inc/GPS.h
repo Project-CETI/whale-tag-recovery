@@ -92,5 +92,6 @@ const uint8_t * gpsBuffer_pop_latest(void);
 void gpsBuffer_thread(ULONG thread_input);
 void gps_sleep(void);
 void gps_wake(void);
+void GPS_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size);
 
 #endif /* INC_RECOVERY_INC_GPS_H_ */

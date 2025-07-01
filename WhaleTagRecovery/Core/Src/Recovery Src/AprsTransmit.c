@@ -19,11 +19,11 @@ static bool is_1200_hz = false;
 //Extern variables
 extern DAC_HandleTypeDef hdac1;
 extern TIM_HandleTypeDef htim2;
-
 uint32_t dac_input[APRS_TRANSMIT_NUM_SINE_SAMPLES];
 
 void aprs_transmit_init(void){
 	calcSineValues();
+	MX_TIM2_Fake_Init(APRS_TRANSMIT_PERIOD_2200HZ);
 }
 
 bool aprs_transmit_send_data(uint8_t * packet_data, uint16_t packet_length){
@@ -34,7 +34,7 @@ bool aprs_transmit_send_data(uint8_t * packet_data, uint16_t packet_length){
 	TX_TIMER bit_timer;
 
 	//Start our DAC and our timer to trigger the conversion edges
-	HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, dac_input, APRS_TRANSMIT_NUM_SINE_SAMPLES, DAC_ALIGN_8B_R);
+	HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t *)dac_input, APRS_TRANSMIT_NUM_SINE_SAMPLES, DAC_ALIGN_12B_R);
 	HAL_TIM_Base_Start(&htim2);
 
 	//Loop through each byte
@@ -116,6 +116,6 @@ static void calcSineValues(){
 
 		//Formula taken from STM32 documentation online on sine wave generation.
 		//Generates a sine wave with a min of 0V and a max of the reference voltage.
-		dac_input[i] = ((sin(i * 2 * PI/APRS_TRANSMIT_NUM_SINE_SAMPLES) + 1) * (43)) + 170;
+		dac_input[i] = ((sin(i * 2 * PI/APRS_TRANSMIT_NUM_SINE_SAMPLES) + 1.0)/2.0) * 0xFFF;
 	}
 }
