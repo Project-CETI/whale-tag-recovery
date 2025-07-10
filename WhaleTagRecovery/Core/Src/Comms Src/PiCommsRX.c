@@ -31,9 +31,11 @@ volatile uint_fast8_t pi_comm_rx_buffer_end = 0;
 volatile bool pi_comm_rx_buffer_overflow = false;
 
 void Pi_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size){
+	static int remaining = 0;
 	int pi_comm_start = -1;
 	int new = 0;
-	for (int i = 0; i < Size; ) {
+	int total_bytes = remaining + Size;
+	for (int i = 0; i < total_bytes; ) {
 		// find command start character
 		if (raw_buffer[i] != PI_COMMS_START_CHAR) {
 			i++;
@@ -63,9 +65,9 @@ void Pi_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size){
 	}
 
 	// shift remaining data
-	int remaining = 0;
+	remaining = 0;
 	if (pi_comm_start > 0) {
-		remaining = sizeof(raw_buffer) - pi_comm_start;
+		remaining = total_bytes - pi_comm_start;
 		memmove(&raw_buffer[0], &raw_buffer[pi_comm_start], remaining);
 	}
 

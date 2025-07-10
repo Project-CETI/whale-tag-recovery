@@ -61,6 +61,8 @@ extern DMA_HandleTypeDef handle_GPDMA1_Channel1;
 extern DAC_HandleTypeDef hdac1;
 extern TIM_HandleTypeDef htim2;
 extern DMA_HandleTypeDef handle_GPDMA1_Channel2;
+extern DMA_NodeTypeDef Node_GPDMA1_Channel0;
+extern DMA_QListTypeDef List_GPDMA1_Channel0;
 extern DMA_HandleTypeDef handle_GPDMA1_Channel0;
 extern UART_HandleTypeDef huart2;
 extern TIM_HandleTypeDef htim6;
