@@ -56,6 +56,8 @@ UART_HandleTypeDef huart4;
 UART_HandleTypeDef huart2;
 UART_HandleTypeDef huart3;
 DMA_HandleTypeDef handle_GPDMA1_Channel2;
+DMA_NodeTypeDef Node_GPDMA1_Channel0;
+DMA_QListTypeDef List_GPDMA1_Channel0;
 DMA_HandleTypeDef handle_GPDMA1_Channel0;
 
 /* USER CODE BEGIN PV */
@@ -94,13 +96,14 @@ static void MX_ICACHE_Init(void);
 /* USER CODE BEGIN 0 */
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size){
 	//restarts the DMA listening of the UART rx (next 247 bytes)
-	if(huart->Instance == USART3){
-		GPS_RxEventCallback(huart, Size);
-	} else if ( huart->Instance == USART2 ) {
+	if ( huart->Instance == USART2 ) {
 		Pi_RxEventCallback(huart, Size);
+	} else if(huart->Instance == USART3){
+//		GPS_RxEventCallback(huart, Size);
 	}
 	return;
 }
+
 /* USER CODE END 0 */
 
 /**

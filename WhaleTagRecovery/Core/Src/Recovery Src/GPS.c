@@ -33,7 +33,7 @@ extern DMA_HandleTypeDef handle_GPDMA1_Channel0;
 #define NMEA_MAX_SIZE   (82)
 
 #define GPS_BUFFER_SIZE (NMEA_MAX_SIZE + 1)
-#define GPS_BUFFER_COUNT (128)
+#define GPS_BUFFER_COUNT (256)
 
 #define GPS_BUFFER_VALID_START (1 << 0)
 
@@ -43,6 +43,7 @@ typedef struct {
 	uint8_t sentence[GPS_BUFFER_SIZE];
 }NmeaString;
 
+
 typedef struct {
     uint8_t some;
     size_t value;
@@ -50,68 +51,67 @@ typedef struct {
 
 
 // === PRIVATE VARIABLES ===
-uint8_t rx_buffer[16*NMEA_MAX_SIZE];
 TX_EVENT_FLAGS_GROUP gpsBuffer_event_flags_group;
  NmeaString gps_buffer[GPS_BUFFER_COUNT] = {};
 volatile size_t gpsBuffer_write_index = 0;
 size_t gpsBuffer_read_index = 0;
 volatile Option_size_t gpsBuffer_newest_index = {.some = 0};
 volatile uint8_t found_start = 0;
+static int rx_buffer_index= 0;
+static int partial = 0;
 
 // === PRIVATE METHODS ===
 
 // === PUBLIC METHODS ===
-/**
- * @brief UART IT complete callback
- * 
- * @param huart 
- */
-
-void GPS_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size){
- 	//restarts the DMA listening of the UART rx (next 247 bytes)
-	// seperate messages
+uint8_t rx_buffer[2][16*NMEA_MAX_SIZE];
+void GPS_RxCpltCallback(struct __UART_HandleTypeDef *huart) {
 	int nmea_start = -1;
 	int new = 0;
-	for (int i = 0; i < Size; i++){
+	for (int i = 0; i < 16*NMEA_MAX_SIZE; i++){
 		//find sentence start
-		switch(rx_buffer[i]) {
+		switch(rx_buffer[rx_buffer_index][i]) {
 			case NMEA_START_CHAR:
 				nmea_start = i;
 				break;
 
 			case '\n': /* fallthrough */
 			case '\r':
-				if (nmea_start == -1)
+
+				if ((partial == 0) && (nmea_start == -1))
 					break; //sentence end with no start if you reach here
 
-				gps_buffer[gpsBuffer_write_index].length = ((i) - nmea_start);
-				memcpy(&gps_buffer[gpsBuffer_write_index].sentence[0], &rx_buffer[nmea_start], gps_buffer[gpsBuffer_write_index].length);
+				if (partial != 0) {
+					gps_buffer[gpsBuffer_write_index].length = (partial + i);
+					memcpy(&gps_buffer[gpsBuffer_write_index].sentence[partial], &rx_buffer[rx_buffer_index][0], i);
+				} else {
+					gps_buffer[gpsBuffer_write_index].length = ((i) - nmea_start);
+					memcpy(&gps_buffer[gpsBuffer_write_index].sentence[0], &rx_buffer[rx_buffer_index][nmea_start], gps_buffer[gpsBuffer_write_index].length);
+
+				}
 				gps_buffer[gpsBuffer_write_index].sentence[gps_buffer[gpsBuffer_write_index].length] = '\0';
 				gpsBuffer_write_index = (gpsBuffer_write_index + 1) % GPS_BUFFER_COUNT;
 				new = 1;
-				//flag thread to process sentence
 				nmea_start = -1;
+				partial = 0;
 				break;
 
 			default:
 				break;
 		}
 	}
-	int remaining = 0;
 	//(nmea_start == -1) => no start found //flush entire buffer
 	//(nmea_start == 0) => sentence too long //flush entire buffer
 	if (nmea_start > 0) {
-		remaining = sizeof(rx_buffer) - nmea_start;
-		memmove(&rx_buffer[0], &rx_buffer[nmea_start], remaining); //shift sentence start to beginning of buffer
+		partial = 16*NMEA_MAX_SIZE - nmea_start;
+		memcpy(&gps_buffer[gpsBuffer_write_index].sentence[0], &rx_buffer[rx_buffer_index][nmea_start], partial);
 	}
 
 	if(new){
 		tx_event_flags_set(&gpsBuffer_event_flags_group, GPS_BUFFER_VALID_START, TX_OR);
 	}
 
-	HAL_UARTEx_ReceiveToIdle_DMA(&huart3, &rx_buffer[remaining], sizeof(rx_buffer) - remaining); //initiate next transfer
-	__HAL_DMA_DISABLE_IT(&handle_GPDMA1_Channel0,DMA_IT_HT);//we don't want the half done transaction interrupt
-	return;
+	//swap buffers
+	rx_buffer_index ^= 1 ;
 }
 
 /**
@@ -139,23 +139,25 @@ void gpsBuffer_thread(ULONG thread_input) {
 #ifndef GPS_COMM_DEBUG 
 	tx_event_flags_create(&gpsBuffer_event_flags_group, "GPS Buffer Event Flags");
 
-	//initiate UART DMA
-	HAL_UARTEx_ReceiveToIdle_DMA(&huart3, rx_buffer, sizeof(rx_buffer));
-	__HAL_DMA_DISABLE_IT(&handle_GPDMA1_Channel0,DMA_IT_HT);//we don't want the half done transaction interrupt
+    //initiate UART DMA
+	HAL_UART_RegisterCallback(&huart3, HAL_UART_RX_COMPLETE_CB_ID, GPS_RxCpltCallback);
+	HAL_UART_RegisterCallback(&huart3, HAL_UART_RX_HALFCOMPLETE_CB_ID, GPS_RxCpltCallback);
+	HAL_UART_Receive_DMA(&huart3, &rx_buffer[0][0], sizeof(rx_buffer));
+
 	while(1) {
         //wait for gps message start
         ULONG actual_flags = 0;
 
-        tx_event_flags_get(&gpsBuffer_event_flags_group, GPS_BUFFER_VALID_START , TX_OR_CLEAR, &actual_flags, TX_WAIT_FOREVER);
-
-        while(gpsBuffer_read_index != gpsBuffer_write_index){
+        tx_event_flags_get(&gpsBuffer_event_flags_group, GPS_BUFFER_VALID_START, TX_OR_CLEAR, &actual_flags, TX_WAIT_FOREVER);
+        // process new messages
+		while(gpsBuffer_read_index != gpsBuffer_write_index){
 			NmeaString *read_sentence = &gps_buffer[gpsBuffer_read_index];
 			pi_comms_tx_forward_gps(read_sentence->sentence, read_sentence->length);
 			gpsBuffer_newest_index.value = gpsBuffer_read_index;
 			gpsBuffer_newest_index.some = 1;
 
-            gpsBuffer_read_index = (gpsBuffer_read_index + 1) % GPS_BUFFER_COUNT;
-        }
+			gpsBuffer_read_index = (gpsBuffer_read_index + 1) % GPS_BUFFER_COUNT;
+		}
 	}
 #else
 	// buffer a indexed packet every second
@@ -371,9 +373,19 @@ bool is_in_dominica(float latitude, float longitude){
 //Turn GPS off (through power FET) and starts buffering thread
 void gps_sleep(void){
 	HAL_GPIO_WritePin(GPS_NEN_GPIO_Port, GPS_NEN_Pin, GPIO_PIN_SET);
+	HAL_UART_DMAStop(&huart3);
 }
 
 void gps_wake(void){
+    //initiate UART DMA
+	gpsBuffer_write_index = 0;
+	gpsBuffer_read_index = 0;
+	rx_buffer_index= 0;
+	partial = 0;
+	HAL_UART_RegisterCallback(&huart3, HAL_UART_RX_COMPLETE_CB_ID, GPS_RxCpltCallback);
+	HAL_UART_RegisterCallback(&huart3, HAL_UART_RX_HALFCOMPLETE_CB_ID, GPS_RxCpltCallback);
+	HAL_UART_Receive_DMA(&huart3, &rx_buffer[0][0], sizeof(rx_buffer));
+
 	//Enable power to GPS module and starts buffering thread
 	HAL_GPIO_WritePin(GPS_NEN_GPIO_Port, GPS_NEN_Pin, GPIO_PIN_RESET);
 }
