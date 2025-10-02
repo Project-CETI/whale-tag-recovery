@@ -59,6 +59,7 @@ volatile Option_size_t gpsBuffer_newest_index = {.some = 0};
 volatile uint8_t found_start = 0;
 static int rx_buffer_index= 0;
 static int partial = 0;
+static int gps_awake = 0;
 
 // === PRIVATE METHODS ===
 
@@ -374,9 +375,14 @@ bool is_in_dominica(float latitude, float longitude){
 void gps_sleep(void){
 	HAL_GPIO_WritePin(GPS_NEN_GPIO_Port, GPS_NEN_Pin, GPIO_PIN_SET);
 	HAL_UART_DMAStop(&huart3);
+	gps_awake = 0;
+
 }
 
 void gps_wake(void){
+	if (gps_awake) {
+		return;
+	}
     //initiate UART DMA
 	gpsBuffer_write_index = 0;
 	gpsBuffer_read_index = 0;
@@ -385,7 +391,8 @@ void gps_wake(void){
 	HAL_UART_RegisterCallback(&huart3, HAL_UART_RX_COMPLETE_CB_ID, GPS_RxCpltCallback);
 	HAL_UART_RegisterCallback(&huart3, HAL_UART_RX_HALFCOMPLETE_CB_ID, GPS_RxCpltCallback);
 	HAL_UART_Receive_DMA(&huart3, &rx_buffer[0][0], sizeof(rx_buffer));
-
+	
 	//Enable power to GPS module and starts buffering thread
 	HAL_GPIO_WritePin(GPS_NEN_GPIO_Port, GPS_NEN_Pin, GPIO_PIN_RESET);
+	gps_awake = 1;
 }

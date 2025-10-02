@@ -25,7 +25,7 @@ extern VHF_HandleTypdeDef vhf;
 
 void state_machine_set_state(State new_state){
 	//actions to take when exiting current state
-	switch(new_state){
+	switch(state){
 		case STATE_CRITICAL:
 			break;
 
@@ -64,6 +64,12 @@ void state_machine_set_state(State new_state){
 			tx_thread_resume(&threads[GPS_BUFFER_THREAD].thread);
 			gps_wake();		//GPS: ON
 			tx_thread_resume(&threads[APRS_THREAD].thread);
+			break;
+
+		case STATE_GPS_COLLECT:
+			tx_thread_resume(&threads[GPS_BUFFER_THREAD].thread);
+			gps_wake();		//GPS: ON
+			aprs_sleep();	//VHF: OFF
 			break;
 
 		case STATE_FISHTRACKER:
@@ -123,6 +129,11 @@ void state_machine_thread_entry(ULONG thread_input){
 					case PI_COMM_MSG_START: {
 						//enter recovery
 						state_machine_set_state(STATE_APRS);
+						break;
+					}
+
+					case PI_COMM_MSG_COLLECT_ONLY: {
+						state_machine_set_state(STATE_GPS_COLLECT);
 						break;
 					}
 
